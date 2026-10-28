@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Disposable live test rig for Mealie Atelier: fictional data only, never a real household.
-#   ./rig.sh up      start Mealie and Home Assistant, onboard both, seed demo recipes
+#   ./rig.sh up      start Mealie and Home Assistant, onboard both, seed demo recipes,
+#                    add the integration
 #   ./rig.sh status  show container state and versions
 #   ./rig.sh down    stop the rig and delete its volumes and state
 # Images: HA_IMAGE (default home-assistant:beta), MEALIE_IMAGE (default mealie:latest).
@@ -41,6 +42,7 @@ up() {
   fi
   wait_for "$HA/api/onboarding" 100
   [ -s "$STATE/ha-token" ] || python3 -I ha_onboard.py "$HA" "$STATE/ha-token"
+  python3 -I ha_setup_entry.py "$HA" "$STATE/ha-token" "$STATE/mealie-token"
   chmod 600 "$STATE"/*-token
   status
 }
