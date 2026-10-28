@@ -10,30 +10,72 @@
           "verify_ssl": "Verify TLS certificate"
         },
         "data_description": {
-          "url": "Use the full address Home Assistant can reach, for example http://192.168.1.20:9000. For the Mealie Home Assistant app, use port 9090. Do not use an ingress or login URL.",
-          "api_token": "Create a token in Mealie under Profile → Manage Your API Tokens. It is stored securely by Home Assistant and must never go in card YAML.",
+          "url": "The full address Home Assistant can reach, including http:// or https:// and the port, for example http://192.168.1.20:9000. For the Mealie Home Assistant app, use port 9090. Do not use an ingress or login URL.",
+          "api_token": "Create a token in Mealie under User profile > API Tokens, then paste it here. Home Assistant stores it securely. It must never go in card YAML.",
+          "verify_ssl": "Leave this enabled. Disable it only for a self-signed certificate on a trusted local network."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Mealie Atelier",
+        "description": "Mealie rejected the saved API token for {url}. Create a new token in Mealie under User profile > API Tokens and enter it here.",
+        "data": {
+          "api_token": "New Mealie API token"
+        },
+        "data_description": {
+          "api_token": "A new token for the same Mealie account. Find it in Mealie under User profile > API Tokens."
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Mealie Atelier",
+        "description": "Change the Mealie address or token. Home Assistant checks the connection before saving.",
+        "data": {
+          "url": "Mealie server URL",
+          "api_token": "Mealie API token",
+          "verify_ssl": "Verify TLS certificate"
+        },
+        "data_description": {
+          "url": "The full address Home Assistant can reach, including http:// or https:// and the port, for example http://192.168.1.20:9000. Do not use an ingress or login URL.",
+          "api_token": "Create a token in Mealie under User profile > API Tokens, then paste it here. Home Assistant stores it securely.",
           "verify_ssl": "Leave this enabled. Disable it only for a self-signed certificate on a trusted local network."
         }
       }
     },
     "error": {
       "invalid_auth": "Authentication failed. Check the Mealie token.",
-      "invalid_url": "Enter a valid http(s) Mealie URL.",
+      "invalid_url": "Enter a valid http(s) Mealie URL, for example http://192.168.1.20:9000.",
       "cannot_connect": "Mealie is unreachable or returned an error.",
       "unknown": "An unexpected error occurred."
+    },
+    "abort": {
+      "already_configured": "This Mealie account is already set up.",
+      "reauth_successful": "Re-authentication was successful.",
+      "reconfigure_successful": "Reconfiguration was successful.",
+      "wrong_account": "This token belongs to a different Mealie account. Use a token of the account that was set up."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Security and interaction",
+        "description": "Control what the dashboard may change and which optional services it can use.",
         "data": {
-          "read_only": "Read-only: block changes to recipes, meal plans and shopping lists",
-          "experimental_ingredient_edits": "Experimental: allow free-text ingredient replacement (backup Mealie first; linked ingredients remain protected)",
+          "read_only": "Read-only mode",
+          "experimental_ingredient_edits": "Experimental ingredient replacement",
           "usda_fdc_api_key": "USDA FoodData Central API key",
-          "openai_api_key": "OpenAI API key (optional)"
+          "openai_api_key": "OpenAI API key",
+          "timer_notify_service": "Timer notification service"
+        },
+        "data_description": {
+          "read_only": "Blocks all changes to recipes, meal plans and shopping lists. Useful for shared tablets.",
+          "experimental_ingredient_edits": "Allows free-text ingredient replacement. Back up Mealie first. Linked ingredients stay protected.",
+          "usda_fdc_api_key": "Optional. Free key from USDA FoodData Central, used for nutrition lookup.",
+          "openai_api_key": "Optional. Only used for food search suggestions. Leave empty to disable.",
+          "timer_notify_service": "Optional. A notify service such as notify.mobile_app_your_phone that receives a push message when a kitchen timer ends. Leave empty for in-app notifications only."
         }
       }
+    },
+    "error": {
+      "invalid_notify_service": "Enter a notify service like notify.mobile_app_your_phone."
     }
   },
   "exceptions": {

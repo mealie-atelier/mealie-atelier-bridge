@@ -10,30 +10,72 @@
           "verify_ssl": "TLS-Zertifikat prüfen"
         },
         "data_description": {
-          "url": "Nutze die vollständige Adresse, die Home Assistant erreichen kann, zum Beispiel http://192.168.1.20:9000. Bei der Mealie-App für Home Assistant gilt Port 9090. Keine Ingress- oder Login-Adresse verwenden.",
-          "api_token": "Erstelle das Token in Mealie unter Profil → API-Tokens verwalten. Home Assistant speichert es sicher. Es gehört niemals in YAML oder eine Karte.",
-          "verify_ssl": "Aktiviert lassen. Nur bei einem selbst signierten Zertifikat im vertrauenswürdigen Heimnetz deaktivieren."
+          "url": "Die vollständige Adresse, die Home Assistant erreichen kann, mit http:// oder https:// und Port, zum Beispiel http://192.168.1.20:9000. Bei der Mealie-App für Home Assistant gilt Port 9090. Verwende keine Ingress- oder Login-Adresse.",
+          "api_token": "Erstelle in Mealie unter Benutzerprofil > API-Tokens ein Token und füge es hier ein. Home Assistant speichert es sicher. Es gehört niemals in die Karten-YAML.",
+          "verify_ssl": "Lass diese Option aktiviert. Deaktiviere sie nur bei einem selbst signierten Zertifikat in einem vertrauenswürdigen Heimnetz."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Mealie Atelier erneut anmelden",
+        "description": "Mealie hat das gespeicherte API-Token für {url} abgelehnt. Erstelle in Mealie unter Benutzerprofil > API-Tokens ein neues Token und gib es hier ein.",
+        "data": {
+          "api_token": "Neues Mealie-API-Token"
+        },
+        "data_description": {
+          "api_token": "Ein neues Token für dasselbe Mealie-Konto. Du findest es in Mealie unter Benutzerprofil > API-Tokens."
+        }
+      },
+      "reconfigure": {
+        "title": "Mealie Atelier neu konfigurieren",
+        "description": "Ändere die Mealie-Adresse oder das Token. Home Assistant prüft die Verbindung vor dem Speichern.",
+        "data": {
+          "url": "Mealie-Server-URL",
+          "api_token": "Mealie-API-Token",
+          "verify_ssl": "TLS-Zertifikat prüfen"
+        },
+        "data_description": {
+          "url": "Die vollständige Adresse, die Home Assistant erreichen kann, mit http:// oder https:// und Port, zum Beispiel http://192.168.1.20:9000. Verwende keine Ingress- oder Login-Adresse.",
+          "api_token": "Erstelle in Mealie unter Benutzerprofil > API-Tokens ein Token und füge es hier ein. Home Assistant speichert es sicher.",
+          "verify_ssl": "Lass diese Option aktiviert. Deaktiviere sie nur bei einem selbst signierten Zertifikat in einem vertrauenswürdigen Heimnetz."
         }
       }
     },
     "error": {
       "invalid_auth": "Authentifizierung fehlgeschlagen. Prüfe das Token.",
-      "invalid_url": "Bitte eine gültige http(s)-URL eingeben.",
+      "invalid_url": "Gib eine gültige http(s)-Adresse für Mealie ein, zum Beispiel http://192.168.1.20:9000.",
       "cannot_connect": "Mealie ist nicht erreichbar oder antwortet mit einem Fehler.",
       "unknown": "Ein unerwarteter Fehler ist aufgetreten."
+    },
+    "abort": {
+      "already_configured": "Dieses Mealie-Konto ist bereits eingerichtet.",
+      "reauth_successful": "Die erneute Anmeldung war erfolgreich.",
+      "reconfigure_successful": "Die Neukonfiguration war erfolgreich.",
+      "wrong_account": "Dieses Token gehört zu einem anderen Mealie-Konto. Verwende ein Token des eingerichteten Kontos."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Sicherheit und Bedienung",
+        "description": "Lege fest, was das Dashboard ändern darf und welche optionalen Dienste es nutzen kann.",
         "data": {
-          "read_only": "Nur Lesen: Änderungen an Rezepten, Wochenplan und Einkaufslisten verhindern",
-          "experimental_ingredient_edits": "Experimentell: Zutaten-Freitext-Ersetzung erlauben (nur nach Mealie-Backup, strukturierte Zutaten bleiben geschützt)",
-          "usda_fdc_api_key": "USDA FoodData Central API-Key (für Nährwertabgleich)",
-          "openai_api_key": "OpenAI API-Key (optional, nur für Lebensmittel-Suchbegriffe)"
+          "read_only": "Nur-Lesen-Modus",
+          "experimental_ingredient_edits": "Experimentelle Zutaten-Ersetzung",
+          "usda_fdc_api_key": "USDA-FoodData-Central-API-Key",
+          "openai_api_key": "OpenAI-API-Key",
+          "timer_notify_service": "Benachrichtigungsdienst für Timer"
+        },
+        "data_description": {
+          "read_only": "Verhindert alle Änderungen an Rezepten, Wochenplan und Einkaufslisten. Praktisch für gemeinsam genutzte Tablets.",
+          "experimental_ingredient_edits": "Erlaubt das Ersetzen von Zutaten per Freitext. Sichere vorher Mealie. Verknüpfte Zutaten bleiben geschützt.",
+          "usda_fdc_api_key": "Optional. Kostenloser Key von USDA FoodData Central für den Nährwertabgleich.",
+          "openai_api_key": "Optional. Wird nur für Vorschläge bei der Lebensmittelsuche genutzt. Leer lassen, um es zu deaktivieren.",
+          "timer_notify_service": "Optional. Ein Notify-Dienst wie notify.mobile_app_dein_handy, der eine Push-Nachricht erhält, wenn ein Küchentimer abläuft. Leer lassen, um nur Hinweise in der App zu bekommen."
         }
       }
+    },
+    "error": {
+      "invalid_notify_service": "Gib einen Notify-Dienst an, zum Beispiel notify.mobile_app_dein_handy."
     }
   },
   "exceptions": {
