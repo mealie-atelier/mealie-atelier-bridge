@@ -6,6 +6,7 @@ Mealie/HA compatibility test is still required before public stable release.
 
 from __future__ import annotations
 
+import asyncio
 import unittest
 
 import pytest
@@ -19,6 +20,16 @@ from custom_components.mealie_atelier.api import (
     safe_id,
     safe_slug,
 )
+
+
+# A 300 kB photo, well above one network chunk (Mealie photos are commonly 100 to 500 kB).
+_BIG_CHUNK = b"WEBPVP8 " + bytes(range(256)) * 1172
+BIG_WEBP = b"RIFF" + len(_BIG_CHUNK).to_bytes(4, "little") + _BIG_CHUNK
+BIG_MEDIA = {
+    "/api/media/recipes/recipe-big/images/min-original.webp": "image/webp",
+    "/api/media/recipes/recipe-big/images/original.webp": "image/webp",
+    "/api/media/recipes/recipe-big/assets/step-big.webp": "image/webp",
+}
 
 
 @pytest.mark.usefixtures("socket_enabled")
@@ -63,6 +74,15 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
                 return web.json_response(
                     {"id": "recipe-1", "name": "Lasagna", "recipeIngredient": []}
                 )
+            if path in BIG_MEDIA:
+                # Stream in small writes, like a real network, so one read() cannot see it all.
+                response = web.StreamResponse(headers={"Content-Type": BIG_MEDIA[path]})
+                await response.prepare(request)
+                for start in range(0, len(BIG_WEBP), 16384):
+                    await response.write(BIG_WEBP[start : start + 16384])
+                    await asyncio.sleep(0)
+                await response.write_eof()
+                return response
             if path == "/api/media/recipes/recipe-1/assets/step-1.jpg":
                 return web.Response(body=b"\xff\xd8\xffjpeg", content_type="image/jpeg")
             if path == "/api/recipes/lasagna" and request.method == "PATCH":
@@ -162,6 +182,12 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
                 for call in self.calls
             )
         )
+
+    async def test_photos_arrive_whole_when_mealie_streams_them_in_chunks(self):
+        self.assertEqual(await self.client.image("recipe-big"), BIG_WEBP)
+        self.assertEqual(await self.client.original_image("recipe-big"), BIG_WEBP)
+        asset = await self.client.recipe_asset("recipe-big", "step-big.webp")
+        self.assertEqual(asset, (BIG_WEBP, "image/webp"))
 
     async def test_recipe_step_asset_is_constrained_and_sniffed(self):
         asset = await self.client.recipe_asset("recipe-1", "step-1.jpg")

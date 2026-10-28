@@ -79,6 +79,17 @@ def check_image(data: bytes, ext: str) -> str:
     return _IMAGE_TYPES[ext]
 
 
+async def read_capped(content: aiohttp.StreamReader, limit: int) -> bytes:
+    """Read a body up to limit + 1 bytes; one `read(n)` only returns what is buffered."""
+    body = bytearray()
+    while len(body) <= limit:
+        chunk = await content.read(limit + 1 - len(body))
+        if not chunk:
+            break
+        body.extend(chunk)
+    return bytes(body)
+
+
 class MealieClient:
     """Mealie API client for both dashboard data and allowlisted mutations."""
 
@@ -156,7 +167,7 @@ class MealieClient:
                     raise MealieError("Recipe image not available")
                 if response.content_length and response.content_length > 2_000_000:
                     raise MealieError("Image exceeds size limit")
-                payload = await response.content.read(2_000_001)
+                payload = await read_capped(response.content, 2_000_000)
                 if len(payload) > 2_000_000:
                     raise MealieError("Image exceeds size limit")
                 return payload
@@ -187,7 +198,7 @@ class MealieClient:
                     raise MealieError("Recipe step image not available")
                 if response.content_length and response.content_length > UPLOAD_MAX_BYTES:
                     raise MealieError("Recipe step image exceeds size limit")
-                payload = await response.content.read(UPLOAD_MAX_BYTES + 1)
+                payload = await read_capped(response.content, UPLOAD_MAX_BYTES)
                 if len(payload) > UPLOAD_MAX_BYTES:
                     raise MealieError("Recipe step image exceeds size limit")
                 if payload.startswith(b"\xff\xd8\xff"):
@@ -265,7 +276,7 @@ class MealieClient:
             ) as response:
                 if response.status != 200 or response.content_type != "image/webp":
                     raise MealieError("Could not back up original photo")
-                payload = await response.content.read(UPLOAD_MAX_BYTES + 1)
+                payload = await read_capped(response.content, UPLOAD_MAX_BYTES)
                 if len(payload) > UPLOAD_MAX_BYTES:
                     raise MealieError("Original photo too large for safety backup")
                 return payload
