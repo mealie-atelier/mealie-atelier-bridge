@@ -814,7 +814,10 @@ class SyncManager:
         return {
             "supported": True,
             "rules": [self.rule_status(rule) for rule in self.rules.values()],
-            "audit": deepcopy(self.store.data["audit"][-20:]),
+            # Entries stored before deletes dropped their runs may name rules that are gone.
+            "audit": deepcopy(
+                [e for e in self.store.data["audit"] if e.get("rule_id") in self.rules][-20:]
+            ),
         }
 
     async def async_save_rule(
@@ -922,6 +925,10 @@ class SyncManager:
         del self.rules[rule_id]
         for record in self._rule_records(rule_id):
             del self.records[record["key"]]
+        # "Recent runs" has no rule names, so runs of a deleted rule would read as current ones.
+        self.store.data["audit"][:] = [
+            entry for entry in self.store.data["audit"] if entry.get("rule_id") != rule_id
+        ]
         self._cancel_scheduled(rule_id)
         self._stop_watcher(rule_id)
         self._rerun.pop(rule_id, None)

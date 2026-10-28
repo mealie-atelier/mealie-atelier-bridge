@@ -594,7 +594,11 @@ async def test_watcher_polls_only_active_watch_rules(
     mealie.add(mealie_item("a", note="Milch"))
     plain_rule, _ = await activate(sync)
     assert sync.counts()["watchers"] == 0
+    assert any(entry["rule_id"] == plain_rule for entry in sync.store.data["audit"])
     await sync.async_delete_rule(plain_rule)
+    assert not any(entry["rule_id"] == plain_rule for entry in sync.store.data["audit"])
+    sync.store.data["audit"].append({"at": "", "rule_id": plain_rule, "count": 1})
+    assert sync.state()["audit"] == []
 
     rule_id, _ = await activate(
         sync, triggers={"after_atelier_add": False, "watch": True}, poll_interval_seconds=60
