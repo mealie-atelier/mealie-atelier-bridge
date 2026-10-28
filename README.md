@@ -1,6 +1,8 @@
-# Mealie Atelier Bridge
-
-**Connect Mealie to the kitchen workflows you already use.**
+<div align="center">
+  <img src="brand/icon-512.png" alt="Mealie Atelier Bridge app icon" width="144">
+  <h1>Mealie Atelier Bridge</h1>
+  <p><strong>Connect Mealie to the kitchen workflows you already use.</strong></p>
+</div>
 
 Mealie Atelier Bridge is planned as an optional Home Assistant integration for bringing Mealie data into useful kitchen automations. It is a separate project from Atelier Cards: Home Assistant is required for the bridge, but not for the cards.
 

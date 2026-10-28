@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" role="img" aria-labelledby="title">
+  <title id="title">Mealie Atelier Bridge — connect recipes with your kitchen</title>
+  <rect width="1280" height="640" fill="#F6EDDD"/>
+  <image href="mealie-atelier.svg" x="94" y="82" width="58" height="58"/>
+  <text x="174" y="119" fill="#302632" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" letter-spacing="3.2">MEALIE ATELIER</text>
+  <text x="96" y="290" fill="#302632" font-family="Georgia, 'Times New Roman', serif" font-size="108" font-weight="700" letter-spacing="-3">Bridge</text>
+  <path d="M101 321h94" stroke="#D99A36" stroke-width="6" stroke-linecap="round"/>
+  <text x="100" y="385" fill="#302632" font-family="Arial, Helvetica, sans-serif" font-size="28">Mealie, connected</text>
+  <text x="100" y="425" fill="#302632" font-family="Arial, Helvetica, sans-serif" font-size="28">to your kitchen.</text>
+  <text x="100" y="521" fill="#776D79" font-family="Arial, Helvetica, sans-serif" font-size="14" letter-spacing="1.9">HOME ASSISTANT  ·  INTEGRATIONS  ·  SYNC</text>
+  <rect x="640" width="640" height="640" fill="#302632"/>
+  <image href="mealie-atelier-bridge-icon-512.png" x="744" y="65" width="432" height="432"/>
+</svg>

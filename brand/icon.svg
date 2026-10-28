@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title">
+  <title id="title">Mealie Atelier Bridge app icon — pasta connects a recipe and a kitchen</title>
+  <defs>
+    <clipPath id="icon-tile"><rect x="24" y="24" width="976" height="976" rx="224"/></clipPath>
+    <clipPath id="recipe-photo"><circle cx="298" cy="502" r="160"/></clipPath>
+  </defs>
+  <g clip-path="url(#icon-tile)">
+    <rect width="1024" height="1024" fill="#35262f"/>
+    <circle cx="298" cy="502" r="196" fill="#f5ead4"/>
+    <image href="photographer-davide-ragusa-handmade-pasta.jpg" x="138" y="342" width="320" height="320" preserveAspectRatio="xMidYMid slice" clip-path="url(#recipe-photo)"/>
+    <circle cx="298" cy="502" r="160" fill="none" stroke="#fff8e9" stroke-width="10"/>
+    <path d="M456 489c71-101 142-103 211-12 47 62 83 88 142 61" fill="none" stroke="#e3a94e" stroke-width="52" stroke-linecap="round"/>
+    <path d="M464 480c63-75 121-79 179-5" fill="none" stroke="#fff0cc" stroke-width="11" stroke-linecap="round"/>
+    <path d="M729 507l73-64 73 64v89H729v-89Z" fill="#f5ead4"/>
+    <path d="M764 596v-55h35v55" fill="none" stroke="#35262f" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="889" cy="617" r="15" fill="#c9503d"/>
+  </g>
+</svg>
