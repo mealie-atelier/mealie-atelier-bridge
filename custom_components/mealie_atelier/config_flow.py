@@ -150,6 +150,10 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except Exception as error:  # noqa: BLE001
                 errors["base"] = _error_key(error)
             else:
+                # The unique_id is "<url>:<account id>". A new URL is fine, a different Mealie
+                # account is not: studio data and timers are stored per entry and would leak.
+                if str(account["id"]) != str(entry.unique_id).rsplit(":", 1)[-1]:
+                    return self.async_abort(reason="wrong_account")
                 unique_id = _unique_id(client, account)
                 if unique_id != entry.unique_id and any(
                     other.unique_id == unique_id for other in self._async_current_entries()

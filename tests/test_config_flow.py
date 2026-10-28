@@ -147,6 +147,33 @@ async def test_reconfigure_success(hass):
     assert entry.unique_id == f"{new_url}:user-1"
 
 
+async def test_reauth_rejects_other_account(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    result = await entry.start_reauth_flow(hass)
+    with patch(CHECK, return_value={"id": "user-2", "username": "guest"}):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_API_TOKEN: "foreign"}
+        )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "wrong_account"
+    assert entry.data[CONF_API_TOKEN] == "old"
+
+
+async def test_reconfigure_rejects_other_account(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    result = await entry.start_reconfigure_flow(hass)
+    with patch(CHECK, return_value={"id": "user-2", "username": "guest"}):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], _input(token="foreign")
+        )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "wrong_account"
+    assert entry.data[CONF_API_TOKEN] == "old"
+    assert entry.unique_id == f"{URL}:user-1"
+
+
 async def test_options_flow_save(hass):
     entry = _entry()
     entry.add_to_hass(hass)

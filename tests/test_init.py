@@ -53,6 +53,8 @@ async def test_setup_with_rejected_token_requires_reauth(
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
     assert "refused access" in (mock_config_entry.reason or "")
     assert not hasattr(mock_config_entry, "runtime_data")
+    flows = hass.config_entries.flow.async_progress()
+    assert any(flow["context"]["source"] == "reauth" for flow in flows)
 
 
 async def test_setup_retries_when_mealie_is_unreachable(
