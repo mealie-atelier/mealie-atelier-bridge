@@ -91,6 +91,12 @@ def _valid(data: Any) -> bool:
 _PRUNABLE = ("completed", "checking", "conflict")
 
 
+def _cap_prunable(record: dict[str, Any]) -> bool:
+    if record["state"] == "completed":
+        return record["operation"]["action"] != "shopping_add"
+    return record["state"] in _PRUNABLE
+
+
 def prune(data: dict[str, dict[str, Any]], now: float, keep: str | None = None) -> None:
     """Drop prunable records older than 30 days, then the oldest ones over the cap.
 
@@ -104,9 +110,10 @@ def prune(data: dict[str, dict[str, Any]], now: float, keep: str | None = None) 
             del data[key]
     overflow = len(data) - OFFLINE_RECORD_LIMIT
     if overflow > 0:
-        # Completed records go first, then the oldest re-checkable toggles.
+        # Completed toggles go first, then the oldest re-checkable toggles. A completed add only
+        # expires by age: its answer may have been lost, and a replay must still find it.
         prunable = sorted(
-            (key for key, record in data.items() if record["state"] in _PRUNABLE and key != keep),
+            (key for key, record in data.items() if key != keep and _cap_prunable(record)),
             key=lambda key: (data[key]["state"] != "completed", data[key]["updated_at"]),
         )
         for key in prunable[:overflow]:

@@ -274,9 +274,9 @@ async def test_operation_id_reuse_with_other_content_is_refused(ledger, client):
 # Pruning, cap, damaged store
 
 
-def record(state="completed", age_days=0.0, now=None) -> dict[str, Any]:
+def record(state="completed", age_days=0.0, now=None, operation=None) -> dict[str, Any]:
     return {
-        "operation": add(),
+        "operation": operation or toggle(),
         "state": state,
         "updated_at": (now or time.time()) - age_days * DAY,
         "result": {"ok": True},
@@ -302,13 +302,14 @@ async def test_old_completed_records_are_pruned_on_each_call(ledger, hass_storag
 def test_cap_drops_oldest_completed_first_and_keeps_open_records():
     now = time.time()
     data = {f"c{i}": record(age_days=i / 1000, now=now) for i in range(2000)}
+    data["added"] = record(age_days=20, now=now, operation=add())
     data["open"] = record("uncertain", age_days=20, now=now)
     data["conflict"] = record("conflict", age_days=20, now=now)
     prune(data, now)
     assert len(data) == 2000
-    assert "open" in data and "conflict" in data
-    # The two oldest completed (largest age) are gone.
-    assert "c1999" not in data and "c1998" not in data and "c1997" in data
+    assert "open" in data and "conflict" in data and "added" in data
+    # The three oldest completed toggles are gone; a completed add only ages out.
+    assert "c1999" not in data and "c1997" not in data and "c1996" in data
 
 
 def test_cap_drops_old_toggles_after_completed_but_never_uncertain_adds():
@@ -339,6 +340,16 @@ async def test_a_full_ledger_still_keeps_the_record_of_the_operation_in_hand(
     assert stored(hass_storage)[uid(7)]["state"] == "uncertain"
     # The same operation again must not post a second time.
     assert await code_of(ledger.process(add(7))) == "offline_add_uncertain"
+    assert client.mutate.await_count == 1
+
+
+async def test_a_full_ledger_answers_a_replayed_add_without_posting_again(ledger, client):
+    ledger.data.update({f"u{i}": record("uncertain", operation=add()) for i in range(2000)})
+    first = await ledger.process(add(8))
+    await ledger.process(toggle(9))
+    # The answer to the add was lost; the card sends it again after another device wrote.
+    again = await ledger.process(add(8))
+    assert again == {**first, "replayed": True}
     assert client.mutate.await_count == 1
 
 
