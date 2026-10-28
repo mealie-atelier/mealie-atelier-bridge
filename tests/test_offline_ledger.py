@@ -474,3 +474,11 @@ async def test_removing_the_entry_deletes_the_ledger_file(
     await hass.config_entries.async_remove(wired.entry_id)
     await hass.async_block_till_done()
     assert KEY not in hass_storage
+
+
+def test_cap_tolerates_a_stored_operation_without_action():
+    now = time.time()
+    data = {f"u{i}": record("uncertain", now=now, operation=add()) for i in range(2000)}
+    data["odd"] = record(now=now, operation={"payload": {}})
+    prune(data, now)
+    assert "odd" not in data and len(data) == 2000

@@ -93,7 +93,7 @@ _PRUNABLE = ("completed", "checking", "conflict")
 
 def _cap_prunable(record: dict[str, Any]) -> bool:
     if record["state"] == "completed":
-        return record["operation"]["action"] != "shopping_add"
+        return record["operation"].get("action") != "shopping_add"
     return record["state"] in _PRUNABLE
 
 
