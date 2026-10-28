@@ -78,6 +78,8 @@ def sign_in(page: Page) -> None:
 def settle(page: Page) -> None:
     """Wait until the card shows content and every visible photo has decoded."""
     page.locator("mealie-atelier-card .view-stage").first.wait_for(timeout=60_000)
+    # Home Assistant's launch screen can still cover a freshly loaded dashboard.
+    page.wait_for_function("!document.getElementById('ha-launch-screen')", timeout=60_000)
     page.wait_for_load_state("networkidle")
     for img in page.locator("mealie-atelier-card img >> visible=true").all():
         img.evaluate("img => img.decode().catch(() => null)")

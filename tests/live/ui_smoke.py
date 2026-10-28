@@ -4,7 +4,7 @@ Usage: uv run --with playwright python tests/live/ui_smoke.py [ha-url] [out-dir]
 
 Registers the bundle as a Lovelace module resource at the Marketplace plugin path, creates a
 dashboard with the main card, signs in as the rig user and checks that seeded recipes render
-without console errors. Saves light and dark screenshots to out-dir (default: state/screens).
+without console errors and that the recipe dialog opens in the top layer. Saves light and dark screenshots to out-dir (default: state/screens).
 """
 
 from __future__ import annotations
@@ -27,6 +27,11 @@ WHOLE_PHOTO = """async img => {
   const body = new Uint8Array(await (await fetch(img.src)).arrayBuffer());
   const riff = new DataView(body.buffer).getUint32(4, true);
   return img.naturalWidth > 0 && body.length === riff + 8;
+}"""
+
+DIALOG_ON_TOP = """el => {
+  const box = el.querySelector('[role="dialog"]').getBoundingClientRect();
+  return el.matches(':popover-open') && box.left >= 0 && box.right <= innerWidth;
 }"""
 
 
@@ -109,6 +114,14 @@ def main() -> None:
                 if not page.evaluate("window.__atelierSmoke === true"):
                     raise SystemExit(f"FAIL the page reloaded during the photo check ({scheme})")
                 print(f"ok   recipes render ({scheme})")
+                # The recipe dialog sits in the top layer, so Home Assistant's sidebar never covers it.
+                page.locator(".recipe-tile >> visible=true").first.click()
+                page.locator("[data-action='cook-start'] >> visible=true").wait_for()
+                raised = page.locator(".modal-backdrop").evaluate(DIALOG_ON_TOP)
+                if not raised:
+                    raise SystemExit(f"FAIL the recipe dialog is covered or clipped ({scheme})")
+                page.screenshot(path=str(OUT / f"recipe-{scheme}.png"))
+                print(f"ok   recipe dialog opens above the sidebar ({scheme})")
                 context.close()
         finally:
             browser.close()

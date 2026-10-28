@@ -81,6 +81,26 @@ def seed_recipe(recipe_data: dict, existing: dict[str, str]) -> str:
     return slug
 
 
+SHOPPING = {
+    "de": ["Milch", "Eier", "Basilikum", "Zitronen", "Parmesan", "Haferflocken"],
+    "en": ["Milk", "Eggs", "Basil", "Lemons", "Parmesan", "Rolled oats"],
+}
+
+
+def seed_shopping() -> None:
+    """Fictional items on the first list; leftovers of the live smoke are removed."""
+    list_id = call("GET", "/api/households/shopping/lists")["items"][0]["id"]
+    items = call("GET", "/api/households/shopping/items?perPage=500")["items"]
+    for item in items:
+        if str(item.get("note") or "").startswith("Live smoke"):
+            call("DELETE", f"/api/households/shopping/items/{item['id']}")
+    notes = {item.get("note") for item in items}
+    for index, note in enumerate(SHOPPING.get(LANG, SHOPPING["en"])):
+        if note not in notes:
+            item = {"shoppingListId": list_id, "note": note, "quantity": 1, "checked": index == 5}
+            call("POST", "/api/households/shopping/items", item)
+
+
 def main() -> None:
     catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
     existing = {r["name"]: r["slug"] for r in call("GET", "/api/recipes?perPage=200")["items"]}
@@ -91,6 +111,7 @@ def main() -> None:
     if not call("GET", "/api/households/shopping/lists")["items"]:
         name = "Wocheneinkauf" if LANG == "de" else "Weekly shop"
         call("POST", "/api/households/shopping/lists", {"name": name})
+    seed_shopping()
     recipes = {r["slug"]: r for r in call("GET", "/api/recipes?perPage=200")["items"]}
     today = date.today()
     planned = {
