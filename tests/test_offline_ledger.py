@@ -329,6 +329,19 @@ def test_cap_never_drops_records_that_need_attention():
     assert len(data) == 2005
 
 
+async def test_a_full_ledger_still_keeps_the_record_of_the_operation_in_hand(
+    ledger, client, hass_storage
+):
+    ledger.data.update({f"u{i}": record("uncertain") for i in range(2000)})
+    client.mutate.side_effect = MealieError("connection reset")
+    with pytest.raises(MealieError):
+        await ledger.process(add(7))
+    assert stored(hass_storage)[uid(7)]["state"] == "uncertain"
+    # The same operation again must not post a second time.
+    assert await code_of(ledger.process(add(7))) == "offline_add_uncertain"
+    assert client.mutate.await_count == 1
+
+
 async def test_damaged_store_starts_empty(hass, client, hass_storage):
     hass_storage[KEY] = {"version": 1, "key": KEY, "data": {"x": "garbage"}}
     ledger = await OfflineLedger.async_load(hass, ENTRY_ID, client)

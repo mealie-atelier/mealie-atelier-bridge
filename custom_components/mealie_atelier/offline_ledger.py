@@ -91,16 +91,22 @@ def _valid(data: Any) -> bool:
 _PRUNABLE = ("completed", "checking", "conflict")
 
 
-def prune(data: dict[str, dict[str, Any]], now: float) -> None:
-    """Drop prunable records older than 30 days, then the oldest ones over the cap."""
+def prune(data: dict[str, dict[str, Any]], now: float, keep: str | None = None) -> None:
+    """Drop prunable records older than 30 days, then the oldest ones over the cap.
+
+    `keep` is the operation being processed: its record must survive, or a lost answer could
+    let the same add reach Mealie twice.
+    """
     for key, record in list(data.items()):
+        if key == keep:
+            continue
         if record["state"] in _PRUNABLE and record["updated_at"] < now - _MAX_AGE_SECONDS:
             del data[key]
     overflow = len(data) - OFFLINE_RECORD_LIMIT
     if overflow > 0:
         # Completed records go first, then the oldest re-checkable toggles.
         prunable = sorted(
-            (key for key, record in data.items() if record["state"] in _PRUNABLE),
+            (key for key, record in data.items() if record["state"] in _PRUNABLE and key != keep),
             key=lambda key: (data[key]["state"] != "completed", data[key]["updated_at"]),
         )
         for key in prunable[:overflow]:
@@ -172,7 +178,7 @@ class OfflineLedger:
                 "state": "checking",
                 "updated_at": time.time(),
             }
-            prune(data, time.time())
+            prune(data, time.time(), keep=op["id"])
             await self._save()
 
         async def set_state(state: str, **fields: Any) -> None:
