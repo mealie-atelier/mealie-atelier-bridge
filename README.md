@@ -27,7 +27,9 @@ There is no integration to install yet. A beginner-friendly setup guide and trou
 
 ## Feedback
 
-[Open an issue](https://github.com/mealie-atelier/mealie-atelier-bridge/issues/new) to discuss this project or report a repository problem.
+- [Ask a question or share an idea](https://github.com/mealie-atelier/mealie-atelier-bridge/discussions)
+- [Report a reproducible repository issue](https://github.com/mealie-atelier/mealie-atelier-bridge/issues/new)
+- [Report a security vulnerability privately](https://github.com/mealie-atelier/mealie-atelier-bridge/security/advisories/new)
 
 ## License
 
