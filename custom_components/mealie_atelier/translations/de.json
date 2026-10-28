@@ -167,6 +167,18 @@
     },
     "sync_not_supported": {
       "message": "Der Einkaufs-Sync braucht Home Assistant mit der Mealie Atelier Bridge."
+    },
+    "invalid_request": {
+      "message": "Die Anfrage war unvollständig oder ungültig. Lade die Seite neu und versuche es erneut."
+    },
+    "mealie_auth": {
+      "message": "Mealie hat den API-Token abgelehnt. Erstelle in Mealie einen neuen Token und authentifiziere die Integration neu."
+    },
+    "mealie_error": {
+      "message": "Mealie ist nicht erreichbar oder hat einen Fehler gemeldet. Prüfe, ob Mealie läuft, und versuche es erneut."
+    },
+    "conflict": {
+      "message": "Jemand anderes hat das inzwischen geändert. Lade neu und versuche es erneut."
     }
   }
 }

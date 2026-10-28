@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import MealieAuthError, MealieError, safe_slug
+from .api import MealieAuthError, MealieError, recipe_update_changes, safe_slug
 from .const import (
     ADMIN_ACTIONS,
     CONF_AI_KEY,
@@ -265,6 +265,14 @@ async def ws_mutation(hass, connection, msg):
     if action == "recipe_update" and "ingredients" in msg["payload"]:
         send_atelier_error(connection, msg, structured_editor_required())
         return
+
+    if action == "recipe_update":
+        # Invalid payloads fail before a snapshot, so they never rotate out real restore points.
+        try:
+            recipe_update_changes(msg["payload"])
+        except ValueError as exc:
+            _fail(connection, msg, exc)
+            return
 
     async def run(client):
         if action == "recipe_update":

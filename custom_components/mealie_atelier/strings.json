@@ -167,6 +167,18 @@
     },
     "sync_not_supported": {
       "message": "Shopping sync needs Home Assistant with the Mealie Atelier Bridge."
+    },
+    "invalid_request": {
+      "message": "The request was incomplete or invalid. Reload the page and try again."
+    },
+    "mealie_auth": {
+      "message": "Mealie refused the API token. Create a new token in Mealie and reauthenticate the integration."
+    },
+    "mealie_error": {
+      "message": "Mealie is unreachable or returned an error. Check that Mealie is running and try again."
+    },
+    "conflict": {
+      "message": "Someone else changed this in the meantime. Reload and try again."
     }
   }
 }

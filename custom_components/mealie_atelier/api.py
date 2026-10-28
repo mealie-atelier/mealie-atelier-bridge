@@ -492,36 +492,7 @@ class MealieClient:
                 "POST", "/api/recipes", data={"name": safe_text(payload.get("name"), 120)}
             )
         if action == "recipe_update":
-            slug = safe_slug(payload.get("slug"))
-            changes = {}
-            if "name" in payload:
-                changes["name"] = safe_text(payload["name"], 120)
-            if "description" in payload:
-                if (
-                    not isinstance(payload["description"], str)
-                    or len(payload["description"]) > 2000
-                ):
-                    raise ValueError("Description too long")
-                changes["description"] = payload["description"]
-            if "servings" in payload:
-                servings = payload["servings"]
-                if (
-                    isinstance(servings, bool)
-                    or not isinstance(servings, int)
-                    or not 1 <= servings <= 100
-                ):
-                    raise ValueError("Servings must be a whole number from 1 to 100")
-                changes["recipeServings"] = servings
-            if "instructions" in payload:
-                lines = payload["instructions"]
-                if not isinstance(lines, list) or len(lines) > 60:
-                    raise ValueError("Too many cooking steps")
-                changes["recipeInstructions"] = [{"text": safe_text(line, 2000)} for line in lines]
-            if "ingredients" in payload:
-                # Plain text would destroy linked foods and units; the structured editor owns this.
-                raise structured_editor_required()
-            if not changes:
-                raise ValueError("Nothing to update")
+            slug, changes = recipe_update_changes(payload)
             return await self.request("PATCH", f"/api/recipes/{slug}", data=changes)
         if action == "recipe_import":
             recipe_url = safe_text(payload.get("url"), 2000)
@@ -589,3 +560,31 @@ class MealieClient:
             data={**current, "checked": checked},
         )
         return result if isinstance(result, dict) else {**current, "checked": checked}
+
+
+def recipe_update_changes(payload: dict) -> tuple[str, dict]:
+    """Validate a recipe_update payload and return the slug and the Mealie PATCH body."""
+    slug = safe_slug(payload.get("slug"))
+    changes = {}
+    if "name" in payload:
+        changes["name"] = safe_text(payload["name"], 120)
+    if "description" in payload:
+        if not isinstance(payload["description"], str) or len(payload["description"]) > 2000:
+            raise ValueError("Description too long")
+        changes["description"] = payload["description"]
+    if "servings" in payload:
+        servings = payload["servings"]
+        if isinstance(servings, bool) or not isinstance(servings, int) or not 1 <= servings <= 100:
+            raise ValueError("Servings must be a whole number from 1 to 100")
+        changes["recipeServings"] = servings
+    if "instructions" in payload:
+        lines = payload["instructions"]
+        if not isinstance(lines, list) or len(lines) > 60:
+            raise ValueError("Too many cooking steps")
+        changes["recipeInstructions"] = [{"text": safe_text(line, 2000)} for line in lines]
+    if "ingredients" in payload:
+        # Plain text would destroy linked foods and units; the structured editor owns this.
+        raise structured_editor_required()
+    if not changes:
+        raise ValueError("Nothing to update")
+    return slug, changes

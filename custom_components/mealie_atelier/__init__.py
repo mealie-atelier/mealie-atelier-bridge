@@ -22,6 +22,7 @@ from .recipe_editing import async_register_commands as async_register_editing_co
 from .studio import initial as studio_initial
 from .uploads import UploadSessions
 from .shopping_sync import SyncManager
+from .shopping_sync.store import SyncStore
 from .shopping_sync import async_register_commands as async_register_sync_commands
 from .websocket import async_register_commands
 
@@ -60,6 +61,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry
             translation_key="cannot_connect",
             translation_placeholders={"error": str(exc)},
         ) from exc
+    # Load everything that can fail before starting background work, so a failed setup
+    # leaves no timer or sync task running.
+    backups = await RecipeBackupStore.async_load(hass, entry.entry_id)
     store = Store(hass, 1, f"mealie_atelier_studio_{entry.entry_id}")
     state = await store.async_load() or studio_initial()
     manager = TimerManager(hass, entry.entry_id, entry.options.get(CONF_TIMER_NOTIFY_SERVICE, ""))
@@ -74,7 +78,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry
         client=client,
         studio=StudioContext(store=store, state=state, lock=asyncio.Lock()),
         alarms=manager,
-        backups=await RecipeBackupStore.async_load(hass, entry.entry_id),
+        backups=backups,
         uploads=UploadSessions(),
         sync=sync,
     )
@@ -89,6 +93,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntr
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry) -> None:
-    """Delete the recipe backups (store and photo files) together with the entry."""
+    """Delete recipe backups (store and photo files) and the sync outbox with the entry."""
     store = await RecipeBackupStore.async_load(hass, entry.entry_id)
     await store.async_remove()
+    # The outbox holds shopping item titles; nothing of a removed entry may stay behind.
+    await SyncStore(hass, entry.entry_id).async_remove()

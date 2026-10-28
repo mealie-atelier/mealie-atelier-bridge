@@ -56,15 +56,45 @@ def test_config_schema_is_config_entry_only(caplog: pytest.LogCaptureFixture) ->
     assert "does not support YAML setup" in caplog.text
 
 
+# Contract 0.3: every code the Bridge sends; sync_not_supported only exists in the web app.
+CONTRACT_ERROR_CODES = {
+    "not_configured",
+    "invalid_request",
+    "mealie_auth",
+    "mealie_error",
+    "read_only",
+    "unauthorized",
+    "write_not_permitted",
+    "conflict",
+    "recipe_changed",
+    "disabled",
+    "use_structured_editor",
+    "write_unverified",
+    "backup_failed",
+    "backup_not_found",
+    "upload_invalid",
+    "upload_expired",
+    "upload_busy",
+    "step_not_found",
+    "sync_rule_not_found",
+    "sync_destination_unsupported",
+    "sync_source_taken",
+    "sync_too_many_rules",
+    "sync_not_activated",
+}
+
+
 @pytest.mark.parametrize("name", ["strings.json", "translations/en.json", "translations/de.json"])
 def test_every_translation_key_used_in_code_has_an_exception_message(name: str) -> None:
     used: set[str] = set()
-    for source in INTEGRATION.glob("*.py"):
+    for source in INTEGRATION.rglob("*.py"):
         text = source.read_text()
         used |= set(re.findall(r'translation_key="(\w+)"', text))
         used |= set(re.findall(r'(?:_translated|_invalid)\("(\w+)"\)', text))
     exceptions = json.loads((INTEGRATION / name).read_text())["exceptions"]
 
     assert used
+    # Helpers pass the key as a variable, so the shared contract codes are listed explicitly.
+    used |= CONTRACT_ERROR_CODES
     assert used <= set(exceptions)
     assert all(exceptions[key]["message"] for key in used)

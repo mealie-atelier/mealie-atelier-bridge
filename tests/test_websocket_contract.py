@@ -328,3 +328,36 @@ async def test_write_grants_gate_mutate_and_show_in_status(
     )
     assert response["error"]["code"] == "write_not_permitted"
     mutate.assert_not_called()
+
+
+async def test_invalid_recipe_update_takes_no_backup(
+    hass: HomeAssistant, setup_integration, hass_ws_client: WebSocketGenerator
+) -> None:
+    """Rejected payloads must not rotate real restore points out of the backup slots."""
+    snapshot = AsyncMock()
+    setup_integration.runtime_data.backups.async_snapshot = snapshot
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id(
+        {
+            "type": "mealie_atelier/mutate",
+            "action": "recipe_update",
+            "payload": {"slug": "gnocchi", "servings": 0},
+        }
+    )
+    response = await client.receive_json()
+    assert response["error"]["code"] == "invalid_request"
+    snapshot.assert_not_awaited()
+
+
+async def test_removing_the_entry_deletes_sync_and_backup_stores(
+    hass: HomeAssistant, setup_integration, hass_storage: dict
+) -> None:
+    """The sync outbox holds shopping item titles; nothing of a removed entry may stay."""
+    entry_id = setup_integration.entry_id
+    keys = (f"mealie_atelier_sync_{entry_id}", f"mealie_atelier_recipe_backups_{entry_id}")
+    for key in keys:
+        hass_storage[key] = {"version": 1, "minor_version": 1, "key": key, "data": {}}
+    assert await hass.config_entries.async_remove(entry_id)
+    await hass.async_block_till_done()
+    for key in keys:
+        assert key not in hass_storage
