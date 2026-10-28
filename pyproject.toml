@@ -18,6 +18,9 @@ dev = [
 
 [tool.uv]
 package = false
+# Dev-only: Home Assistant pins an older Pillow with published advisories. The integration
+# does not ship or import Pillow; the tests do not depend on the pinned version.
+override-dependencies = ["pillow>=13.0.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
