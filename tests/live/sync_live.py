@@ -83,26 +83,26 @@ def count(titles: list[str], text: str) -> int:
 async def copy_rule(check: SyncCheck, tag: str) -> None:
     listed = mealie("POST", "/api/households/shopping/lists", {"name": f"{PREFIX} copy {tag}"})
     list_id = listed["id"]
-    notes = [f"{PREFIX} apples {tag}", f"{PREFIX} oats {tag}", f"{PREFIX} lemons {tag}"]
-    for note in notes:
-        mealie(
-            "POST",
-            "/api/households/shopping/items",
-            {"shoppingListId": list_id, "note": note, "quantity": 0, "checked": False},
-        )
-    # Already on the To-do list, so the first batch must skip it.
-    await check.todo("add_item", {"item": notes[1]})
-    draft = {
-        "name": f"{PREFIX} copy",
-        "source_list_id": list_id,
-        "destination_entity_id": TODO,
-        "mode": "copy",
-        "triggers": {"after_atelier_add": True, "watch": False},
-        "debounce_seconds": 5,
-        "duplicate_policy": "skip_exact",
-    }
     rule_id = None
     try:
+        notes = [f"{PREFIX} apples {tag}", f"{PREFIX} oats {tag}", f"{PREFIX} lemons {tag}"]
+        for note in notes:
+            mealie(
+                "POST",
+                "/api/households/shopping/items",
+                {"shoppingListId": list_id, "note": note, "quantity": 0, "checked": False},
+            )
+        # Already on the To-do list, so the first batch must skip it.
+        await check.todo("add_item", {"item": notes[1]})
+        draft = {
+            "name": f"{PREFIX} copy",
+            "source_list_id": list_id,
+            "destination_entity_id": TODO,
+            "mode": "copy",
+            "triggers": {"after_atelier_add": True, "watch": False},
+            "debounce_seconds": 5,
+            "duplicate_policy": "skip_exact",
+        }
         preview = await check.ok(
             "sync_preview (draft)", {"type": "mealie_atelier/sync_preview", "rule": draft}
         )
@@ -165,34 +165,36 @@ async def copy_rule(check: SyncCheck, tag: str) -> None:
         )
         source = mealie_items(list_id)
         check.check(
-            "copy mode leaves Mealie unchecked", not any(item["checked"] for item in source)
+            "copy mode leaves Mealie unchecked",
+            len(source) == 4 and not any(item["checked"] for item in source),
         )
     finally:
+        # The list goes first, so a failed rule delete cannot leave it behind.
+        mealie("DELETE", f"/api/households/shopping/lists/{list_id}")
         if rule_id:
             await check.ok(
                 "sync_rule_delete (copy)",
                 {"type": "mealie_atelier/sync_rule_delete", "rule_id": rule_id},
             )
-        mealie("DELETE", f"/api/households/shopping/lists/{list_id}")
 
 
 async def move_rule(check: SyncCheck, tag: str) -> None:
     listed = mealie("POST", "/api/households/shopping/lists", {"name": f"{PREFIX} move {tag}"})
     list_id = listed["id"]
-    note = f"{PREFIX} flour {tag}"
-    mealie(
-        "POST",
-        "/api/households/shopping/items",
-        {"shoppingListId": list_id, "note": note, "quantity": 0, "checked": False},
-    )
-    draft = {
-        "source_list_id": list_id,
-        "destination_entity_id": TODO,
-        "mode": "move",
-        "triggers": {"after_atelier_add": False, "watch": False},
-    }
     rule_id = None
     try:
+        note = f"{PREFIX} flour {tag}"
+        mealie(
+            "POST",
+            "/api/households/shopping/items",
+            {"shoppingListId": list_id, "note": note, "quantity": 0, "checked": False},
+        )
+        draft = {
+            "source_list_id": list_id,
+            "destination_entity_id": TODO,
+            "mode": "move",
+            "triggers": {"after_atelier_add": False, "watch": False},
+        }
         saved = await check.ok(
             "sync_rule_save (move)", {"type": "mealie_atelier/sync_rule_save", "rule": draft}
         )
@@ -205,16 +207,18 @@ async def move_rule(check: SyncCheck, tag: str) -> None:
         check.check("item arrived once", count(await check.todo_titles(), note) == 1)
         source = mealie_items(list_id)
         check.check(
-            "move mode checked the item off in Mealie", all(item["checked"] for item in source)
+            "move mode checked the item off in Mealie",
+            len(source) == 1 and all(item["checked"] for item in source),
         )
         await check.ok("sync_records", {"type": "mealie_atelier/sync_records", "rule_id": rule_id})
     finally:
+        # The list goes first, so a failed rule delete cannot leave it behind.
+        mealie("DELETE", f"/api/households/shopping/lists/{list_id}")
         if rule_id:
             await check.ok(
                 "sync_rule_delete (move)",
                 {"type": "mealie_atelier/sync_rule_delete", "rule_id": rule_id},
             )
-        mealie("DELETE", f"/api/households/shopping/lists/{list_id}")
 
 
 async def cleanup(check: SyncCheck) -> None:
