@@ -5,3 +5,5 @@
 - 2026-10-28 — The owner requested manual repository checks and releases with no GitHub Actions or automated dependency-update PRs. Workflow and Dependabot files were removed and repository Actions/automatic security updates disabled.
 
 - 2026-10-28 — Replaced the rounded Bridge icon and social artwork with the square-edged pasta identity; synchronized the repository, HACS integration icon, and logo from the self-contained SVG master.
+
+- 2026-10-28 — Added a Bridge FAQ and linked the repository to the Cards repository's canonical open-work index; clarified that smart shopping sync remains planned.

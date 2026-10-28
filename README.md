@@ -13,6 +13,13 @@ An optional Home Assistant custom integration that connects Mealie to Mealie Ate
 
 The Bridge currently does **not** implement the planned Mealie-to-Home-Assistant To-do/Bring shopping sync. The safety and implementation requirements are tracked in [`docs/SMART_SHOPPING_SYNC.md`](docs/SMART_SHOPPING_SYNC.md).
 
+## Project status and help
+
+- [Open work and release gates](https://github.com/mealie-atelier/mealie-atelier-cards/blob/main/docs/OPEN_TODOS.md)
+- [Bridge frequently asked questions](docs/FAQ.md)
+- [Setup and troubleshooting discussions](https://github.com/orgs/mealie-atelier/discussions)
+- [Cards and standalone app](https://github.com/mealie-atelier/mealie-atelier-cards)
+
 ## Install
 
 For guided setup and the read-only alternative, use the [Cards setup guide](https://github.com/mealie-atelier/mealie-atelier-cards/blob/main/docs/INSTALLATION_0.9.5.md). Install this Bridge through HACS as an integration, then add it from **Settings → Devices & services**. Enter the direct Mealie base URL reachable from Home Assistant and an API token. Install the Cards package separately as a dashboard plugin.
