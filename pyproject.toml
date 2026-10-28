@@ -1,6 +1,6 @@
 [project]
 name = "mealie-atelier-bridge"
-version = "0.9.5"
+version = "0.10.0"
 description = "Optional Home Assistant integration for Mealie Atelier: secure API bridge and kitchen workflows."
 readme = "README.md"
 license = "MIT"

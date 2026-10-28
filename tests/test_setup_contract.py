@@ -48,6 +48,15 @@ def test_manifest_follows_hassfest_conventions() -> None:
     assert manifest["version"]
 
 
+def test_version_is_the_same_everywhere() -> None:
+    from custom_components.mealie_atelier.const import VERSION
+
+    manifest = json.loads((INTEGRATION / "manifest.json").read_text())
+    project = re.search(r'^version = "([^"]+)"', (ROOT / "pyproject.toml").read_text(), re.M)
+    assert manifest["version"] == VERSION
+    assert project and project.group(1) == VERSION
+
+
 def test_config_schema_is_config_entry_only(caplog: pytest.LogCaptureFixture) -> None:
     from custom_components.mealie_atelier import CONFIG_SCHEMA
 

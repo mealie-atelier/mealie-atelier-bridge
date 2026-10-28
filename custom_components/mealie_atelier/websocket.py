@@ -13,6 +13,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import MealieAuthError, MealieError, recipe_update_changes, safe_slug
 from .const import (
+    VERSION,
     ADMIN_ACTIONS,
     CONF_AI_KEY,
     CONF_EXPERIMENTAL_INGREDIENTS,
@@ -150,7 +151,7 @@ async def ws_status(hass, connection, msg):
                 "can_edit_ingredients": admin and structured,
             }
         )
-    connection.send_result(msg["id"], {"entries": entries, "version": "0.9.5"})
+    connection.send_result(msg["id"], {"entries": entries, "version": VERSION})
 
 
 @websocket_api.websocket_command(
