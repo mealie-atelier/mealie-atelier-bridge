@@ -1,14 +1,15 @@
 """Live acceptance smoke test of the Bridge against the disposable rig (fictional data only).
 
 Usage: python3 tests/live/smoke.py [ha-url] [token-file]
-Runs read commands, a recipe edit with backup and restore, the structured ingredient read and the
-shopping sync read path. Exits non-zero on the first failed check and leaves the recipe as it was.
+Runs read commands, a recipe edit with backup and restore, the structured ingredient read, the
+offline replay ledger (exactly once, reuse and conflict refusals) and the shopping sync read path. Exits non-zero on the first failed check and leaves the recipe as it was.
 """
 
 from __future__ import annotations
 
 import asyncio
 import sys
+import uuid
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -43,6 +44,42 @@ class Smoke:
             raise SystemExit(f"FAIL {label}")
         self.passed += 1
         print(f"ok   {label}")
+
+
+def replay(action: str, payload: dict, op_id: str | None = None) -> dict:
+    operation = {"id": op_id or str(uuid.uuid4()), "action": action, "payload": payload}
+    return {"type": "mealie_atelier/offline_replay", "operation": operation}
+
+
+async def offline_replay(smoke: Smoke) -> None:
+    shopping = await smoke.ok("shopping before replay", {"type": "mealie_atelier/shopping"})
+    list_id = shopping["lists"][0]["id"]
+    note = f"Live smoke offline {uuid.uuid4().hex[:8]}"
+    add = replay("shopping_add", {"list_id": list_id, "note": note})
+    await smoke.ok("offline_replay: queued add", add)
+    again = await smoke.ok("offline_replay: same add again", add)
+    smoke.check("offline_replay: repeat is answered from the ledger", again.get("replayed"))
+    shopping = await smoke.ok("shopping after replay", {"type": "mealie_atelier/shopping"})
+    added = [item for item in shopping["items"] if item.get("note") == note]
+    smoke.check("offline_replay: the add reached Mealie exactly once", len(added) == 1)
+    reused = add["operation"] | {"payload": {"list_id": list_id, "note": f"{note} changed"}}
+    await smoke.refused(
+        "offline_replay: an op ID with new content",
+        {"type": "mealie_atelier/offline_replay", "operation": reused},
+        "offline_op_reused",
+    )
+    item_id = added[0]["id"]
+    await smoke.ok(
+        "offline_replay: queued tick",
+        replay("shopping_toggle", {"item_id": item_id, "checked": True, "expected_checked": False}),
+    )
+    await smoke.refused(
+        "offline_replay: a stale untick",
+        replay(
+            "shopping_toggle", {"item_id": item_id, "checked": False, "expected_checked": False}
+        ),
+        "offline_conflict",
+    )
 
 
 async def main() -> None:
@@ -114,6 +151,9 @@ async def main() -> None:
             },
             "use_structured_editor",
         )
+
+        smoke.check("status: offline queue advertised", entry["features"]["offline_queue"])
+        await offline_replay(smoke)
 
         await smoke.ok("sync_state", {"type": "mealie_atelier/sync_state"})
         await smoke.ok("sync_destinations", {"type": "mealie_atelier/sync_destinations"})

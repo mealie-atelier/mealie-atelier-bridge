@@ -22,6 +22,12 @@ OUT = Path(sys.argv[2]) if len(sys.argv) > 2 else HERE / "state" / "screens"
 RESOURCE = "/local/community/mealie-atelier-cards/mealie-atelier-cards.js"
 DASHBOARD = "atelier-live"
 CARD = {"type": "custom:mealie-atelier-card", "mode": "recipes"}
+WHOLE_PHOTO = """async img => {
+  try { await img.decode(); } catch { return false; }
+  const body = new Uint8Array(await (await fetch(img.src)).arrayBuffer());
+  const riff = new DataView(body.buffer).getUint32(4, true);
+  return img.naturalWidth > 0 && body.length === riff + 8;
+}"""
 
 
 async def prepare() -> None:
@@ -76,13 +82,32 @@ def main() -> None:
                 page.locator("input[name='username']").fill("atelier", timeout=30_000)
                 page.locator("input[name='password']").fill("atelier-test-only")
                 page.keyboard.press("Enter")
-                page.wait_for_url(f"**/{DASHBOARD}/0**", timeout=30_000)
+                # The auth callback loads the frontend once more; wait for the settled page.
+                page.wait_for_url(
+                    lambda url: url.endswith(f"/{DASHBOARD}/0") and "auth_callback" not in url,
+                    timeout=30_000,
+                )
+                page.wait_for_load_state("networkidle")
                 card = page.locator("mealie-atelier-card")
                 card.wait_for(state="attached", timeout=60_000)
                 # Seeded fictional recipe; the card renders in its shadow root.
-                page.get_by_text("Gnocchi", exact=False).first.wait_for(timeout=60_000)
-                page.wait_for_timeout(1500)
+                page.locator("text=Gnocchi >> visible=true").first.wait_for(timeout=60_000)
+                page.evaluate("window.__atelierSmoke = true")
+                photos = page.locator(".recipe-tile img >> visible=true")
+                photos.first.wait_for(timeout=30_000)
+                for index in range(photos.count()):
+                    photos.nth(index).scroll_into_view_if_needed()
+                    # A truncated WebP still decodes its size, so compare the body to its RIFF size.
+                    loaded = photos.nth(index).evaluate(WHOLE_PHOTO)
+                    if not loaded:
+                        raise SystemExit(f"FAIL recipe photo {index + 1} did not load ({scheme})")
+                page.evaluate("window.scrollTo(0, 0)")
+                page.locator("text=Gnocchi >> visible=true").first.scroll_into_view_if_needed()
+                page.wait_for_timeout(800)
+                print(f"ok   {photos.count()} recipe photos arrive whole ({scheme})")
                 page.screenshot(path=str(OUT / f"recipes-{scheme}.png"))
+                if not page.evaluate("window.__atelierSmoke === true"):
+                    raise SystemExit(f"FAIL the page reloaded during the photo check ({scheme})")
                 print(f"ok   recipes render ({scheme})")
                 context.close()
         finally:
