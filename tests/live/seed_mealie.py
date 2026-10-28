@@ -97,7 +97,7 @@ def seed_shopping() -> None:
     notes = {item.get("note") for item in items}
     for index, note in enumerate(SHOPPING.get(LANG, SHOPPING["en"])):
         if note not in notes:
-            item = {"shoppingListId": list_id, "note": note, "quantity": 1, "checked": index == 5}
+            item = {"shoppingListId": list_id, "note": note, "quantity": 0, "checked": index == 5}
             call("POST", "/api/households/shopping/items", item)
 
 

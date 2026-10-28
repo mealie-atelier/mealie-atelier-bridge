@@ -2,9 +2,10 @@
 
 Usage: uv run --with playwright python tests/live/capture_screens.py [out-dir] [language]
 
-Run ui_smoke.py first (it registers the module resource). Builds an `atelier-shots` dashboard with
-one panel view per card mode, signs in as the rig user and saves desktop and phone screenshots in
-light and dark: the main views, a recipe and cooking mode. Default out-dir: state/shots.
+Run ui_smoke.py first (it registers the module resource). Builds `atelier-shots-light` and
+`atelier-shots-dark` dashboards with one panel view per card mode, signs in as the rig user and
+saves desktop and phone screenshots in light and dark: the main views, a recipe and cooking mode.
+Default out-dir: state/shots.
 """
 
 from __future__ import annotations
@@ -22,51 +23,59 @@ OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "state" / "shots"
 LANGUAGE = sys.argv[2] if len(sys.argv) > 2 else "de"
 DASHBOARD = "atelier-shots"
 MODES = ["dashboard", "recipes", "mealplan", "shopping", "discover"]
+# View titles as a household would name them; they show as tabs in Home Assistant's header.
+TITLES = {
+    "de": ["Küche", "Rezepte", "Wochenplan", "Einkauf", "Kochinspo"],
+    "en": ["Kitchen", "Recipes", "Meal plan", "Shopping", "Cook ideas"],
+}
 DEVICES = {"desktop": {"width": 1440, "height": 960}, "phone": {"width": 390, "height": 844}}
 
 
 async def prepare() -> None:
-    """Idempotently create the screenshot dashboard: one panel view per mode and theme."""
+    """Idempotently create one screenshot dashboard per theme with a panel view per mode."""
+    titles = TITLES.get(LANGUAGE, TITLES["en"])
     async with HaSocket(BASE, read_token(str(HERE / "state" / "ha-token"))) as socket:
         _, dashboards = await socket.call({"type": "lovelace/dashboards/list"})
-        if not any(item["url_path"] == DASHBOARD for item in dashboards or []):
-            ok, error = await socket.call(
+        existing = {item["url_path"] for item in dashboards or []}
+        for theme in ("light", "dark"):
+            url_path = f"{DASHBOARD}-{theme}"
+            if url_path not in existing:
+                ok, error = await socket.call(
+                    {
+                        "type": "lovelace/dashboards/create",
+                        "url_path": url_path,
+                        "title": "Atelier",
+                        "mode": "storage",
+                        "show_in_sidebar": False,
+                    }
+                )
+                if not ok:
+                    raise SystemExit(f"dashboard: {error}")
+            views = [
                 {
-                    "type": "lovelace/dashboards/create",
-                    "url_path": DASHBOARD,
-                    "title": "Atelier Shots",
-                    "mode": "storage",
-                    "show_in_sidebar": False,
+                    "title": title,
+                    "path": mode,
+                    "panel": True,
+                    "cards": [
+                        {
+                            "type": "custom:mealie-atelier-card",
+                            "mode": mode,
+                            "theme": theme,
+                            "language": LANGUAGE,
+                        }
+                    ],
                 }
+                for mode, title in zip(MODES, titles, strict=True)
+            ]
+            ok, error = await socket.call(
+                {"type": "lovelace/config/save", "url_path": url_path, "config": {"views": views}}
             )
             if not ok:
-                raise SystemExit(f"dashboard: {error}")
-        views = [
-            {
-                "title": f"{mode} {theme}",
-                "path": f"{mode}-{theme}",
-                "panel": True,
-                "cards": [
-                    {
-                        "type": "custom:mealie-atelier-card",
-                        "mode": mode,
-                        "theme": theme,
-                        "language": LANGUAGE,
-                    }
-                ],
-            }
-            for mode in MODES
-            for theme in ("light", "dark")
-        ]
-        ok, error = await socket.call(
-            {"type": "lovelace/config/save", "url_path": DASHBOARD, "config": {"views": views}}
-        )
-        if not ok:
-            raise SystemExit(f"dashboard config: {error}")
+                raise SystemExit(f"dashboard config: {error}")
 
 
 def sign_in(page: Page) -> None:
-    page.goto(f"{BASE}/{DASHBOARD}/dashboard-light")
+    page.goto(f"{BASE}/{DASHBOARD}-light/dashboard")
     page.wait_for_url("**/auth/authorize**", timeout=30_000)
     page.locator("input[name='username']").fill("atelier", timeout=30_000)
     page.locator("input[name='password']").fill("atelier-test-only")
@@ -112,10 +121,10 @@ def main() -> None:
                     page = context.new_page()
                     sign_in(page)
                     for mode in MODES:
-                        page.goto(f"{BASE}/{DASHBOARD}/{mode}-{theme}")
+                        page.goto(f"{BASE}/{DASHBOARD}-{theme}/{mode}")
                         settle(page)
                         shoot(page, f"{device}-{theme}-{mode}")
-                    page.goto(f"{BASE}/{DASHBOARD}/recipes-{theme}")
+                    page.goto(f"{BASE}/{DASHBOARD}-{theme}/recipes")
                     settle(page)
                     page.locator(".recipe-tile >> visible=true").first.click()
                     page.locator("[data-action='cook-start'] >> visible=true").wait_for()
