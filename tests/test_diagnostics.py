@@ -45,6 +45,8 @@ async def test_diagnostics_redact_secrets_and_report_counts(
     assert result["entry"]["options"][CONF_TIMER_NOTIFY_SERVICE] == "notify.mobile_app_phone"
     assert result["counts"]["alarms"] == 1
     assert result["counts"]["pantry_items"] == 2
+    assert result["shopping_sync"]["rules"] == 0
+    assert result["shopping_sync"]["records"]["pending"] == 0
     dumped = json.dumps(result)
     for secret in (MEALIE_TOKEN, MEALIE_URL, "sk-secret-ai", "secret-fdc"):
         assert secret not in dumped

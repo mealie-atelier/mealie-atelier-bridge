@@ -149,6 +149,24 @@
     },
     "disabled": {
       "message": "Die strukturierte Zutatenbearbeitung ist in den Mealie-Atelier-Optionen ausgeschaltet."
+    },
+    "sync_rule_not_found": {
+      "message": "Diese Sync-Regel gibt es nicht mehr. Lade die Sync-Einstellungen neu."
+    },
+    "sync_destination_unsupported": {
+      "message": "Wähle eine To-do-Liste, die Einträge hinzufügen kann. Listen von Mealie selbst sind als Ziel nicht möglich."
+    },
+    "sync_source_taken": {
+      "message": "Eine andere Sync-Regel nutzt diese Mealie-Liste bereits. Bearbeite stattdessen diese Regel."
+    },
+    "sync_too_many_rules": {
+      "message": "Du kannst höchstens 5 Sync-Regeln anlegen. Lösche eine, bevor du eine neue hinzufügst."
+    },
+    "sync_not_activated": {
+      "message": "Bestätige zuerst die erste Übertragung, bevor diese Regel selbstständig synchronisiert."
+    },
+    "sync_not_supported": {
+      "message": "Der Einkaufs-Sync braucht Home Assistant mit der Mealie Atelier Bridge."
     }
   }
 }

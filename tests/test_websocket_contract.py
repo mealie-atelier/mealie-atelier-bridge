@@ -43,7 +43,11 @@ async def test_registration_and_signed_recipe_images(
     mock_mealie: AiohttpClientMocker,
     hass_ws_client: WebSocketGenerator,
 ):
-    commands = [name for name in hass.data[WEBSOCKET_DOMAIN] if name.startswith("mealie_atelier/")]
+    commands = [
+        name
+        for name in hass.data[WEBSOCKET_DOMAIN]
+        if name.startswith("mealie_atelier/") and not name.startswith("mealie_atelier/sync_")
+    ]
     assert len(commands) == 34
     for name in ("alarm_create", "alarm_cancel", "alarm_capabilities"):
         assert f"mealie_atelier/{name}" in commands

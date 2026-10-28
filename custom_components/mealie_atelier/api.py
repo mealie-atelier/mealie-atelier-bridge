@@ -535,3 +535,57 @@ class MealieClient:
                 raise ValueError("Enter a valid recipe URL")
             return await self.request("POST", "/api/recipes/create/url", data={"url": recipe_url})
         raise ValueError("Unsupported operation")
+
+    async def shopping_lists(self) -> list[dict]:
+        """Shopping list summaries, used to validate and name a sync source."""
+        result = await self.request("GET", "/api/households/shopping/lists", params={"perPage": -1})
+        lists = result.get("items", []) if isinstance(result, dict) else result
+        if not isinstance(lists, list):
+            raise MealieError("Unexpected shopping list response")
+        return [row for row in lists if isinstance(row, dict)]
+
+    async def shopping_items(self, list_id: str) -> list[dict]:
+        """Items of one shopping list in list order."""
+        list_id = safe_id(list_id)
+        result = await self.request(
+            "GET",
+            "/api/households/shopping/items",
+            params={
+                "queryFilter": f'shoppingListId="{list_id}"',
+                "perPage": -1,
+                "orderBy": "position",
+            },
+        )
+        items = result.get("items", []) if isinstance(result, dict) else result
+        if not isinstance(items, list):
+            raise MealieError("Unexpected shopping item response")
+        # The server-side filter is a convenience; never let another list's items through.
+        return [
+            item
+            for item in items
+            if isinstance(item, dict) and item.get("shoppingListId") == list_id
+        ]
+
+    async def shopping_item(self, item_id: str) -> dict:
+        result = await self.request("GET", f"/api/households/shopping/items/{safe_id(item_id)}")
+        if not isinstance(result, dict):
+            raise MealieError("Unexpected shopping item response")
+        return result
+
+    async def set_shopping_item_checked(
+        self, item_id: str, checked: bool, current: dict | None = None
+    ) -> dict:
+        """Check or uncheck one item, preserving its food, unit and note.
+
+        Pass the item that was just read as `current` to write exactly the state that was compared.
+        """
+        if not isinstance(checked, bool):
+            raise ValueError("checked must be boolean")
+        if current is None:
+            current = await self.shopping_item(item_id)
+        result = await self.request(
+            "PUT",
+            f"/api/households/shopping/items/{safe_id(item_id)}",
+            data={**current, "checked": checked},
+        )
+        return result if isinstance(result, dict) else {**current, "checked": checked}

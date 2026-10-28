@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from copy import deepcopy
 
 import probatio
@@ -41,6 +42,11 @@ from .signing import sign_images as _sign_images
 from .studio import apply as studio_apply
 from .studio_ai import audit_recipe as ai_audit
 from .studio_ai import substitutes as ai_substitutes
+
+_LOGGER = logging.getLogger(__name__)
+
+# Mutations that add items to a shopping list and may feed a shopping sync rule.
+SYNC_SOURCE_ACTIONS = frozenset({"shopping_from_recipe", "shopping_add"})
 
 
 # Advertised to cards through `status` as part of the shared status contract.
@@ -267,7 +273,17 @@ async def ws_mutation(hass, connection, msg):
             recipe = await client.recipe(payload.get("slug"))
             kind = "instructions" if set(payload) <= {"slug", "instructions"} else "basics"
             await entry.runtime_data.backups.async_snapshot(client, recipe, kind, connection.user)
-        return await client.mutate(action, msg["payload"])
+        result = await client.mutate(action, msg["payload"])
+        if action in SYNC_SOURCE_ACTIONS:
+            # Mealie confirmed the write; the sync debounces on its own and never delays or
+            # fails this response.
+            try:
+                entry.runtime_data.sync.notify_source_changed(
+                    msg["payload"].get("list_id"), origin="after_atelier_add"
+                )
+            except Exception:
+                _LOGGER.exception("Shopping sync could not be notified")
+        return result
 
     await _respond(hass, connection, msg, run)
 

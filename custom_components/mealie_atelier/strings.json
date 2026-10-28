@@ -149,6 +149,24 @@
     },
     "disabled": {
       "message": "Structured ingredient editing is switched off in the Mealie Atelier options."
+    },
+    "sync_rule_not_found": {
+      "message": "This shopping sync rule no longer exists. Reload the sync settings."
+    },
+    "sync_destination_unsupported": {
+      "message": "Choose a To-do list that can add items. Mealie's own lists cannot be a destination."
+    },
+    "sync_source_taken": {
+      "message": "Another sync rule already uses this Mealie list. Edit that rule instead."
+    },
+    "sync_too_many_rules": {
+      "message": "You can set up at most 5 sync rules. Delete one before adding another."
+    },
+    "sync_not_activated": {
+      "message": "Send and confirm the first batch before this rule syncs on its own."
+    },
+    "sync_not_supported": {
+      "message": "Shopping sync needs Home Assistant with the Mealie Atelier Bridge."
     }
   }
 }

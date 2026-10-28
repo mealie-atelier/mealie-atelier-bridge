@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
@@ -15,6 +15,9 @@ from .api import MealieClient
 from .const import DOMAIN
 from .recipe_backups import RecipeBackupStore
 from .uploads import UploadSessions
+
+if TYPE_CHECKING:
+    from .shopping_sync import SyncManager
 
 
 @dataclass
@@ -35,6 +38,7 @@ class MealieAtelierData:
     alarms: TimerManager
     backups: RecipeBackupStore
     uploads: UploadSessions
+    sync: SyncManager
 
 
 type MealieAtelierConfigEntry = ConfigEntry[MealieAtelierData]

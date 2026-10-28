@@ -12,7 +12,7 @@ An optional Home Assistant custom integration that connects Mealie to Mealie Ate
 - Optional read-only mode enforced by the backend.
 - Optional per-user write grants: pick which Home Assistant users may change shopping lists and meal plans (empty means everyone). Administrators always can; recipe editing stays admin only.
 
-The Bridge currently does **not** implement the planned Mealie-to-Home-Assistant To-do/Bring shopping sync. The safety and implementation requirements are tracked in [`docs/SMART_SHOPPING_SYNC.md`](docs/SMART_SHOPPING_SYNC.md).
+- Optional Smart Shopping Sync from one Mealie shopping list to a Home Assistant To-do list, such as your Bring! list. Live acceptance against real providers is still pending.
 
 ## Project status and help
 
@@ -26,6 +26,19 @@ The Bridge currently does **not** implement the planned Mealie-to-Home-Assistant
 For guided setup and the read-only alternative, use the [Cards setup guide](https://github.com/mealie-atelier/mealie-atelier-cards/blob/main/docs/INSTALLATION_0.9.5.md). Install this Bridge through HACS as an integration, then add it from **Settings → Devices & services**. Enter the direct Mealie base URL reachable from Home Assistant and an API token. Install the Cards package separately as a dashboard plugin.
 
 Until a tagged release is published, this repository is source code for development and should not be treated as a stable catalog package.
+
+## Set up Smart Shopping Sync
+
+The sync runs in the Bridge, so it keeps working when no dashboard is open. The standalone web app does not sync.
+
+1. Set up the destination first through its own Home Assistant integration (for example Bring!), so it appears as a To-do entity. The Bridge never asks for Bring credentials.
+2. As a Home Assistant administrator, open the shopping view of the Atelier Cards and start the sync setup. Read-only mode must be off.
+3. Pick the Mealie source list and the To-do destination. Lists of the core Mealie integration are not offered, so items cannot loop back into Mealie.
+4. Choose **Copy** (Mealie stays unchanged) or **Move** (an item is checked off in Mealie only after the destination accepted it or an identical open line was found there), when to sync, and the duplicate policy.
+5. Check the preview and send the first batch. Nothing syncs on its own before this confirmation.
+6. Use the rule status to pause, resume, run by hand, retry failed items and decide on conflicts.
+
+How a rule behaves after setup, including failures and conflicts, is described in [`docs/SMART_SHOPPING_SYNC.md`](docs/SMART_SHOPPING_SYNC.md#how-it-works). Diagnostics include only counts, never item text.
 
 ## Security model
 

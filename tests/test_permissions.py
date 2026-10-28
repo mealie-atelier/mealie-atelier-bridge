@@ -52,8 +52,20 @@ READ_COMMANDS = {
     "units",
     "ingredients_get",
     "recipe_backups",
+    "sync_state",
+    "sync_destinations",
+    "sync_preview",
+    "sync_records",
 }
-WRITE_COMMANDS = {"mutate", "studio_update"}
+WRITE_COMMANDS = {
+    "mutate",
+    "studio_update",
+    "sync_run",
+    "sync_pause",
+    "sync_resume",
+    "sync_retry",
+    "sync_resolve",
+}
 ADMIN_COMMANDS = {
     "mutate",
     "nutrition_save",
@@ -67,6 +79,9 @@ ADMIN_COMMANDS = {
     "recipe_image_delete",
     "step_image_add",
     "step_image_remove",
+    "sync_rule_save",
+    "sync_rule_delete",
+    "sync_run",
 }
 PERSONAL_COMMANDS = {"studio_update", "alarm_create", "alarm_cancel"}
 
@@ -88,6 +103,14 @@ WRITE_MESSAGES = [pytest.param(_mutate(a), id=f"mutate:{a}") for a in sorted(WRI
             "payload": {"people": 2, "maxMinutes": 30},
         },
         id="studio_update:profile",
+    ),
+    pytest.param({"type": f"{PREFIX}sync_run", "rule_id": "r1"}, id="sync_run"),
+    pytest.param({"type": f"{PREFIX}sync_pause", "rule_id": "r1"}, id="sync_pause"),
+    pytest.param({"type": f"{PREFIX}sync_resume", "rule_id": "r1"}, id="sync_resume"),
+    pytest.param({"type": f"{PREFIX}sync_retry", "rule_id": "r1"}, id="sync_retry"),
+    pytest.param(
+        {"type": f"{PREFIX}sync_resolve", "rule_id": "r1", "record_key": "k", "action": "dismiss"},
+        id="sync_resolve",
     ),
 ]
 ADMIN_MESSAGES = [pytest.param(_mutate(a), id=f"mutate:{a}") for a in sorted(ADMIN_ACTIONS)] + [
@@ -151,7 +174,21 @@ ADMIN_MESSAGES = [pytest.param(_mutate(a), id=f"mutate:{a}") for a in sorted(ADM
         },
         id="step_image_remove",
     ),
+    pytest.param({"type": f"{PREFIX}sync_rule_save", "rule": {}}, id="sync_rule_save"),
+    pytest.param({"type": f"{PREFIX}sync_rule_delete", "rule_id": "r1"}, id="sync_rule_delete"),
+    pytest.param(
+        {"type": f"{PREFIX}sync_run", "rule_id": "r1", "confirm_first_batch": True},
+        id="sync_run:confirm_first_batch",
+    ),
 ]
+
+
+GATE_CODES = {"read_only", "unauthorized", "write_not_permitted"}
+
+
+def _passed_gate(response: dict) -> bool:
+    """Allowed means the gate let it through; a later domain error (unknown rule) still counts."""
+    return response["success"] or response["error"]["code"] not in GATE_CODES
 
 
 def _types(params) -> set[str]:
@@ -298,7 +335,7 @@ async def test_granted_user_and_admin_are_allowed(hass, setup_integration, hass_
     user, token = await _token(hass, "Cook")
     hass.config_entries.async_update_entry(setup_integration, options={CONF_WRITE_USERS: [user.id]})
     for client in (await hass_ws_client(hass, token), await hass_ws_client()):
-        assert (await _send(client, message))["success"]
+        assert _passed_gate(await _send(client, message))
 
 
 async def test_granted_user_cannot_edit_recipes(hass, setup_integration, hass_ws_client):
@@ -320,9 +357,9 @@ async def test_empty_grant_list_lets_every_user_write(
     setup_integration.runtime_data.client.mutate = AsyncMock(return_value={"ok": True})
     _, token = await _token(hass, "Guest")
     client = await hass_ws_client(hass, token)
-    assert (await _send(client, message))["success"]
+    assert _passed_gate(await _send(client, message))
     hass.config_entries.async_update_entry(setup_integration, options={CONF_WRITE_USERS: []})
-    assert (await _send(client, message))["success"]
+    assert _passed_gate(await _send(client, message))
 
 
 @pytest.mark.parametrize("message", [*WRITE_MESSAGES, *ADMIN_MESSAGES])

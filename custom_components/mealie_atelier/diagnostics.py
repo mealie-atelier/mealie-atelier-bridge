@@ -38,4 +38,5 @@ async def async_get_config_entry_diagnostics(
             "family_members": len(family.get("members") or []),
             "studio_revision": state.get("revision", 0),
         }
+        data["shopping_sync"] = runtime.sync.counts()
     return data

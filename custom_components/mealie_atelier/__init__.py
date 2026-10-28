@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 
 from homeassistant.const import CONF_URL
 from homeassistant.core import HomeAssistant
@@ -20,7 +21,11 @@ from .recipe_backups import RecipeBackupStore
 from .recipe_editing import async_register_commands as async_register_editing_commands
 from .studio import initial as studio_initial
 from .uploads import UploadSessions
+from .shopping_sync import SyncManager
+from .shopping_sync import async_register_commands as async_register_sync_commands
 from .websocket import async_register_commands
+
+_LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -29,6 +34,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Register frontend bridge once; no YAML configuration needed."""
     async_register_commands(hass)
     async_register_editing_commands(hass)
+    async_register_sync_commands(hass)
     hass.http.register_view(MealieAtelierImageView())
     hass.http.register_view(MealieAtelierRecipeAssetView())
     return True
@@ -58,19 +64,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry
     state = await store.async_load() or studio_initial()
     manager = TimerManager(hass, entry.entry_id, entry.options.get(CONF_TIMER_NOTIFY_SERVICE, ""))
     await manager.async_start()
+    sync = SyncManager(hass, entry.entry_id, client)
+    try:
+        await sync.async_start()
+    except Exception:
+        # Shopping sync is optional: a sync problem never blocks the rest of the Bridge.
+        _LOGGER.exception("Shopping sync could not start")
     entry.runtime_data = MealieAtelierData(
         client=client,
         studio=StudioContext(store=store, state=state, lock=asyncio.Lock()),
         alarms=manager,
         backups=await RecipeBackupStore.async_load(hass, entry.entry_id),
         uploads=UploadSessions(),
+        sync=sync,
     )
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry) -> bool:
-    """Stop the timer scheduler on unload; do not remove core Mealie."""
+    """Stop the timer scheduler and shopping sync on unload; do not remove core Mealie."""
     await entry.runtime_data.alarms.async_stop()
+    await entry.runtime_data.sync.async_stop()
     return True
 
 
