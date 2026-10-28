@@ -4,10 +4,17 @@ from __future__ import annotations
 
 from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.http import KEY_HASS
 
-from .api import MealieError, safe_id
-from .const import DOMAIN
+from .api import MealieClient, MealieError, safe_id
+from .models import get_loaded_entry
+
+
+def _client(hass: HomeAssistant, entry_id: str) -> MealieClient | None:
+    """Return the client of a loaded entry, or None for unknown or unloaded entries."""
+    entry = get_loaded_entry(hass, entry_id)
+    return entry.runtime_data.client if entry else None
 
 
 class MealieAtelierImageView(HomeAssistantView):
@@ -24,7 +31,7 @@ class MealieAtelierImageView(HomeAssistantView):
             safe_id(entry_id)
         except ValueError:
             raise web.HTTPNotFound() from None
-        client = hass.data.get(DOMAIN, {}).get(entry_id)
+        client = _client(hass, entry_id)
         if client is None:
             raise web.HTTPNotFound()
         try:
@@ -56,7 +63,7 @@ class MealieAtelierRecipeAssetView(HomeAssistantView):
             safe_id(entry_id)
         except ValueError:
             raise web.HTTPNotFound() from None
-        client = hass.data.get(DOMAIN, {}).get(entry_id)
+        client = _client(hass, entry_id)
         if client is None:
             raise web.HTTPNotFound()
         try:

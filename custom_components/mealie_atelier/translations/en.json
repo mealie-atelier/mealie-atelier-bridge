@@ -35,5 +35,40 @@
         }
       }
     }
+  },
+  "exceptions": {
+    "auth_failed": {
+      "message": "Mealie refused access. Check the API token and its permissions."
+    },
+    "cannot_connect": {
+      "message": "Unable to connect to Mealie: {error}"
+    },
+    "not_configured": {
+      "message": "Configure Mealie Atelier Bridge first."
+    },
+    "recipe_changed": {
+      "message": "The recipe changed since the preview. Reopen the analysis before continuing."
+    },
+    "existing_values_protected": {
+      "message": "Existing values are protected. Confirm the replacement to continue."
+    },
+    "invalid_timer": {
+      "message": "The kitchen timer is invalid."
+    },
+    "timer_exists": {
+      "message": "A different kitchen timer with this ID already exists."
+    },
+    "too_many_timers": {
+      "message": "There are too many kitchen timers."
+    },
+    "timer_not_found": {
+      "message": "The kitchen timer was not found."
+    },
+    "timer_not_permitted": {
+      "message": "You may not cancel another user's kitchen timer."
+    },
+    "timer_dispatched": {
+      "message": "The kitchen timer has already been dispatched."
+    }
   }
 }

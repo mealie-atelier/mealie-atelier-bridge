@@ -12,9 +12,17 @@ import time
 from copy import deepcopy
 from uuid import UUID
 
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.storage import Store
 
+from .const import DOMAIN
+
 _LOGGER = logging.getLogger(__name__)
+
+
+def _invalid(key: str) -> ServiceValidationError:
+    """Build a translated validation error for a user-triggered timer problem."""
+    return ServiceValidationError(translation_domain=DOMAIN, translation_key=key)
 
 
 def _uuid(value):
@@ -71,7 +79,7 @@ class TimerManager:
             or due < now + 1000
             or due > now + 24 * 3600_000
         ):
-            raise ValueError("Invalid kitchen timer")
+            raise _invalid("invalid_timer")
         async with self.lock:
             existing = next((a for a in self.alarms if a["id"] == uid), None)
             if existing:
@@ -80,10 +88,10 @@ class TimerManager:
                     or existing["deadline"] != due
                     or existing["label"] != label.strip()
                 ):
-                    raise ValueError("Timer ID already exists")
+                    raise _invalid("timer_exists")
                 return deepcopy(existing)
             if len(self.alarms) > 300:
-                raise ValueError("Too many kitchen timers")
+                raise _invalid("too_many_timers")
             entry = {
                 "id": uid,
                 "label": label.strip(),
@@ -103,11 +111,11 @@ class TimerManager:
         async with self.lock:
             entry = next((a for a in self.alarms if a["id"] == uid), None)
             if not entry:
-                raise ValueError("Timer not found")
+                raise _invalid("timer_not_found")
             if entry["owner"] != actor and not is_admin:
-                raise ValueError("Not permitted to cancel another user's timer")
+                raise _invalid("timer_not_permitted")
             if entry["status"] in ("sending", "sent"):
-                raise ValueError("Timer has already been dispatched")
+                raise _invalid("timer_dispatched")
             entry["status"] = "cancelled"
             await self._save()
             return deepcopy(entry)

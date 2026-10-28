@@ -1,4 +1,4 @@
-"""Real HTTP transport tests for the Mealie bridge; does not require running HA.
+"""Real HTTP transport tests for the Mealie bridge client against a local fixture server.
 
 These tests exercise the aiohttp client with a strict local Mealie fixture. A real
 Mealie/HA compatibility test is still required before public stable release.
@@ -6,28 +6,22 @@ Mealie/HA compatibility test is still required before public stable release.
 
 from __future__ import annotations
 
-import importlib.util
-import sys
-import types
 import unittest
-from pathlib import Path
 from uuid import UUID
 
+import pytest
 from aiohttp import ClientSession, web
 
-ROOT = Path(__file__).resolve().parents[1] / "custom_components" / "mealie_atelier"
-package = types.ModuleType("mealie_atelier")
-package.__path__ = [str(ROOT)]
-sys.modules["mealie_atelier"] = package
-for name in ("const", "api"):
-    spec = importlib.util.spec_from_file_location(f"mealie_atelier.{name}", ROOT / f"{name}.py")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[f"mealie_atelier.{name}"] = module
-    spec.loader.exec_module(module)
-
-from mealie_atelier.api import MealieClient, MealieError, safe_date, safe_id, safe_slug
+from custom_components.mealie_atelier.api import (
+    MealieClient,
+    MealieError,
+    safe_date,
+    safe_id,
+    safe_slug,
+)
 
 
+@pytest.mark.usefixtures("socket_enabled")
 class ClientTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.calls = []

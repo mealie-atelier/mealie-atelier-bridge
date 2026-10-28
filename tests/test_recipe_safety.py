@@ -2,17 +2,11 @@
 
 import asyncio
 from copy import deepcopy
-from importlib.util import module_from_spec, spec_from_file_location
-from pathlib import Path
 from uuid import uuid4
 
 import pytest
 
-path = Path(__file__).parents[1] / "custom_components/mealie_atelier/recipe_safety.py"
-spec = spec_from_file_location("atelier_recipe_safety", path)
-mod = module_from_spec(spec)
-spec.loader.exec_module(mod)
-fingerprint, preview, merge, verified = mod.fingerprint, mod.preview, mod.merge, mod.verified
+from custom_components.mealie_atelier.recipe_safety import fingerprint, merge, preview, verified
 
 REFERENCE = str(uuid4())
 RECIPE = {

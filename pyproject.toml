@@ -23,20 +23,11 @@ package = false
 testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-# Temporary: the current tests stub the homeassistant package. Remove once they run on the real
-# pytest-homeassistant-custom-component fixtures.
-addopts = "-p no:homeassistant"
+pythonpath = ["."]
 
 [tool.ruff]
 line-length = 100
 target-version = "py314"
-
-[tool.ruff.lint.per-file-ignores]
-# These tests load the integration modules from their file paths before importing them,
-# so module-level imports necessarily follow that bootstrap block.
-"tests/test_api.py" = ["E402"]
-"tests/test_nutrition.py" = ["E402"]
-"tests/test_websocket_contract.py" = ["E402"]
 
 [tool.ruff.format]
 quote-style = "double"

@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 INTEGRATION = ROOT / "custom_components" / "mealie_atelier"
@@ -32,3 +35,36 @@ def test_home_assistant_setup_guide_offers_both_no_yaml_paths() -> None:
     assert "Mealie Atelier Bridge" in guide
     assert "No YAML is needed" in guide
     assert "JavaScript module" in guide
+
+
+def test_manifest_follows_hassfest_conventions() -> None:
+    manifest = json.loads((INTEGRATION / "manifest.json").read_text())
+    keys = list(manifest)
+
+    assert keys[:2] == ["domain", "name"]
+    assert keys[2:] == sorted(keys[2:])
+    assert {"http", "websocket_api"} <= set(manifest["dependencies"])
+    assert manifest["documentation"].startswith("https://github.com/mealie-atelier/")
+    assert manifest["version"]
+
+
+def test_config_schema_is_config_entry_only(caplog: pytest.LogCaptureFixture) -> None:
+    from custom_components.mealie_atelier import CONFIG_SCHEMA
+
+    assert CONFIG_SCHEMA({}) == {}
+    CONFIG_SCHEMA({"mealie_atelier": {}})
+    assert "does not support YAML setup" in caplog.text
+
+
+@pytest.mark.parametrize("name", ["strings.json", "translations/en.json", "translations/de.json"])
+def test_every_translation_key_used_in_code_has_an_exception_message(name: str) -> None:
+    used: set[str] = set()
+    for source in INTEGRATION.glob("*.py"):
+        text = source.read_text()
+        used |= set(re.findall(r'translation_key="(\w+)"', text))
+        used |= set(re.findall(r'(?:_translated|_invalid)\("(\w+)"\)', text))
+    exceptions = json.loads((INTEGRATION / name).read_text())["exceptions"]
+
+    assert used
+    assert used <= set(exceptions)
+    assert all(exceptions[key]["message"] for key in used)

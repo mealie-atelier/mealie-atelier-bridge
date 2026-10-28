@@ -35,5 +35,40 @@
         }
       }
     }
+  },
+  "exceptions": {
+    "auth_failed": {
+      "message": "Mealie hat den Zugriff verweigert. Prüfe den API-Token und seine Berechtigungen."
+    },
+    "cannot_connect": {
+      "message": "Verbindung zu Mealie nicht möglich: {error}"
+    },
+    "not_configured": {
+      "message": "Richte zuerst Mealie Atelier Bridge ein."
+    },
+    "recipe_changed": {
+      "message": "Das Rezept hat sich seit der Vorschau geändert. Öffne die Analyse erneut, bevor du fortfährst."
+    },
+    "existing_values_protected": {
+      "message": "Vorhandene Werte sind geschützt. Bestätige das Ersetzen, um fortzufahren."
+    },
+    "invalid_timer": {
+      "message": "Der Küchentimer ist ungültig."
+    },
+    "timer_exists": {
+      "message": "Ein anderer Küchentimer mit dieser ID existiert bereits."
+    },
+    "too_many_timers": {
+      "message": "Es gibt zu viele Küchentimer."
+    },
+    "timer_not_found": {
+      "message": "Der Küchentimer wurde nicht gefunden."
+    },
+    "timer_not_permitted": {
+      "message": "Du darfst den Küchentimer einer anderen Person nicht abbrechen."
+    },
+    "timer_dispatched": {
+      "message": "Der Küchentimer wurde bereits ausgelöst."
+    }
   }
 }

@@ -1,13 +1,6 @@
-import importlib.util
-import sys
 import unittest
-from pathlib import Path
 
-root = Path(__file__).resolve().parents[1] / "custom_components" / "mealie_atelier" / "studio.py"
-spec = importlib.util.spec_from_file_location("studio_pure", root)
-studio = importlib.util.module_from_spec(spec)
-sys.modules["studio_pure"] = studio
-spec.loader.exec_module(studio)
+from custom_components.mealie_atelier import studio
 
 
 class StudioTests(unittest.TestCase):

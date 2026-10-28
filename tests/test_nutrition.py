@@ -5,29 +5,13 @@ No live external service and no live Mealie/Home Assistant installation is calle
 
 from __future__ import annotations
 
-import importlib.util
-import sys
-import types
 import unittest
-from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from aiohttp import ClientSession, web
 
-ROOT = Path(__file__).resolve().parents[1] / "custom_components" / "mealie_atelier"
-if "mealie_atelier" not in sys.modules:
-    pkg = types.ModuleType("mealie_atelier")
-    pkg.__path__ = [str(ROOT)]
-    sys.modules["mealie_atelier"] = pkg
-for name in ("const", "api", "nutrition"):
-    module_name = f"mealie_atelier.{name}"
-    if module_name not in sys.modules:
-        spec = importlib.util.spec_from_file_location(module_name, ROOT / f"{name}.py")
-        mod = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = mod
-        spec.loader.exec_module(mod)
-
-from mealie_atelier import nutrition as n
+from custom_components.mealie_atelier import nutrition as n
 
 RECIPE = {
     "slug": "haferflocken-mit-beeren",
@@ -64,6 +48,7 @@ FOODS = {
 }
 
 
+@pytest.mark.usefixtures("socket_enabled")
 class NutritionTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.calls = []

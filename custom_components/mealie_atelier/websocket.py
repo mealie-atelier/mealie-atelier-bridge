@@ -11,6 +11,7 @@ import probatio
 from homeassistant.components import websocket_api
 from homeassistant.components.http.auth import async_sign_path
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import MealieAuthError, MealieError, safe_id, safe_slug
@@ -36,6 +37,7 @@ from .nutrition import (
 from .nutrition import (
     search as search_nutrition,
 )
+from .models import MealieAtelierConfigEntry, get_loaded_entry
 from .studio import apply as studio_apply
 from .studio_ai import audit_recipe as ai_audit
 from .studio_ai import substitutes as ai_substitutes
@@ -67,15 +69,14 @@ def async_register_commands(hass: HomeAssistant) -> None:
         websocket_api.async_register_command(hass, command)
 
 
-def _client(hass: HomeAssistant, connection, msg: dict):
-    entries = hass.data.get(DOMAIN, {})
-    entry_id = msg.get("entry_id")
-    if entry_id:
-        return entries.get(entry_id), entry_id
-    if entries:
-        first_id = next(iter(entries))
-        return entries[first_id], first_id
-    return None, None
+def _entry(hass: HomeAssistant, msg: dict) -> MealieAtelierConfigEntry | None:
+    """Resolve the addressed loaded entry; without an entry_id use the first loaded one."""
+    return get_loaded_entry(hass, msg.get("entry_id"))
+
+
+def _translated(key: str) -> ServiceValidationError:
+    """Build a translated validation error that the user can act on."""
+    return ServiceValidationError(translation_domain=DOMAIN, translation_key=key)
 
 
 def _sign_images(hass: HomeAssistant, entry_id: str, result: Any) -> Any:
@@ -139,7 +140,7 @@ def _sign_images(hass: HomeAssistant, entry_id: str, result: Any) -> Any:
 
 def _fail(connection, msg: dict, exc: Exception) -> None:
     """Return an error; no tokens, tracebacks or upstream URLs in frontend payload."""
-    if isinstance(exc, ValueError):
+    if isinstance(exc, (ValueError, ServiceValidationError)):
         code = "invalid_request"
     elif isinstance(exc, MealieAuthError):
         code = "mealie_auth"
@@ -149,16 +150,16 @@ def _fail(connection, msg: dict, exc: Exception) -> None:
 
 
 async def _respond(hass, connection, msg, func) -> None:
-    client, _ = _client(hass, connection, msg)
-    if client is None:
+    entry = _entry(hass, msg)
+    if entry is None:
         connection.send_error(
             msg["id"], "not_configured", "Install and configure Mealie Atelier Bridge"
         )
         return
     try:
-        result = await func(client)
+        result = await func(entry.runtime_data.client)
         connection.send_result(msg["id"], result)
-    except (MealieError, ValueError, TypeError) as exc:
+    except (MealieError, ValueError, TypeError, HomeAssistantError) as exc:
         _fail(connection, msg, exc)
 
 
@@ -176,8 +177,7 @@ async def ws_status(hass, connection, msg):
             and not entry.options.get(CONF_READ_ONLY, False),
             "can_edit_ingredients": False,  # No safe WS write command exposed until HA path is reviewed against live Mealie.
         }
-        for entry in hass.config_entries.async_entries(DOMAIN)
-        if entry.entry_id in hass.data.get(DOMAIN, {})
+        for entry in hass.config_entries.async_loaded_entries(DOMAIN)
     ]
     connection.send_result(msg["id"], {"entries": entries, "version": "0.9.5"})
 
@@ -193,14 +193,15 @@ async def ws_status(hass, connection, msg):
 )
 @websocket_api.async_response
 async def ws_recipes(hass, connection, msg):
-    client, entry_id = _client(hass, connection, msg)
-    if not client:
+    entry = _entry(hass, msg)
+    if not entry:
         connection.send_error(msg["id"], "not_configured", "Configure Mealie Atelier Bridge")
         return
+    client = entry.runtime_data.client
     try:
         results = await client.recipes(msg["page"], msg["per_page"], msg["search"])
-        connection.send_result(msg["id"], _sign_images(hass, entry_id, results))
-    except (ValueError, MealieError) as exc:
+        connection.send_result(msg["id"], _sign_images(hass, entry.entry_id, results))
+    except (ValueError, MealieError, HomeAssistantError) as exc:
         _fail(connection, msg, exc)
 
 
@@ -213,14 +214,15 @@ async def ws_recipes(hass, connection, msg):
 )
 @websocket_api.async_response
 async def ws_recipe(hass, connection, msg):
-    client, entry_id = _client(hass, connection, msg)
-    if not client:
+    entry = _entry(hass, msg)
+    if not entry:
         connection.send_error(msg["id"], "not_configured", "Configure Mealie Atelier Bridge")
         return
+    client = entry.runtime_data.client
     try:
         result = await client.recipe(msg["slug"])
-        connection.send_result(msg["id"], _sign_images(hass, entry_id, result))
-    except (ValueError, MealieError) as exc:
+        connection.send_result(msg["id"], _sign_images(hass, entry.entry_id, result))
+    except (ValueError, MealieError, HomeAssistantError) as exc:
         _fail(connection, msg, exc)
 
 
@@ -234,14 +236,15 @@ async def ws_recipe(hass, connection, msg):
 )
 @websocket_api.async_response
 async def ws_mealplan(hass, connection, msg):
-    client, entry_id = _client(hass, connection, msg)
-    if not client:
+    entry = _entry(hass, msg)
+    if not entry:
         connection.send_error(msg["id"], "not_configured", "Configure Mealie Atelier Bridge")
         return
+    client = entry.runtime_data.client
     try:
         results = await client.mealplan(msg["start"], msg["end"])
-        connection.send_result(msg["id"], _sign_images(hass, entry_id, results))
-    except (ValueError, MealieError) as exc:
+        connection.send_result(msg["id"], _sign_images(hass, entry.entry_id, results))
+    except (ValueError, MealieError, HomeAssistantError) as exc:
         _fail(connection, msg, exc)
 
 
@@ -277,12 +280,11 @@ async def ws_metadata(hass, connection, msg):
 )
 @websocket_api.async_response
 async def ws_mutation(hass, connection, msg):
-    client, entry_id = _client(hass, connection, msg)
-    if client is None or entry_id is None:
+    entry = _entry(hass, msg)
+    if entry is None:
         connection.send_error(msg["id"], "not_configured", "Configure Mealie Atelier Bridge")
         return
-    entry = hass.config_entries.async_get_entry(entry_id)
-    if entry is None or bool(entry.options.get(CONF_READ_ONLY, False)):
+    if bool(entry.options.get(CONF_READ_ONLY, False)):
         connection.send_error(msg["id"], "read_only", "Mealie Atelier is in read-only mode")
         return
     action = msg["action"]
@@ -307,13 +309,10 @@ async def ws_mutation(hass, connection, msg):
 
 # Nutrition endpoints: per-ingredient validation and nutrition writes require HA admins.
 def _nutrition_entry(hass, connection, msg):
-    client, entry_id = _client(hass, connection, msg)
-    if not client or not entry_id:
-        raise ValueError("Configure Mealie Atelier Bridge")
-    entry = hass.config_entries.async_get_entry(entry_id)
+    entry = _entry(hass, msg)
     if not entry:
-        raise ValueError("Mealie Atelier entry unavailable")
-    return client, entry
+        raise _translated("not_configured")
+    return entry.runtime_data.client, entry
 
 
 @websocket_api.websocket_command(
@@ -334,7 +333,7 @@ async def ws_nutrition_prepare(hass, connection, msg):
             ai_enabled=bool(entry.options.get(CONF_AI_KEY)),
         )
         connection.send_result(msg["id"], result)
-    except (ValueError, MealieError) as exc:
+    except (ValueError, MealieError, HomeAssistantError) as exc:
         _fail(connection, msg, exc)
 
 
@@ -353,7 +352,7 @@ async def ws_nutrition_search(hass, connection, msg):
             async_get_clientsession(hass), entry.options.get(CONF_FDC_KEY, ""), msg["query"]
         )
         connection.send_result(msg["id"], result)
-    except (ValueError, MealieError) as exc:
+    except (ValueError, MealieError, HomeAssistantError) as exc:
         _fail(connection, msg, exc)
 
 
@@ -372,14 +371,14 @@ async def ws_nutrition_ai(hass, connection, msg):
         recipe = await client.recipe(msg["slug"])
         preview = prepare_nutrition(recipe, fdc_enabled=False, ai_enabled=True)
         if msg["expected_hash"] != preview["hash"]:
-            raise ValueError("Recipe changed since preview")
+            raise _translated("recipe_changed")
         result = await ai_suggest(
             async_get_clientsession(hass),
             entry.options.get(CONF_AI_KEY, ""),
             [row["text"] for row in preview["ingredients"]],
         )
         connection.send_result(msg["id"], result)
-    except (ValueError, MealieError) as exc:
+    except (ValueError, MealieError, HomeAssistantError) as exc:
         _fail(connection, msg, exc)
 
 
@@ -405,7 +404,7 @@ async def ws_nutrition_calculate(hass, connection, msg):
             expected_hash=msg["expected_hash"],
         )
         connection.send_result(msg["id"], result)
-    except (ValueError, MealieError) as exc:
+    except (ValueError, MealieError, HomeAssistantError) as exc:
         _fail(connection, msg, exc)
 
 
@@ -438,7 +437,7 @@ async def ws_nutrition_save(hass, connection, msg):
             and any(x not in (None, "") for x in existing.values())
             and not msg["overwrite_existing"]
         ):
-            raise ValueError("Existing values are protected; confirm replacement")
+            raise _translated("existing_values_protected")
         result = await calculate_nutrition(
             async_get_clientsession(hass),
             entry.options.get(CONF_FDC_KEY, ""),
@@ -452,7 +451,7 @@ async def ws_nutrition_save(hass, connection, msg):
         }
         await client.request("PATCH", f"/api/recipes/{safe_slug(msg['slug'])}", data=changes)
         connection.send_result(msg["id"], {"saved": True, "report": result})
-    except (ValueError, MealieError) as exc:
+    except (ValueError, MealieError, HomeAssistantError) as exc:
         _fail(connection, msg, exc)
 
 
@@ -465,12 +464,11 @@ async def ws_nutrition_save(hass, connection, msg):
 )
 @websocket_api.async_response
 async def ws_studio_state(hass, connection, msg):
-    _, entry_id = _client(hass, connection, msg)
-    ctx = hass.data.get(DOMAIN + "_studio", {}).get(entry_id)
-    if not ctx:
+    entry = _entry(hass, msg)
+    if not entry:
         connection.send_error(msg["id"], "not_configured", "Studio storage unavailable")
         return
-    result = deepcopy(ctx["state"])
+    result = deepcopy(entry.runtime_data.studio.state)
     result["journal"] = result.get("journal", {}).get(connection.user.id, {})
     connection.send_result(msg["id"], result)
 
@@ -486,12 +484,11 @@ async def ws_studio_state(hass, connection, msg):
 )
 @websocket_api.async_response
 async def ws_studio_update(hass, connection, msg):
-    _, entry_id = _client(hass, connection, msg)
-    ctx = hass.data.get(DOMAIN + "_studio", {}).get(entry_id)
-    entry = hass.config_entries.async_get_entry(entry_id) if entry_id else None
-    if not ctx or not entry:
+    entry = _entry(hass, msg)
+    if not entry:
         connection.send_error(msg["id"], "not_configured", "Studio storage unavailable")
         return
+    ctx = entry.runtime_data.studio
     if entry.options.get(CONF_READ_ONLY, False):
         connection.send_error(msg["id"], "read_only", "Kitchen is read-only")
         return
@@ -500,8 +497,8 @@ async def ws_studio_update(hass, connection, msg):
         connection.send_error(msg["id"], "unauthorized", "Admin required to edit family members")
         return
     try:
-        async with ctx["lock"]:
-            current = ctx["state"]
+        async with ctx.lock:
+            current = ctx.state
             if "expected_revision" in msg and current["revision"] != msg["expected_revision"]:
                 connection.send_error(
                     msg["id"], "conflict", "Another device changed the kitchen. Refresh first"
@@ -558,9 +555,9 @@ async def ws_studio_update(hass, connection, msg):
                     **current.get("journal", {}),
                     connection.user.id: updated["journal"],
                 }
-            await ctx["store"].async_save(updated)
-            ctx["state"] = updated
-        manager = hass.data.get(DOMAIN + "_alarms", {}).get(entry_id)
+            await ctx.store.async_save(updated)
+            ctx.state = updated
+        manager = entry.runtime_data.alarms
         warnings = []
         if manager and action in ("session_timer", "session_end"):
             old_timers = (
@@ -584,7 +581,7 @@ async def ws_studio_update(hass, connection, msg):
                                 "deadline": timer["deadline"],
                             },
                         )
-                    except (ValueError, TypeError) as exc:
+                    except (ValueError, TypeError, HomeAssistantError) as exc:
                         warnings.append(str(exc))
             for timer in old_timers:
                 if not any(new["id"] == timer["id"] for new in new_timers):
@@ -592,14 +589,14 @@ async def ws_studio_update(hass, connection, msg):
                         await manager.async_cancel(
                             connection.user.id, timer["id"], connection.user.is_admin
                         )
-                    except (ValueError, TypeError):
+                    except (ValueError, TypeError, HomeAssistantError):
                         pass
         result = deepcopy(updated)
         if warnings:
             result["alarmWarnings"] = warnings
         result["journal"] = result.get("journal", {}).get(connection.user.id, {})
         connection.send_result(msg["id"], result)
-    except (ValueError, TypeError) as exc:
+    except (ValueError, TypeError, HomeAssistantError) as exc:
         _fail(connection, msg, exc)
 
 
@@ -613,8 +610,7 @@ async def ws_studio_update(hass, connection, msg):
 )
 @websocket_api.async_response
 async def ws_studio_substitute(hass, connection, msg):
-    _, entry_id = _client(hass, connection, msg)
-    entry = hass.config_entries.async_get_entry(entry_id) if entry_id else None
+    entry = _entry(hass, msg)
     if not entry:
         connection.send_error(msg["id"], "not_configured", "Studio unavailable")
         return
@@ -626,7 +622,7 @@ async def ws_studio_substitute(hass, connection, msg):
             msg["recipe"],
         )
         connection.send_result(msg["id"], result)
-    except (ValueError, MealieError) as exc:
+    except (ValueError, MealieError, HomeAssistantError) as exc:
         _fail(connection, msg, exc)
 
 
@@ -639,18 +635,17 @@ async def ws_studio_substitute(hass, connection, msg):
 )
 @websocket_api.async_response
 async def ws_studio_ai_audit(hass, connection, msg):
-    client, entry_id = _client(hass, connection, msg)
-    entry = hass.config_entries.async_get_entry(entry_id) if entry_id else None
-    if not client or not entry:
+    entry = _entry(hass, msg)
+    if not entry:
         connection.send_error(msg["id"], "not_configured", "Studio unavailable")
         return
     try:
-        recipe = await client.recipe(msg["slug"])
+        recipe = await entry.runtime_data.client.recipe(msg["slug"])
         result = await ai_audit(
             async_get_clientsession(hass), entry.options.get(CONF_AI_KEY, ""), recipe
         )
         connection.send_result(msg["id"], result)
-    except (ValueError, MealieError) as exc:
+    except (ValueError, MealieError, HomeAssistantError) as exc:
         _fail(connection, msg, exc)
 
 
@@ -663,8 +658,7 @@ async def ws_studio_ai_audit(hass, connection, msg):
 )
 @websocket_api.async_response
 async def ws_alarm_capabilities(hass, connection, msg):
-    _, entry_id = _client(hass, connection, msg)
-    entry = hass.config_entries.async_get_entry(entry_id) if entry_id else None
+    entry = _entry(hass, msg)
     connection.send_result(
         msg["id"],
         {
@@ -684,16 +678,16 @@ async def ws_alarm_capabilities(hass, connection, msg):
 )
 @websocket_api.async_response
 async def ws_alarm_create(hass, connection, msg):
-    _, entry_id = _client(hass, connection, msg)
-    manager = hass.data.get(DOMAIN + "_alarms", {}).get(entry_id)
-    if not manager:
+    entry = _entry(hass, msg)
+    if not entry:
         connection.send_error(msg["id"], "not_configured", "Kitchen timer service unavailable")
         return
+    manager = entry.runtime_data.alarms
     try:
         connection.send_result(
             msg["id"], await manager.async_create(connection.user.id, msg["timer"])
         )
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, HomeAssistantError) as exc:
         _fail(connection, msg, exc)
 
 
@@ -706,11 +700,11 @@ async def ws_alarm_create(hass, connection, msg):
 )
 @websocket_api.async_response
 async def ws_alarm_cancel(hass, connection, msg):
-    _, entry_id = _client(hass, connection, msg)
-    manager = hass.data.get(DOMAIN + "_alarms", {}).get(entry_id)
-    if not manager:
+    entry = _entry(hass, msg)
+    if not entry:
         connection.send_error(msg["id"], "not_configured", "Kitchen timer service unavailable")
         return
+    manager = entry.runtime_data.alarms
     try:
         connection.send_result(
             msg["id"],
@@ -718,7 +712,7 @@ async def ws_alarm_cancel(hass, connection, msg):
                 connection.user.id, msg["timer_id"], connection.user.is_admin
             ),
         )
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, HomeAssistantError) as exc:
         _fail(connection, msg, exc)
 
 
@@ -730,9 +724,9 @@ async def ws_alarm_cancel(hass, connection, msg):
 )
 @websocket_api.async_response
 async def ws_alarms(hass, connection, msg):
-    _, entry_id = _client(hass, connection, msg)
-    manager = hass.data.get(DOMAIN + "_alarms", {}).get(entry_id)
-    if not manager:
+    entry = _entry(hass, msg)
+    if not entry:
         connection.send_error(msg["id"], "not_configured", "Kitchen timer service unavailable")
         return
+    manager = entry.runtime_data.alarms
     connection.send_result(msg["id"], manager.list(connection.user.id, connection.user.is_admin))
