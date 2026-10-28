@@ -44,10 +44,10 @@ def upload_image(slug: str, image: Path) -> None:
     call("PUT", f"/api/recipes/{slug}/image", raw=parts, ctype=ctype)
 
 
-def seed_recipe(recipe_data: dict, existing: set[str]) -> str:
-    slug = recipe_data["slug"]
-    if slug not in existing:
-        slug = call("POST", "/api/recipes", {"name": recipe_data["title"][LANG]})
+def seed_recipe(recipe_data: dict, existing: dict[str, str]) -> str:
+    # Mealie derives its own slug (umlauts transliterate differently), so match by name.
+    name = recipe_data["title"][LANG]
+    slug = existing.get(name) or call("POST", "/api/recipes", {"name": name})
     recipe = call("GET", f"/api/recipes/{slug}")
     servings = recipe_data["servings"]
     prep, cook = recipe_data["prepMinutes"], recipe_data["cookMinutes"]
@@ -83,7 +83,7 @@ def seed_recipe(recipe_data: dict, existing: set[str]) -> str:
 
 def main() -> None:
     catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
-    existing = {r["slug"] for r in call("GET", "/api/recipes?perPage=200")["items"]}
+    existing = {r["name"]: r["slug"] for r in call("GET", "/api/recipes?perPage=200")["items"]}
     slugs = []
     for recipe_data in catalog["recipes"]:
         slugs.append(seed_recipe(recipe_data, existing))
@@ -93,9 +93,20 @@ def main() -> None:
         call("POST", "/api/households/shopping/lists", {"name": name})
     recipes = {r["slug"]: r for r in call("GET", "/api/recipes?perPage=200")["items"]}
     today = date.today()
+    planned = {
+        (row["date"], row.get("recipeId"))
+        for row in call(
+            "GET",
+            f"/api/households/mealplans?start_date={today}"
+            f"&end_date={today + timedelta(days=4)}&perPage=200",
+        )["items"]
+    }
     for offset, slug in enumerate(slugs[:5]):
+        day = (today + timedelta(days=offset)).isoformat()
+        if (day, recipes[slug]["id"]) in planned:
+            continue
         entry = {
-            "date": (today + timedelta(days=offset)).isoformat(),
+            "date": day,
             "entryType": "dinner",
             "recipeId": recipes[slug]["id"],
         }
