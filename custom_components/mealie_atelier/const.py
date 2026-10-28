@@ -56,3 +56,8 @@ SYNC_AUDIT_LIMIT = 200
 SYNC_RECORD_LIMIT = 2000
 SYNC_PRUNE_DAYS = 30
 EVENT_SYNC_FINISHED = "mealie_atelier_sync_finished"
+
+# Offline shopping edits: durable idempotency ledger (docs: contract section H.2).
+OFFLINE_STORE_VERSION = 1
+OFFLINE_RECORD_LIMIT = 2000
+OFFLINE_PRUNE_DAYS = 30

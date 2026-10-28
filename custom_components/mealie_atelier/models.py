@@ -17,6 +17,7 @@ from .recipe_backups import RecipeBackupStore
 from .uploads import UploadSessions
 
 if TYPE_CHECKING:
+    from .offline_ledger import OfflineLedger
     from .shopping_sync import SyncManager
 
 
@@ -39,6 +40,7 @@ class MealieAtelierData:
     backups: RecipeBackupStore
     uploads: UploadSessions
     sync: SyncManager
+    offline: OfflineLedger
 
 
 type MealieAtelierConfigEntry = ConfigEntry[MealieAtelierData]

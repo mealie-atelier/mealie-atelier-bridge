@@ -16,6 +16,8 @@ from .alarms import TimerManager
 from .api import MealieAuthError, MealieClient, MealieError
 from .const import CONF_API_TOKEN, CONF_TIMER_NOTIFY_SERVICE, CONF_VERIFY_SSL, DOMAIN
 from .http import MealieAtelierImageView, MealieAtelierRecipeAssetView
+from .offline_ledger import OfflineLedger
+from .offline_ledger import async_register_commands as async_register_offline_commands
 from .models import MealieAtelierConfigEntry, MealieAtelierData, StudioContext
 from .recipe_backups import RecipeBackupStore
 from .recipe_editing import async_register_commands as async_register_editing_commands
@@ -36,6 +38,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     async_register_commands(hass)
     async_register_editing_commands(hass)
     async_register_sync_commands(hass)
+    async_register_offline_commands(hass)
     hass.http.register_view(MealieAtelierImageView())
     hass.http.register_view(MealieAtelierRecipeAssetView())
     return True
@@ -64,6 +67,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry
     # Load everything that can fail before starting background work, so a failed setup
     # leaves no timer or sync task running.
     backups = await RecipeBackupStore.async_load(hass, entry.entry_id)
+    offline = await OfflineLedger.async_load(hass, entry.entry_id, client)
     store = Store(hass, 1, f"mealie_atelier_studio_{entry.entry_id}")
     state = await store.async_load() or studio_initial()
     manager = TimerManager(hass, entry.entry_id, entry.options.get(CONF_TIMER_NOTIFY_SERVICE, ""))
@@ -81,6 +85,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry
         backups=backups,
         uploads=UploadSessions(),
         sync=sync,
+        offline=offline,
     )
     return True
 
@@ -98,3 +103,5 @@ async def async_remove_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntr
     await store.async_remove()
     # The outbox holds shopping item titles; nothing of a removed entry may stay behind.
     await SyncStore(hass, entry.entry_id).async_remove()
+    # The ledger keeps shopping notes and item ids of queued edits.
+    await Store(hass, 1, f"mealie_atelier_offline_{entry.entry_id}").async_remove()

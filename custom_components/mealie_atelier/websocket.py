@@ -140,6 +140,7 @@ async def ws_status(hass, connection, msg):
                     "structured_ingredients": structured,
                     "uploads": True,
                     "recipe_filters": True,
+                    "offline_queue": True,
                 },
                 "limits": {
                     "upload_max_bytes": UPLOAD_MAX_BYTES,

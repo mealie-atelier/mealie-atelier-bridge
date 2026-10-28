@@ -65,6 +65,7 @@ WRITE_COMMANDS = {
     "sync_resume",
     "sync_retry",
     "sync_resolve",
+    "offline_replay",
 }
 ADMIN_COMMANDS = {
     "mutate",
@@ -108,6 +109,17 @@ WRITE_MESSAGES = [pytest.param(_mutate(a), id=f"mutate:{a}") for a in sorted(WRI
     pytest.param({"type": f"{PREFIX}sync_pause", "rule_id": "r1"}, id="sync_pause"),
     pytest.param({"type": f"{PREFIX}sync_resume", "rule_id": "r1"}, id="sync_resume"),
     pytest.param({"type": f"{PREFIX}sync_retry", "rule_id": "r1"}, id="sync_retry"),
+    pytest.param(
+        {
+            "type": f"{PREFIX}offline_replay",
+            "operation": {
+                "id": "6f1c1c1e-2f6a-4c0e-8d7b-3a1f5b9d2c10",
+                "action": "shopping_toggle",
+                "payload": {"item_id": "item-1", "checked": True, "expected_checked": False},
+            },
+        },
+        id="offline_replay",
+    ),
     pytest.param(
         {"type": f"{PREFIX}sync_resolve", "rule_id": "r1", "record_key": "k", "action": "dismiss"},
         id="sync_resolve",
@@ -440,6 +452,7 @@ async def test_status_reports_permissions_of_the_calling_user(
             "structured_ingredients",
             "uploads",
             "recipe_filters",
+            "offline_queue",
         }
         assert row["limits"] == {"upload_max_bytes": 10485760, "upload_chunk_bytes": 262144}
 

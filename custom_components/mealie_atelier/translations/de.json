@@ -165,6 +165,15 @@
     "sync_not_activated": {
       "message": "Bestätige zuerst die erste Übertragung, bevor diese Regel selbstständig synchronisiert."
     },
+    "offline_op_reused": {
+      "message": "Diese Offline-Änderungs-ID wurde schon für eine andere Änderung verwendet. Lade die Karte neu und versuche es erneut."
+    },
+    "offline_conflict": {
+      "message": "Dieser Artikel wurde zwischenzeitlich anderswo geändert. Prüfe den aktuellen Wert, bevor du erneut bearbeitest."
+    },
+    "offline_add_uncertain": {
+      "message": "Ein früheres Hinzufügen ist möglicherweise schon bei Mealie angekommen. Prüfe die Liste, um ein Duplikat zu vermeiden."
+    },
     "sync_not_supported": {
       "message": "Der Einkaufs-Sync braucht Home Assistant mit der Mealie Atelier Bridge."
     },

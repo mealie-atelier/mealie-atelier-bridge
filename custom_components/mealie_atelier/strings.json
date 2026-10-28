@@ -165,6 +165,15 @@
     "sync_not_activated": {
       "message": "Send and confirm the first batch before this rule syncs on its own."
     },
+    "offline_op_reused": {
+      "message": "That offline change ID was already used for a different change. Reload the card and try again."
+    },
+    "offline_conflict": {
+      "message": "This item was changed elsewhere in the meantime. Review the current value before editing again."
+    },
+    "offline_add_uncertain": {
+      "message": "An earlier add may already have reached Mealie. Check the list to avoid a duplicate."
+    },
     "sync_not_supported": {
       "message": "Shopping sync needs Home Assistant with the Mealie Atelier Bridge."
     },
