@@ -4,7 +4,7 @@ name: atelier-live
 services:
   mealie:
     image: ${MEALIE_IMAGE:-ghcr.io/mealie-recipes/mealie:latest}
-    ports: ["${MEALIE_PORT:-19925}:9000"]
+    ports: ["127.0.0.1:${MEALIE_PORT:-19925}:9000"]
     environment:
       ALLOW_SIGNUP: "false"
       BASE_URL: http://localhost:${MEALIE_PORT:-19925}
@@ -12,7 +12,7 @@ services:
     volumes: [mealie-data:/app/data]
   homeassistant:
     image: ${HA_IMAGE:-ghcr.io/home-assistant/home-assistant:beta}
-    ports: ["${HA_PORT:-18123}:8123"]
+    ports: ["127.0.0.1:${HA_PORT:-18123}:8123"]
     environment:
       TZ: Europe/Berlin
     volumes:
