@@ -2,19 +2,15 @@
 
 from __future__ import annotations
 
-import re
 from copy import deepcopy
-from datetime import timedelta
-from typing import Any
 
 import probatio
 from homeassistant.components import websocket_api
-from homeassistant.components.http.auth import async_sign_path
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import MealieAuthError, MealieError, safe_id, safe_slug
+from .api import MealieAuthError, MealieError, safe_slug
 from .const import (
     ADMIN_ACTIONS,
     CONF_AI_KEY,
@@ -38,8 +34,10 @@ from .nutrition import (
 from .nutrition import (
     search as search_nutrition,
 )
+from .errors import AtelierError, send_atelier_error, structured_editor_required
 from .models import MealieAtelierConfigEntry, get_loaded_entry
 from .permissions import can_admin, can_write, check, check_personal
+from .signing import sign_images as _sign_images
 from .studio import apply as studio_apply
 from .studio_ai import audit_recipe as ai_audit
 from .studio_ai import substitutes as ai_substitutes
@@ -86,67 +84,11 @@ def _translated(key: str) -> ServiceValidationError:
     return ServiceValidationError(translation_domain=DOMAIN, translation_key=key)
 
 
-def _sign_images(hass: HomeAssistant, entry_id: str, result: Any) -> Any:
-    """Allow <img> display without placing Mealie API tokens in the browser."""
-
-    def decorate(item: Any):
-        if isinstance(item, list):
-            return [decorate(row) for row in item]
-        if not isinstance(item, dict):
-            return item
-        item = {**item}
-        if item.get("image") and item.get("id"):
-            path = f"/api/mealie_atelier/image/{entry_id}/{item['id']}"
-            item["imageUrl"] = async_sign_path(hass, path, timedelta(hours=2))
-        if isinstance(item.get("recipeInstructions"), list) and item.get("id"):
-            recipe_id = safe_id(item["id"])
-            instructions = []
-            for raw_step in item["recipeInstructions"]:
-                if not isinstance(raw_step, dict) or not isinstance(raw_step.get("text"), str):
-                    instructions.append(raw_step)
-                    continue
-                step = {**raw_step}
-                image_urls = []
-
-                def replace_image(match, image_urls=image_urls):
-                    tag = match.group(0)
-                    source = re.search(
-                        r"\bsrc\s*=\s*(?:\"([^\"]*)\"|'([^']*)'|([^\s>]+))", tag, re.IGNORECASE
-                    )
-                    src = (
-                        next((value for value in source.groups() if value is not None), "")
-                        if source
-                        else ""
-                    )
-                    prefix = f"/api/media/recipes/{item['id']}/assets/"
-                    filename = src[len(prefix) :] if src.startswith(prefix) else ""
-                    if not re.fullmatch(
-                        r"[A-Za-z0-9][A-Za-z0-9._-]{0,119}", filename
-                    ) or filename in (".", ".."):
-                        return ""
-                    asset_path = (
-                        f"/api/mealie_atelier/recipe_asset/{entry_id}/{recipe_id}/{filename}"
-                    )
-                    image_urls.append(async_sign_path(hass, asset_path, timedelta(hours=2)))
-                    return ""
-
-                step["text"] = re.sub(
-                    r"<img\b[^>]*>", replace_image, step["text"], flags=re.IGNORECASE
-                ).strip()
-                step["imageUrls"] = image_urls
-                instructions.append(step)
-            item["recipeInstructions"] = instructions
-        if isinstance(item.get("recipe"), dict):
-            item["recipe"] = decorate(item["recipe"])
-        if isinstance(item.get("items"), list):
-            item["items"] = decorate(item["items"])
-        return item
-
-    return decorate(result)
-
-
 def _fail(connection, msg: dict, exc: Exception) -> None:
     """Return an error; no tokens, tracebacks or upstream URLs in frontend payload."""
+    if isinstance(exc, AtelierError):
+        send_atelier_error(connection, msg, exc)
+        return
     if isinstance(exc, (ValueError, ServiceValidationError)):
         code = "invalid_request"
     elif isinstance(exc, MealieAuthError):
@@ -314,18 +256,20 @@ async def ws_mutation(hass, connection, msg):
         return
     if not check(connection, msg, entry, "admin" if action in ADMIN_ACTIONS else "write"):
         return
-    if (
-        action == "recipe_update"
-        and "ingredients" in msg["payload"]
-        and not entry.options.get(CONF_EXPERIMENTAL_INGREDIENTS, False)
-    ):
-        connection.send_error(
-            msg["id"],
-            "disabled",
-            "Ingredient editing is experimental and disabled in integration options",
-        )
+    if action == "recipe_update" and "ingredients" in msg["payload"]:
+        send_atelier_error(connection, msg, structured_editor_required())
         return
-    await _respond(hass, connection, msg, lambda c: c.mutate(action, msg["payload"]))
+
+    async def run(client):
+        if action == "recipe_update":
+            # Snapshot first: a failed backup means no Mealie write at all.
+            payload = msg["payload"]
+            recipe = await client.recipe(payload.get("slug"))
+            kind = "instructions" if set(payload) <= {"slug", "instructions"} else "basics"
+            await entry.runtime_data.backups.async_snapshot(client, recipe, kind, connection.user)
+        return await client.mutate(action, msg["payload"])
+
+    await _respond(hass, connection, msg, run)
 
 
 # Nutrition endpoints: per-ingredient validation and nutrition writes require HA admins.

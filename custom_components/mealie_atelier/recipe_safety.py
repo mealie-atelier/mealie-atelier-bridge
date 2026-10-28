@@ -25,21 +25,37 @@ def fingerprint(recipe: dict) -> str:
 def preview(recipe: dict) -> dict:
     return {
         "slug": recipe.get("slug"),
+        "recipe_id": recipe.get("id"),
         "expected_hash": fingerprint(recipe),
+        "servings": recipe.get("recipeServings"),
         "rows": [
             {
-                "referenceId": r.get("referenceId"),
+                "reference_id": r.get("referenceId"),
                 "quantity": r.get("quantity"),
+                "unit": {k: r["unit"].get(k) for k in ("id", "name", "abbreviation")}
+                if r.get("unit")
+                else None,
                 "food": {k: r["food"].get(k) for k in ("id", "name")} if r.get("food") else None,
-                "unit": {k: r["unit"].get(k) for k in ("id", "name")} if r.get("unit") else None,
                 "note": r.get("note") or "",
-                "originalText": r.get("originalText") or "",
+                "original_text": r.get("originalText") or "",
                 "display": r.get("display") or "",
                 "title": r.get("title") or "",
             }
             for r in recipe["recipeIngredient"]
         ],
     }
+
+
+# Request rows use snake_case; Mealie rows and older callers use camelCase.
+_ROW_ALIASES = (("reference_id", "referenceId"), ("original_text", "originalText"))
+
+
+def _normalized(row: dict) -> dict:
+    row = dict(row)
+    for snake, camel in _ROW_ALIASES:
+        if snake in row:
+            row[camel] = row.pop(snake)
+    return row
 
 
 def _uuid(v):
@@ -50,6 +66,8 @@ def _uuid(v):
 
 
 def _text(v, limit):
+    if v is None:
+        return ""
     if not isinstance(v, str) or len(v) > limit:
         raise ValueError("Invalid ingredient text")
     return v.strip()
@@ -69,6 +87,7 @@ async def merge(recipe: dict, draft: list, resolver):
     for input_row in draft:
         if not isinstance(input_row, dict):
             raise ValueError("Invalid ingredient row")  # noqa: TRY004
+        input_row = _normalized(input_row)
         ref = input_row.get("referenceId") or str(uuid4())
         if not _uuid(ref) or ref in seen or input_row.get("referenceId") and ref not in old:
             raise ValueError("Invalid or duplicate referenceId")

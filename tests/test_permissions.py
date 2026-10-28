@@ -48,9 +48,26 @@ READ_COMMANDS = {
     "studio_ai_audit",
     "alarms",
     "alarm_capabilities",
+    "foods",
+    "units",
+    "ingredients_get",
+    "recipe_backups",
 }
 WRITE_COMMANDS = {"mutate", "studio_update"}
-ADMIN_COMMANDS = {"mutate", "nutrition_save"}
+ADMIN_COMMANDS = {
+    "mutate",
+    "nutrition_save",
+    "food_create",
+    "unit_create",
+    "ingredients_save",
+    "recipe_restore",
+    "upload_begin",
+    "upload_chunk",
+    "recipe_image_set",
+    "recipe_image_delete",
+    "step_image_add",
+    "step_image_remove",
+}
 PERSONAL_COMMANDS = {"studio_update", "alarm_create", "alarm_cancel"}
 
 STUDIO_PANTRY = {"action": "pantry_put", "payload": {"name": "Rice", "amount": 100, "unit": "g"}}
@@ -82,6 +99,57 @@ ADMIN_MESSAGES = [pytest.param(_mutate(a), id=f"mutate:{a}") for a in sorted(ADM
             "entries": [],
         },
         id="nutrition_save",
+    ),
+    pytest.param({"type": f"{PREFIX}food_create", "name": "Leek"}, id="food_create"),
+    pytest.param({"type": f"{PREFIX}unit_create", "name": "Pinch"}, id="unit_create"),
+    pytest.param(
+        {"type": f"{PREFIX}ingredients_save", "slug": "gnocchi", "expected_hash": "x", "rows": []},
+        id="ingredients_save",
+    ),
+    pytest.param(
+        {"type": f"{PREFIX}recipe_restore", "slug": "gnocchi", "backup_id": "b1"},
+        id="recipe_restore",
+    ),
+    pytest.param(
+        {
+            "type": f"{PREFIX}upload_begin",
+            "slug": "gnocchi",
+            "purpose": "cover",
+            "size": 10,
+            "mime": "image/png",
+            "sha256": "0" * 64,
+        },
+        id="upload_begin",
+    ),
+    pytest.param(
+        {"type": f"{PREFIX}upload_chunk", "upload_id": "u1", "index": 0, "data": ""},
+        id="upload_chunk",
+    ),
+    pytest.param(
+        {
+            "type": f"{PREFIX}recipe_image_set",
+            "slug": "gnocchi",
+            "upload_id": "u1",
+            "expected_image": "x",
+        },
+        id="recipe_image_set",
+    ),
+    pytest.param(
+        {"type": f"{PREFIX}recipe_image_delete", "slug": "gnocchi", "expected_image": "x"},
+        id="recipe_image_delete",
+    ),
+    pytest.param(
+        {"type": f"{PREFIX}step_image_add", "slug": "gnocchi", "step_index": 0, "upload_id": "u1"},
+        id="step_image_add",
+    ),
+    pytest.param(
+        {
+            "type": f"{PREFIX}step_image_remove",
+            "slug": "gnocchi",
+            "step_index": 0,
+            "file_name": "step.png",
+        },
+        id="step_image_remove",
     ),
 ]
 

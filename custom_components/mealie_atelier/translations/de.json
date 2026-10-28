@@ -61,7 +61,7 @@
         "data": {
           "read_only": "Nur-Lesen-Modus",
           "write_users": "Nutzer mit Schreibrecht",
-          "experimental_ingredient_edits": "Experimentelle Zutaten-Ersetzung",
+          "experimental_ingredient_edits": "Strukturierte Zutatenbearbeitung",
           "usda_fdc_api_key": "USDA-FoodData-Central-API-Key",
           "openai_api_key": "OpenAI-API-Key",
           "timer_notify_service": "Benachrichtigungsdienst für Timer"
@@ -69,7 +69,7 @@
         "data_description": {
           "read_only": "Verhindert alle Änderungen an Rezepten, Wochenplan und Einkaufslisten. Praktisch für gemeinsam genutzte Tablets.",
           "write_users": "Leer lassen, damit alle Home-Assistant-Nutzer Einkaufslisten und Wochenpläne ändern dürfen. Administratoren dürfen immer schreiben. Rezepte bearbeiten bleibt Administratoren vorbehalten.",
-          "experimental_ingredient_edits": "Erlaubt das Ersetzen von Zutaten per Freitext. Sichere vorher Mealie. Verknüpfte Zutaten bleiben geschützt.",
+          "experimental_ingredient_edits": "Erlaubt Administratoren, Zutaten mit verknüpften Lebensmitteln und Einheiten zu bearbeiten. Vor jeder Änderung wird ein Backup gespeichert.",
           "usda_fdc_api_key": "Optional. Kostenloser Key von USDA FoodData Central für den Nährwertabgleich.",
           "openai_api_key": "Optional. Wird nur für Vorschläge bei der Lebensmittelsuche genutzt. Leer lassen, um es zu deaktivieren.",
           "timer_notify_service": "Optional. Ein Notify-Dienst wie notify.mobile_app_dein_handy, der eine Push-Nachricht erhält, wenn ein Küchentimer abläuft. Leer lassen, um nur Hinweise in der App zu bekommen."
@@ -122,6 +122,33 @@
     },
     "timer_dispatched": {
       "message": "Der Küchentimer wurde bereits ausgelöst."
+    },
+    "use_structured_editor": {
+      "message": "Bearbeite Zutaten mit dem strukturierten Zutaten-Editor. Das Ersetzen per Freitext gibt es nicht mehr."
+    },
+    "write_unverified": {
+      "message": "Mealie hat die Änderung angenommen, aber das gespeicherte Rezept weicht ab. Backup {backup_id} macht sie rückgängig."
+    },
+    "backup_failed": {
+      "message": "Das Backup konnte nicht gespeichert werden, deshalb wurde nichts geändert. Prüfe den freien Speicherplatz und versuche es erneut."
+    },
+    "backup_not_found": {
+      "message": "Dieses Backup existiert nicht mehr. Öffne den Versionsverlauf erneut."
+    },
+    "upload_invalid": {
+      "message": "Das Foto wurde abgelehnt. Nutze ein JPEG, PNG oder WebP mit höchstens 10 MiB."
+    },
+    "upload_expired": {
+      "message": "Der Upload ist abgelaufen. Wähle das Foto erneut aus."
+    },
+    "upload_busy": {
+      "message": "Es laufen zu viele Foto-Uploads. Warte kurz und versuche es erneut."
+    },
+    "step_not_found": {
+      "message": "Der Schritt hat sich inzwischen geändert. Lade das Rezept neu und versuche es erneut."
+    },
+    "disabled": {
+      "message": "Die strukturierte Zutatenbearbeitung ist in den Mealie-Atelier-Optionen ausgeschaltet."
     }
   }
 }

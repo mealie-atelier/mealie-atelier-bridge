@@ -12,7 +12,6 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClien
 from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
 from custom_components.mealie_atelier.const import (
-    CONF_EXPERIMENTAL_INGREDIENTS,
     CONF_READ_ONLY,
     CONF_WRITE_USERS,
 )
@@ -45,7 +44,7 @@ async def test_registration_and_signed_recipe_images(
     hass_ws_client: WebSocketGenerator,
 ):
     commands = [name for name in hass.data[WEBSOCKET_DOMAIN] if name.startswith("mealie_atelier/")]
-    assert len(commands) == 20
+    assert len(commands) == 34
     for name in ("alarm_create", "alarm_cancel", "alarm_capabilities"):
         assert f"mealie_atelier/{name}" in commands
 
@@ -66,11 +65,12 @@ async def test_registration_and_signed_recipe_images(
     assert "MOCK_TOKEN" not in str(result)
 
 
-async def test_only_admin_can_manage_recipe_and_experimental_ingredients(
+async def test_only_admin_can_manage_recipes_and_plain_ingredients_are_gone(
     hass: HomeAssistant,
     setup_integration: MockConfigEntry,
     hass_ws_client: WebSocketGenerator,
     hass_read_only_access_token: str,
+    mock_mealie: AiohttpClientMocker,
 ):
     entry = setup_integration
     mutate = AsyncMock(return_value={"saved": True})
@@ -95,10 +95,14 @@ async def test_only_admin_can_manage_recipe_and_experimental_ingredients(
         "payload": {"slug": "gnocchi", "ingredients": ["200 g flour"]},
     }
     response = await send(admin, ingredients)
-    assert response["error"]["code"] == "disabled"
+    assert response["error"]["code"] == "use_structured_editor"
     mutate.assert_not_called()
 
-    hass.config_entries.async_update_entry(entry, options={CONF_EXPERIMENTAL_INGREDIENTS: True})
+    mock_mealie.get(
+        f"{MEALIE_URL}/api/recipes/gnocchi",
+        json={"id": "recipe-42", "slug": "gnocchi", "name": "Gnocchi"},
+        headers=JSON,
+    )
     response = await send(
         admin,
         {

@@ -13,6 +13,8 @@ from homeassistant.helpers.storage import Store
 from .alarms import TimerManager
 from .api import MealieClient
 from .const import DOMAIN
+from .recipe_backups import RecipeBackupStore
+from .uploads import UploadSessions
 
 
 @dataclass
@@ -31,6 +33,8 @@ class MealieAtelierData:
     client: MealieClient
     studio: StudioContext
     alarms: TimerManager
+    backups: RecipeBackupStore
+    uploads: UploadSessions
 
 
 type MealieAtelierConfigEntry = ConfigEntry[MealieAtelierData]

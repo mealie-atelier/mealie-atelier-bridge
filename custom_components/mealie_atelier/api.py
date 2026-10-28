@@ -6,16 +6,17 @@ import asyncio
 import re
 from typing import Any
 from urllib.parse import quote, urlsplit
-from uuid import uuid4
 
 import aiohttp
 
-from .const import MAX_PAGE_SIZE
+from .const import MAX_PAGE_SIZE, UPLOAD_MAX_BYTES
+from .errors import structured_editor_required
 
 _RECIPE_SLUG = re.compile(r"^[\w\-]{1,150}$", re.ASCII)
 _ITEM_ID = re.compile(r"^[\w\-]{1,150}$", re.ASCII)
 _ASSET_FILENAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$", re.ASCII)
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_IMAGE_TYPES = {"jpg": "image/jpeg", "png": "image/png", "webp": "image/webp"}
 _VALID_MEALS = frozenset({"breakfast", "lunch", "dinner", "side", "dessert", "drink", "snack"})
 
 
@@ -62,6 +63,20 @@ def safe_text(value: Any, limit: int = 500) -> str:
     if not cleaned or len(cleaned) > limit:
         raise ValueError("Text length outside allowed range")
     return cleaned
+
+
+def check_image(data: bytes, ext: str) -> str:
+    """Validate size and magic bytes against the claimed extension; return the content type."""
+    if ext not in _IMAGE_TYPES or not 100 <= len(data) <= UPLOAD_MAX_BYTES:
+        raise ValueError("Photo must be JPEG, PNG or WebP and 10 MiB or smaller")
+    magic = {
+        "jpg": data[:3] == b"\xff\xd8\xff",
+        "png": data[:8] == bytes([137, 80, 78, 71, 13, 10, 26, 10]),
+        "webp": data[:4] == b"RIFF" and data[8:12] == b"WEBP",
+    }
+    if not magic[ext]:
+        raise ValueError("Photo data does not match file extension")
+    return _IMAGE_TYPES[ext]
 
 
 class MealieClient:
@@ -170,10 +185,10 @@ class MealieClient:
                     return None
                 if response.status != 200:
                     raise MealieError("Recipe step image not available")
-                if response.content_length and response.content_length > 8_000_000:
+                if response.content_length and response.content_length > UPLOAD_MAX_BYTES:
                     raise MealieError("Recipe step image exceeds size limit")
-                payload = await response.content.read(8_000_001)
-                if len(payload) > 8_000_000:
+                payload = await response.content.read(UPLOAD_MAX_BYTES + 1)
+                if len(payload) > UPLOAD_MAX_BYTES:
                     raise MealieError("Recipe step image exceeds size limit")
                 if payload.startswith(b"\xff\xd8\xff"):
                     return payload, "image/jpeg"
@@ -187,21 +202,9 @@ class MealieClient:
 
     async def upload_image(self, slug: str, image: bytes, ext: str) -> dict:
         """Upload an original photo to the documented Mealie multipart endpoint."""
-        if ext not in ("jpg", "png", "webp") or len(image) > 4 * 1024 * 1024 or len(image) < 100:
-            raise ValueError("Photo must be JPEG, PNG or WebP and 4 MiB or smaller")
-        jpeg = image[:3] == b"\xff\xd8\xff"
-        png = image[:8] == bytes([137, 80, 78, 71, 13, 10, 26, 10])
-        webp = image[:4] == b"RIFF" and image[8:12] == b"WEBP"
-        expected = {"jpg": jpeg, "png": png, "webp": webp}
-        if not expected[ext]:
-            raise ValueError("Photo data does not match file extension")
+        content_type = check_image(image, ext)
         form = aiohttp.FormData()
-        form.add_field(
-            "image",
-            image,
-            filename=f"photo.{ext}",
-            content_type={"jpg": "image/jpeg", "png": "image/png", "webp": "image/webp"}[ext],
-        )
+        form.add_field("image", image, filename=f"photo.{ext}", content_type=content_type)
         form.add_field("extension", ext)
         try:
             async with self._session.put(
@@ -218,6 +221,37 @@ class MealieClient:
         except (TimeoutError, aiohttp.ClientError) as exc:
             raise MealieError("Photo upload failed") from exc
 
+    async def upload_asset(self, slug: str, name: str, ext: str, data: bytes) -> dict:
+        """Attach a raster photo as a recipe asset; returns Mealie's name, icon and fileName."""
+        content_type = check_image(data, ext)
+        form = aiohttp.FormData()
+        form.add_field("name", safe_text(name, 120))
+        form.add_field("icon", "mdi-image")
+        form.add_field("extension", ext)
+        form.add_field("file", data, filename=f"{name}.{ext}", content_type=content_type)
+        try:
+            async with self._session.post(
+                f"{self.url}/api/recipes/{safe_slug(slug)}/assets",
+                headers={"Authorization": f"Bearer {self._token}", "Accept": "application/json"},
+                data=form,
+                ssl=self._verify_ssl,
+                allow_redirects=False,
+                timeout=aiohttp.ClientTimeout(total=35),
+            ) as response:
+                if response.status >= 300:
+                    raise MealieError(f"Mealie rejected photo (HTTP {response.status})")
+                asset = await response.json()
+        except (TimeoutError, aiohttp.ClientError) as exc:
+            raise MealieError("Photo upload failed") from exc
+        if not isinstance(asset, dict) or not _ASSET_FILENAME.fullmatch(
+            str(asset.get("fileName") or "")
+        ):
+            raise MealieError("Mealie returned an unexpected asset response")
+        return asset
+
+    async def delete_image(self, slug: str) -> None:
+        await self.request("DELETE", f"/api/recipes/{safe_slug(slug)}/image")
+
     async def original_image(self, recipe_id: str) -> bytes:
         """Backup original photo before replacing it. Fail closed on missing original."""
         url = f"{self.url}/api/media/recipes/{safe_id(recipe_id)}/images/original.webp"
@@ -231,8 +265,8 @@ class MealieClient:
             ) as response:
                 if response.status != 200 or response.content_type != "image/webp":
                     raise MealieError("Could not back up original photo")
-                payload = await response.content.read(10 * 1024 * 1024 + 1)
-                if len(payload) > 10 * 1024 * 1024:
+                payload = await response.content.read(UPLOAD_MAX_BYTES + 1)
+                if len(payload) > UPLOAD_MAX_BYTES:
                     raise MealieError("Original photo too large for safety backup")
                 return payload
         except (TimeoutError, aiohttp.ClientError) as exc:
@@ -265,6 +299,88 @@ class MealieClient:
         if not isinstance(result, dict):
             raise MealieError("Unexpected recipe response")
         return result
+
+    async def patch_recipe(self, slug: str, changes: dict) -> dict:
+        """PATCH only the given recipe fields; Mealie answers with the updated recipe."""
+        if not isinstance(changes, dict) or not changes:
+            raise ValueError("Nothing to update")
+        result = await self.request("PATCH", f"/api/recipes/{safe_slug(slug)}", data=changes)
+        if not isinstance(result, dict):
+            raise MealieError("Unexpected recipe response")
+        return result
+
+    async def _catalog(self, kind: str, search: str, page: int, per_page: int) -> dict:
+        params: dict[str, Any] = {
+            "page": max(1, min(10000, int(page))),
+            "perPage": max(1, min(50, int(per_page))),
+            "orderBy": "name",
+            "orderDirection": "asc",
+        }
+        if search.strip():
+            params["search"] = search.strip()[:80]
+        result = await self.request("GET", f"/api/{kind}", params=params)
+        if not isinstance(result, dict) or not isinstance(result.get("items"), list):
+            raise MealieError(f"Unexpected {kind} listing")
+        return result
+
+    async def foods(self, search: str = "", page: int = 1, per_page: int = 20) -> dict:
+        return await self._catalog("foods", search, page, per_page)
+
+    async def units(self, search: str = "", page: int = 1, per_page: int = 20) -> dict:
+        return await self._catalog("units", search, page, per_page)
+
+    async def food(self, food_id: str) -> dict:
+        result = await self.request("GET", f"/api/foods/{safe_id(food_id)}")
+        if not isinstance(result, dict):
+            raise MealieError("Unexpected food response")
+        return result
+
+    async def unit(self, unit_id: str) -> dict:
+        result = await self.request("GET", f"/api/units/{safe_id(unit_id)}")
+        if not isinstance(result, dict):
+            raise MealieError("Unexpected unit response")
+        return result
+
+    async def _exact(self, kind: str, name: str) -> dict | None:
+        found = await self._catalog(kind, name, 1, 50)
+        wanted = name.casefold()
+        return next(
+            (
+                item
+                for item in found["items"]
+                if isinstance(item, dict) and str(item.get("name", "")).casefold() == wanted
+            ),
+            None,
+        )
+
+    async def create_food(self, name: str, plural_name: str = "") -> dict:
+        """Create a food, or return the existing exact (case-insensitive) match."""
+        name = safe_text(name, 120)
+        existing = await self._exact("foods", name)
+        if existing:
+            return {**existing, "existing": True}
+        body = {"name": name}
+        if isinstance(plural_name, str) and plural_name.strip():
+            body["pluralName"] = safe_text(plural_name, 120)
+        created = await self.request("POST", "/api/foods", data=body)
+        if not isinstance(created, dict) or not created.get("id"):
+            raise MealieError("Unexpected food response")
+        return {**created, "existing": False}
+
+    async def create_unit(self, name: str, abbreviation: str = "") -> dict:
+        """Create a unit, or return the existing exact (case-insensitive) match."""
+        name = safe_text(name, 60)
+        existing = await self._exact("units", name)
+        if existing:
+            return {**existing, "existing": True}
+        abbreviation = abbreviation.strip() if isinstance(abbreviation, str) else ""
+        if len(abbreviation) > 20:
+            raise ValueError("Abbreviation too long")
+        body = {"name": name, "abbreviation": abbreviation, "useAbbreviation": bool(abbreviation)}
+        created = await self.request("POST", "/api/units", data=body)
+        if not isinstance(created, dict) or not created.get("id"):
+            raise MealieError("Unexpected unit response")
+        return {**created, "existing": False}
 
     async def mealplan(self, start: str, end: str) -> list:
         safe_date(start)
@@ -402,28 +518,8 @@ class MealieClient:
                     raise ValueError("Too many cooking steps")
                 changes["recipeInstructions"] = [{"text": safe_text(line, 2000)} for line in lines]
             if "ingredients" in payload:
-                # Optional advanced operation: avoid destroying structured food/unit mapping.
-                lines = payload["ingredients"]
-                if not isinstance(lines, list) or len(lines) > 100:
-                    raise ValueError("Too many ingredients")
-                cleaned = [safe_text(line, 1000) for line in lines]
-                previous = await self.recipe(slug)
-                if any(
-                    row.get("food")
-                    or row.get("unit")
-                    or row.get("referencedRecipe")
-                    or row.get("substitutions")
-                    or row.get("quantity") not in (None, 0)
-                    for row in previous.get("recipeIngredient", [])
-                    if isinstance(row, dict)
-                ):
-                    raise ValueError(
-                        "Structured ingredients are protected. Edit these in Mealie directly"
-                    )
-                changes["recipeIngredient"] = [
-                    {"originalText": line, "display": line, "referenceId": str(uuid4())}
-                    for line in cleaned
-                ]
+                # Plain text would destroy linked foods and units; the structured editor owns this.
+                raise structured_editor_required()
             if not changes:
                 raise ValueError("Nothing to update")
             return await self.request("PATCH", f"/api/recipes/{slug}", data=changes)

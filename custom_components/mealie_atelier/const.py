@@ -6,11 +6,21 @@ DOMAIN = "mealie_atelier"
 CONF_API_TOKEN = "api_token"
 CONF_VERIFY_SSL = "verify_ssl"
 CONF_READ_ONLY = "read_only"
+CONF_WRITE_USERS = "write_users"
 CONF_EXPERIMENTAL_INGREDIENTS = "experimental_ingredient_edits"
 CONF_WRITE_USERS = "write_users"
 DEFAULT_TIMEOUT = 20
 MAX_PAGE_SIZE = 60
 MAX_BODY_LENGTH = 10000
+
+# Recipe photos and the backups taken before every recipe write.
+UPLOAD_MAX_BYTES = 10 * 1024 * 1024
+UPLOAD_CHUNK_BYTES = 256 * 1024
+UPLOAD_TTL_SECONDS = 600
+UPLOAD_MAX_SESSIONS = 2
+BACKUPS_PER_RECIPE = 10
+BACKUP_MAX_RECIPES = 200
+IMAGE_BACKUPS_PER_RECIPE = 3
 
 # Only explicitly supported operations may write to Mealie.
 ADMIN_ACTIONS = frozenset({"recipe_create", "recipe_update", "recipe_import"})

@@ -61,7 +61,7 @@
         "data": {
           "read_only": "Read-only mode",
           "write_users": "Users allowed to change data",
-          "experimental_ingredient_edits": "Experimental ingredient replacement",
+          "experimental_ingredient_edits": "Structured ingredient editing",
           "usda_fdc_api_key": "USDA FoodData Central API key",
           "openai_api_key": "OpenAI API key",
           "timer_notify_service": "Timer notification service"
@@ -69,7 +69,7 @@
         "data_description": {
           "read_only": "Blocks all changes to recipes, meal plans and shopping lists. Useful for shared tablets.",
           "write_users": "Leave empty to let every Home Assistant user change shopping lists and meal plans. Administrators can always write. Recipe editing stays admin only.",
-          "experimental_ingredient_edits": "Allows free-text ingredient replacement. Back up Mealie first. Linked ingredients stay protected.",
+          "experimental_ingredient_edits": "Lets administrators edit ingredients with linked foods and units. A backup is saved before every change.",
           "usda_fdc_api_key": "Optional. Free key from USDA FoodData Central, used for nutrition lookup.",
           "openai_api_key": "Optional. Only used for food search suggestions. Leave empty to disable.",
           "timer_notify_service": "Optional. A notify service such as notify.mobile_app_your_phone that receives a push message when a kitchen timer ends. Leave empty for in-app notifications only."
@@ -122,6 +122,33 @@
     },
     "timer_dispatched": {
       "message": "The kitchen timer has already been dispatched."
+    },
+    "use_structured_editor": {
+      "message": "Edit ingredients with the structured ingredient editor. Plain-text replacement is no longer available."
+    },
+    "write_unverified": {
+      "message": "Mealie accepted the change but the saved recipe differs. Backup {backup_id} can undo it."
+    },
+    "backup_failed": {
+      "message": "The backup could not be saved, so nothing was changed. Check the free space and try again."
+    },
+    "backup_not_found": {
+      "message": "This backup no longer exists. Open the version history again."
+    },
+    "upload_invalid": {
+      "message": "The photo was refused. Use a JPEG, PNG or WebP of at most 10 MiB."
+    },
+    "upload_expired": {
+      "message": "The upload expired. Choose the photo again."
+    },
+    "upload_busy": {
+      "message": "Too many photo uploads are open. Wait a moment and try again."
+    },
+    "step_not_found": {
+      "message": "The step changed in the meantime. Reload the recipe and try again."
+    },
+    "disabled": {
+      "message": "Structured ingredient editing is switched off in the Mealie Atelier options."
     }
   }
 }

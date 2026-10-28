@@ -7,11 +7,11 @@ Mealie/HA compatibility test is still required before public stable release.
 from __future__ import annotations
 
 import unittest
-from uuid import UUID
 
 import pytest
 from aiohttp import ClientSession, web
 
+from custom_components.mealie_atelier.errors import AtelierError
 from custom_components.mealie_atelier.api import (
     MealieClient,
     MealieError,
@@ -181,20 +181,18 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
                 "description": "Very tasty",
                 "servings": 4,
                 "instructions": ["Preheat oven", "Bake"],
-                "ingredients": ["200 g flour", "1 lemon"],
             },
         )
         self.assertEqual(result["recipeServings"], 4)
         self.assertEqual(result["recipeInstructions"], [{"text": "Preheat oven"}, {"text": "Bake"}])
-        self.assertEqual(result["recipeIngredient"][0]["originalText"], "200 g flour")
-        self.assertTrue(UUID(result["recipeIngredient"][0]["referenceId"]))
         self.assertNotIn("password", self.calls[-1]["body"])
         with self.assertRaises(ValueError):
             await self.client.mutate("recipe_update", {"slug": "lasagna", "servings": 0})
         with self.assertRaises(ValueError):
             await self.client.mutate("recipe_update", {"slug": "lasagna", "instructions": [""]})
-        with self.assertRaises(ValueError):
-            await self.client.mutate("recipe_update", {"slug": "lasagna", "ingredients": [" "]})
+        with self.assertRaises(AtelierError) as caught:
+            await self.client.mutate("recipe_update", {"slug": "lasagna", "ingredients": ["x"]})
+        self.assertEqual(caught.exception.code, "use_structured_editor")
         with self.assertRaises(ValueError):
             await self.client.mutate("dangerous_operation", {})
 

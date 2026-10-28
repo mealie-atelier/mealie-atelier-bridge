@@ -20,6 +20,14 @@ No. Smart shopping sync is planned, not implemented. The [specification](SMART_S
 
 The planned sync targets Home Assistant's generic To-do entity contract. Provider support must be tested because integrations may differ in optional fields and failure behavior. Do not assume compatibility until it is listed as tested in the open-work/release records.
 
+## Are recipe changes backed up?
+
+Yes. Before every recipe write (structured ingredients, name, description, servings, steps, cover photo, step photos and restores) the Bridge saves a snapshot in Home Assistant storage: the newest 10 per recipe, for up to 200 recipes. Cover photos are kept as private files under `mealie_atelier/backups/` in the Home Assistant config folder, the newest 3 per recipe. If the backup cannot be written, nothing is changed in Mealie. Removing the integration deletes its backups.
+
+## Does removing a step photo delete the file in Mealie?
+
+No. Mealie v3.29 has no endpoint to delete a recipe asset. Removing or replacing a step photo only removes the reference from the step and the entry from the recipe's asset list. The image file stays on the Mealie disk until you clean it up there.
+
 ## Where do I ask for help or report a security issue?
 
 Use [GitHub Discussions](https://github.com/orgs/mealie-atelier/discussions) for setup questions and ideas. Report reproducible bugs through the repository's Issue forms. Use the private reporting process in [SECURITY.md](../.github/SECURITY.md) for vulnerabilities; do not post credentials or private recipe data publicly.
