@@ -11,7 +11,11 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
-from custom_components.mealie_atelier.const import CONF_EXPERIMENTAL_INGREDIENTS, CONF_READ_ONLY
+from custom_components.mealie_atelier.const import (
+    CONF_EXPERIMENTAL_INGREDIENTS,
+    CONF_READ_ONLY,
+    CONF_WRITE_USERS,
+)
 
 from .conftest import ENTRY_ID, JSON, MEALIE_URL
 
@@ -124,6 +128,7 @@ async def test_readonly_denies_all_writes_and_exposes_status(
     assert status["entry_id"] == ENTRY_ID
     assert not status["can_write"]
     assert not status["can_manage"]
+    assert status["permissions"] == {"can_read": True, "can_write": False, "can_admin": False}
 
     response = await send(
         client,
@@ -288,3 +293,30 @@ async def test_translated_errors_reach_the_websocket_client(
     )
     assert response["error"]["code"] == "invalid_request"
     assert "protected" in response["error"]["message"]
+
+
+async def test_write_grants_gate_mutate_and_show_in_status(
+    hass: HomeAssistant,
+    setup_integration: MockConfigEntry,
+    hass_ws_client: WebSocketGenerator,
+    hass_read_only_access_token: str,
+):
+    entry = setup_integration
+    hass.config_entries.async_update_entry(entry, options={CONF_WRITE_USERS: ["somebody-else"]})
+    mutate = AsyncMock()
+    entry.runtime_data.client.mutate = mutate
+    ordinary = await hass_ws_client(hass, hass_read_only_access_token)
+
+    status = (await send(ordinary, {"type": "mealie_atelier/status"}))["result"]["entries"][0]
+    assert status["permissions"] == {"can_read": True, "can_write": False, "can_admin": False}
+    assert status["can_write"] is False
+    response = await send(
+        ordinary,
+        {
+            "type": "mealie_atelier/mutate",
+            "action": "shopping_add",
+            "payload": {"list_id": "list-1", "note": "Bread"},
+        },
+    )
+    assert response["error"]["code"] == "write_not_permitted"
+    mutate.assert_not_called()

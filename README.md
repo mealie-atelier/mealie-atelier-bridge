@@ -10,6 +10,7 @@ An optional Home Assistant custom integration that connects Mealie to Mealie Ate
 - Authenticated Home Assistant WebSocket commands for recipes, meal plans, shopping lists, nutrition workflows, cooking sessions, and timers.
 - German and English setup translations.
 - Optional read-only mode enforced by the backend.
+- Optional per-user write grants: pick which Home Assistant users may change shopping lists and meal plans (empty means everyone). Administrators always can; recipe editing stays admin only.
 
 The Bridge currently does **not** implement the planned Mealie-to-Home-Assistant To-do/Bring shopping sync. The safety and implementation requirements are tracked in [`docs/SMART_SHOPPING_SYNC.md`](docs/SMART_SHOPPING_SYNC.md).
 

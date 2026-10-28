@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 import pytest
+import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -15,6 +16,7 @@ from custom_components.mealie_atelier.const import (
     CONF_READ_ONLY,
     CONF_TIMER_NOTIFY_SERVICE,
     CONF_VERIFY_SSL,
+    CONF_WRITE_USERS,
     DOMAIN,
 )
 
@@ -196,3 +198,65 @@ async def test_options_flow_rejects_bad_notify_service(hass):
         result["flow_id"], {CONF_TIMER_NOTIFY_SERVICE: "telegram"}
     )
     assert result["errors"] == {CONF_TIMER_NOTIFY_SERVICE: "invalid_notify_service"}
+
+
+async def _options_form(hass, entry):
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    schema = result["data_schema"].schema
+    field = next(key for key in schema if key == CONF_WRITE_USERS)
+    return result, schema[field], field
+
+
+async def test_options_flow_lists_only_active_non_system_users(hass):
+    anna = await hass.auth.async_create_user("Anna")
+    ben = await hass.auth.async_create_user("Ben")
+    gone = await hass.auth.async_create_user("Inactive")
+    await hass.auth.async_update_user(gone, is_active=False)
+    await hass.auth.async_create_system_user("Integration")
+    entry = _entry()
+    entry.add_to_hass(hass)
+
+    _, selector, _ = await _options_form(hass, entry)
+
+    options = selector.config["options"]
+    assert [(o["value"], o["label"]) for o in options] == [(anna.id, "Anna"), (ben.id, "Ben")]
+    assert selector.config["multiple"] is True
+
+
+async def test_options_flow_saves_write_users_and_suggests_only_known_ids(hass):
+    anna = await hass.auth.async_create_user("Anna")
+    entry = _entry()
+    entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(entry, options={CONF_WRITE_USERS: [anna.id, "deleted"]})
+
+    result, _, field = await _options_form(hass, entry)
+    # The form never suggests a stale id, so the frontend cannot resubmit it.
+    assert field.description["suggested_value"] == [anna.id]
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_WRITE_USERS: [anna.id]}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options[CONF_WRITE_USERS] == [anna.id]
+
+
+async def test_options_flow_rejects_unknown_write_user_id(hass):
+    anna = await hass.auth.async_create_user("Anna")
+    entry = _entry()
+    entry.add_to_hass(hass)
+    result, _, _ = await _options_form(hass, entry)
+
+    with pytest.raises(vol.Invalid):
+        await hass.config_entries.options.async_configure(
+            result["flow_id"], {CONF_WRITE_USERS: [anna.id, "deleted"]}
+        )
+    assert CONF_WRITE_USERS not in entry.options
+
+
+async def test_options_flow_defaults_to_no_grants(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options[CONF_WRITE_USERS] == []

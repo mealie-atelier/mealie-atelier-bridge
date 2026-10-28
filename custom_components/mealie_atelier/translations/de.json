@@ -60,6 +60,7 @@
         "description": "Lege fest, was das Dashboard ändern darf und welche optionalen Dienste es nutzen kann.",
         "data": {
           "read_only": "Nur-Lesen-Modus",
+          "write_users": "Nutzer mit Schreibrecht",
           "experimental_ingredient_edits": "Experimentelle Zutaten-Ersetzung",
           "usda_fdc_api_key": "USDA-FoodData-Central-API-Key",
           "openai_api_key": "OpenAI-API-Key",
@@ -67,6 +68,7 @@
         },
         "data_description": {
           "read_only": "Verhindert alle Änderungen an Rezepten, Wochenplan und Einkaufslisten. Praktisch für gemeinsam genutzte Tablets.",
+          "write_users": "Leer lassen, damit alle Home-Assistant-Nutzer Einkaufslisten und Wochenpläne ändern dürfen. Administratoren dürfen immer schreiben. Rezepte bearbeiten bleibt Administratoren vorbehalten.",
           "experimental_ingredient_edits": "Erlaubt das Ersetzen von Zutaten per Freitext. Sichere vorher Mealie. Verknüpfte Zutaten bleiben geschützt.",
           "usda_fdc_api_key": "Optional. Kostenloser Key von USDA FoodData Central für den Nährwertabgleich.",
           "openai_api_key": "Optional. Wird nur für Vorschläge bei der Lebensmittelsuche genutzt. Leer lassen, um es zu deaktivieren.",
@@ -79,6 +81,15 @@
     }
   },
   "exceptions": {
+    "read_only": {
+      "message": "Mealie Atelier ist im Nur-Lesen-Modus."
+    },
+    "unauthorized": {
+      "message": "Das dürfen nur Home-Assistant-Administratoren."
+    },
+    "write_not_permitted": {
+      "message": "Dein Home-Assistant-Nutzer darf keine Daten ändern. Ein Administrator kann dir in den Mealie-Atelier-Optionen Zugriff geben."
+    },
     "auth_failed": {
       "message": "Mealie hat den Zugriff verweigert. Prüfe den API-Token und seine Berechtigungen."
     },

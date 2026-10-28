@@ -23,6 +23,7 @@ from .const import (
     CONF_READ_ONLY,
     CONF_TIMER_NOTIFY_SERVICE,
     DOMAIN,
+    WRITE_ACTIONS,
 )
 from .nutrition import (
     ai_suggest,
@@ -38,9 +39,15 @@ from .nutrition import (
     search as search_nutrition,
 )
 from .models import MealieAtelierConfigEntry, get_loaded_entry
+from .permissions import can_admin, can_write, check, check_personal
 from .studio import apply as studio_apply
 from .studio_ai import audit_recipe as ai_audit
 from .studio_ai import substitutes as ai_substitutes
+
+
+# Advertised to cards through `status` as part of the shared status contract.
+UPLOAD_MAX_BYTES = 10 * 1024 * 1024
+UPLOAD_CHUNK_BYTES = 256 * 1024
 
 
 def async_register_commands(hass: HomeAssistant) -> None:
@@ -166,19 +173,35 @@ async def _respond(hass, connection, msg, func) -> None:
 @websocket_api.websocket_command({probatio.Required("type"): "mealie_atelier/status"})
 @websocket_api.async_response
 async def ws_status(hass, connection, msg):
-    entries = [
-        {
-            "entry_id": entry.entry_id,
-            "name": entry.title,
-            "connected": True,
-            "read_only": bool(entry.options.get(CONF_READ_ONLY, False)),
-            "can_write": not entry.options.get(CONF_READ_ONLY, False),
-            "can_manage": bool(connection.user.is_admin)
-            and not entry.options.get(CONF_READ_ONLY, False),
-            "can_edit_ingredients": False,  # No safe WS write command exposed until HA path is reviewed against live Mealie.
-        }
-        for entry in hass.config_entries.async_loaded_entries(DOMAIN)
-    ]
+    entries = []
+    for entry in hass.config_entries.async_loaded_entries(DOMAIN):
+        read_only = bool(entry.options.get(CONF_READ_ONLY, False))
+        writer = can_write(entry, connection.user)
+        admin = can_admin(entry, connection.user)
+        structured = bool(entry.options.get(CONF_EXPERIMENTAL_INGREDIENTS, False)) and not read_only
+        entries.append(
+            {
+                "entry_id": entry.entry_id,
+                "name": entry.title,
+                "connected": True,
+                "read_only": read_only,
+                "permissions": {"can_read": True, "can_write": writer, "can_admin": admin},
+                "features": {
+                    "shopping_sync": True,
+                    "structured_ingredients": structured,
+                    "uploads": True,
+                    "recipe_filters": True,
+                },
+                "limits": {
+                    "upload_max_bytes": UPLOAD_MAX_BYTES,
+                    "upload_chunk_bytes": UPLOAD_CHUNK_BYTES,
+                },
+                # Legacy mirrors for cards that predate `permissions`.
+                "can_write": writer,
+                "can_manage": admin,
+                "can_edit_ingredients": admin and structured,
+            }
+        )
     connection.send_result(msg["id"], {"entries": entries, "version": "0.9.5"})
 
 
@@ -284,10 +307,13 @@ async def ws_mutation(hass, connection, msg):
     if entry is None:
         connection.send_error(msg["id"], "not_configured", "Configure Mealie Atelier Bridge")
         return
-    if bool(entry.options.get(CONF_READ_ONLY, False)):
-        connection.send_error(msg["id"], "read_only", "Mealie Atelier is in read-only mode")
-        return
     action = msg["action"]
+    # Unknown actions fail before any permission decision can reveal which actions exist.
+    if action not in ADMIN_ACTIONS and action not in WRITE_ACTIONS:
+        connection.send_error(msg["id"], "invalid_request", "Unsupported operation")
+        return
+    if not check(connection, msg, entry, "admin" if action in ADMIN_ACTIONS else "write"):
+        return
     if (
         action == "recipe_update"
         and "ingredients" in msg["payload"]
@@ -297,11 +323,6 @@ async def ws_mutation(hass, connection, msg):
             msg["id"],
             "disabled",
             "Ingredient editing is experimental and disabled in integration options",
-        )
-        return
-    if action in ADMIN_ACTIONS and not connection.user.is_admin:
-        connection.send_error(
-            msg["id"], "unauthorized", "Only Home Assistant admins can manage recipes"
         )
         return
     await _respond(hass, connection, msg, lambda c: c.mutate(action, msg["payload"]))
@@ -421,14 +442,8 @@ async def ws_nutrition_calculate(hass, connection, msg):
 @websocket_api.async_response
 async def ws_nutrition_save(hass, connection, msg):
     try:
-        if not connection.user.is_admin:
-            connection.send_error(
-                msg["id"], "unauthorized", "Only Home Assistant admins may update nutrition"
-            )
-            return
         client, entry = _nutrition_entry(hass, connection, msg)
-        if entry.options.get(CONF_READ_ONLY, False):
-            connection.send_error(msg["id"], "read_only", "Mealie Atelier is read-only")
+        if not check(connection, msg, entry, "admin"):
             return
         recipe = await client.recipe(msg["slug"])
         existing = recipe.get("nutrition") or {}
@@ -489,10 +504,12 @@ async def ws_studio_update(hass, connection, msg):
         connection.send_error(msg["id"], "not_configured", "Studio storage unavailable")
         return
     ctx = entry.runtime_data.studio
-    if entry.options.get(CONF_READ_ONLY, False):
-        connection.send_error(msg["id"], "read_only", "Kitchen is read-only")
-        return
     action = msg["action"]
+    if action == "journal_set":
+        if not check_personal(connection, msg, entry):
+            return
+    elif not check(connection, msg, entry, "write"):
+        return
     if action == "family_member" and not connection.user.is_admin:
         connection.send_error(msg["id"], "unauthorized", "Admin required to edit family members")
         return
@@ -682,6 +699,8 @@ async def ws_alarm_create(hass, connection, msg):
     if not entry:
         connection.send_error(msg["id"], "not_configured", "Kitchen timer service unavailable")
         return
+    if not check_personal(connection, msg, entry):
+        return
     manager = entry.runtime_data.alarms
     try:
         connection.send_result(
@@ -703,6 +722,8 @@ async def ws_alarm_cancel(hass, connection, msg):
     entry = _entry(hass, msg)
     if not entry:
         connection.send_error(msg["id"], "not_configured", "Kitchen timer service unavailable")
+        return
+    if not check_personal(connection, msg, entry):
         return
     manager = entry.runtime_data.alarms
     try:

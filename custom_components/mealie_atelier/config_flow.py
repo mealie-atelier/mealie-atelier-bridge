@@ -12,6 +12,7 @@ from homeassistant.const import CONF_URL
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
+    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -26,6 +27,7 @@ from .const import (
     CONF_READ_ONLY,
     CONF_TIMER_NOTIFY_SERVICE,
     CONF_VERIFY_SSL,
+    CONF_WRITE_USERS,
     DOMAIN,
 )
 
@@ -190,6 +192,17 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
 
     async def async_step_init(self, user_input=None):
         errors = {}
+        # Home Assistant has no user selector. Offer active, non-system users and forget stored
+        # ids of users that were deleted or deactivated, so the form never submits a stale one.
+        users = sorted(
+            (
+                user
+                for user in await self.hass.auth.async_get_users()
+                if not user.system_generated and user.is_active
+            ),
+            key=lambda user: (user.name or user.id).casefold(),
+        )
+        known = {user.id for user in users}
         if user_input is not None:
             service = user_input.get(CONF_TIMER_NOTIFY_SERVICE, "").strip()
             if service and not (
@@ -198,7 +211,12 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
                 errors[CONF_TIMER_NOTIFY_SERVICE] = "invalid_notify_service"
             else:
                 return self.async_create_entry(
-                    data={**user_input, CONF_TIMER_NOTIFY_SERVICE: service}
+                    # The selector only accepts ids from its options, so no stale id reaches here.
+                    data={
+                        **user_input,
+                        CONF_TIMER_NOTIFY_SERVICE: service,
+                        CONF_WRITE_USERS: user_input.get(CONF_WRITE_USERS, []),
+                    }
                 )
         # Offer the notify services that exist right now, but still allow typing one that
         # is not registered yet (for example a phone that is currently offline).
@@ -207,6 +225,16 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
         schema = vol.Schema(
             {
                 vol.Required(CONF_READ_ONLY, default=False): bool,
+                vol.Optional(CONF_WRITE_USERS, default=[]): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            SelectOptionDict(value=user.id, label=user.name or user.id)
+                            for user in users
+                        ],
+                        multiple=True,
+                        mode=SelectSelectorMode.LIST,
+                    )
+                ),
                 vol.Required(CONF_EXPERIMENTAL_INGREDIENTS, default=False): bool,
                 vol.Optional(CONF_FDC_KEY, default=""): str,
                 vol.Optional(CONF_AI_KEY, default=""): str,
@@ -219,10 +247,12 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
                 ),
             }
         )
+        suggested = dict(user_input or self.config_entry.options)
+        suggested[CONF_WRITE_USERS] = [
+            user_id for user_id in suggested.get(CONF_WRITE_USERS) or [] if user_id in known
+        ]
         return self.async_show_form(
             step_id="init",
-            data_schema=self.add_suggested_values_to_schema(
-                schema, user_input or self.config_entry.options
-            ),
+            data_schema=self.add_suggested_values_to_schema(schema, suggested),
             errors=errors,
         )

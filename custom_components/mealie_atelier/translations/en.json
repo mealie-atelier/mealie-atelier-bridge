@@ -60,6 +60,7 @@
         "description": "Control what the dashboard may change and which optional services it can use.",
         "data": {
           "read_only": "Read-only mode",
+          "write_users": "Users allowed to change data",
           "experimental_ingredient_edits": "Experimental ingredient replacement",
           "usda_fdc_api_key": "USDA FoodData Central API key",
           "openai_api_key": "OpenAI API key",
@@ -67,6 +68,7 @@
         },
         "data_description": {
           "read_only": "Blocks all changes to recipes, meal plans and shopping lists. Useful for shared tablets.",
+          "write_users": "Leave empty to let every Home Assistant user change shopping lists and meal plans. Administrators can always write. Recipe editing stays admin only.",
           "experimental_ingredient_edits": "Allows free-text ingredient replacement. Back up Mealie first. Linked ingredients stay protected.",
           "usda_fdc_api_key": "Optional. Free key from USDA FoodData Central, used for nutrition lookup.",
           "openai_api_key": "Optional. Only used for food search suggestions. Leave empty to disable.",
@@ -79,6 +81,15 @@
     }
   },
   "exceptions": {
+    "read_only": {
+      "message": "Mealie Atelier is in read-only mode."
+    },
+    "unauthorized": {
+      "message": "Only Home Assistant administrators can do this."
+    },
+    "write_not_permitted": {
+      "message": "Your Home Assistant user may not change data. An administrator can grant access in the Mealie Atelier options."
+    },
     "auth_failed": {
       "message": "Mealie refused access. Check the API token and its permissions."
     },
