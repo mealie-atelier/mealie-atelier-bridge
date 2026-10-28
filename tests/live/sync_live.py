@@ -169,13 +169,15 @@ async def copy_rule(check: SyncCheck, tag: str) -> None:
             len(source) == 4 and not any(item["checked"] for item in source),
         )
     finally:
-        # The list goes first, so a failed rule delete cannot leave it behind.
-        mealie("DELETE", f"/api/households/shopping/lists/{list_id}")
-        if rule_id:
-            await check.ok(
-                "sync_rule_delete (copy)",
-                {"type": "mealie_atelier/sync_rule_delete", "rule_id": rule_id},
-            )
+        # Each cleanup runs even when the other one fails.
+        try:
+            mealie("DELETE", f"/api/households/shopping/lists/{list_id}")
+        finally:
+            if rule_id:
+                await check.ok(
+                    "sync_rule_delete (copy)",
+                    {"type": "mealie_atelier/sync_rule_delete", "rule_id": rule_id},
+                )
 
 
 async def move_rule(check: SyncCheck, tag: str) -> None:
@@ -212,13 +214,15 @@ async def move_rule(check: SyncCheck, tag: str) -> None:
         )
         await check.ok("sync_records", {"type": "mealie_atelier/sync_records", "rule_id": rule_id})
     finally:
-        # The list goes first, so a failed rule delete cannot leave it behind.
-        mealie("DELETE", f"/api/households/shopping/lists/{list_id}")
-        if rule_id:
-            await check.ok(
-                "sync_rule_delete (move)",
-                {"type": "mealie_atelier/sync_rule_delete", "rule_id": rule_id},
-            )
+        # Each cleanup runs even when the other one fails.
+        try:
+            mealie("DELETE", f"/api/households/shopping/lists/{list_id}")
+        finally:
+            if rule_id:
+                await check.ok(
+                    "sync_rule_delete (move)",
+                    {"type": "mealie_atelier/sync_rule_delete", "rule_id": rule_id},
+                )
 
 
 async def cleanup(check: SyncCheck) -> None:

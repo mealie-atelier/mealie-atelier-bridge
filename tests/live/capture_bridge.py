@@ -94,8 +94,10 @@ def main() -> None:
             finally:
                 browser.close()
     finally:
-        asyncio.run(ws({"type": "mealie_atelier/sync_rule_delete", "rule_id": rule_id}))
-        asyncio.run(abort_flows())
+        try:
+            asyncio.run(ws({"type": "mealie_atelier/sync_rule_delete", "rule_id": rule_id}))
+        finally:
+            asyncio.run(abort_flows())
     print(f"screenshots in {OUT}")
 
 
