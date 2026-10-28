@@ -16,11 +16,14 @@
 
 ## Manual verification
 
+Install [uv](https://docs.astral.sh/uv/) and Python 3.14.2 or newer (the minimum for Home Assistant 2026.10), then:
+
 ```sh
-pytest -q
-ruff check custom_components tests
-ruff format --check custom_components tests
-python -m compileall -q custom_components/mealie_atelier
+uv sync
+git config core.hooksPath .githooks   # runs the checks below before every commit
+uv run ruff check
+uv run ruff format --check
+uv run pytest -q
 ```
 
 GitHub Actions are disabled across the organization; use no workflows or automated release checks. Run and review these commands manually before a release. Do not describe local mock tests as live Home Assistant or Mealie acceptance. Follow `docs/SMART_SHOPPING_SYNC.md` before implementing or advertising shopping-list synchronization.

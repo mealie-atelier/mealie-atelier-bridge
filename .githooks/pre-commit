@@ -1,0 +1,6 @@
+#!/bin/sh
+# Local quality gate. GitHub Actions are intentionally disabled for this organization.
+set -e
+uv run --frozen ruff check
+uv run --frozen ruff format --check
+uv run --frozen pytest -q
