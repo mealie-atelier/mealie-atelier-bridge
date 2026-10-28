@@ -2,7 +2,7 @@
 
 An optional Home Assistant custom integration that connects Mealie to Mealie Atelier Cards. It does not replace Home Assistant's official Mealie integration.
 
-![Mealie Atelier Bridge icon](custom_components/mealie_atelier/brand/icon.png)
+<img align="right" width="132" alt="Mealie Atelier Bridge icon with pasta and tomatoes" src="custom_components/mealie_atelier/brand/icon.png">
 
 ## What it provides
 
@@ -23,7 +23,7 @@ Until a tagged release is published, this repository is source code for developm
 
 Tokens are stored in Home Assistant config-entry data and sent server-to-server. Never put a Mealie token into card YAML or browser code. The Bridge exposes explicit, allowlisted commands rather than an arbitrary API proxy. Read-only mode blocks write operations at the backend boundary. Disable SSL verification only on a trusted private network with a known self-signed certificate.
 
-## Local verification
+## Manual local verification
 
 ```sh
 python -m pip install aiohttp pytest ruff
@@ -33,7 +33,7 @@ ruff format --check custom_components tests
 python -m compileall -q custom_components/mealie_atelier
 ```
 
-These checks use local fixtures. They do not verify a live Home Assistant, Mealie, Bring, HACS, or physical device. See the [Cards release checklist](https://github.com/mealie-atelier/mealie-atelier-cards/blob/main/docs/RELEASE_READINESS_0.9.5.md) for the external acceptance gates.
+The repositories intentionally have no GitHub Actions or automatic dependency-update pull requests; maintainers run and review these checks manually before release. These checks use local fixtures. They do not verify a live Home Assistant, Mealie, Bring, HACS, or physical device. See the [Cards release checklist](https://github.com/mealie-atelier/mealie-atelier-cards/blob/main/docs/RELEASE_READINESS_0.9.5.md) for the external acceptance gates.
 
 ## License and support
 

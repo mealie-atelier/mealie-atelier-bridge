@@ -14,7 +14,7 @@
 - `tests/`: local unit and contract tests.
 - `docs/`: feature specifications, release gates, and dated corrections.
 
-## Verify
+## Manual verification
 
 ```sh
 pytest -q
@@ -23,4 +23,4 @@ ruff format --check custom_components tests
 python -m compileall -q custom_components/mealie_atelier
 ```
 
-Do not describe local mock tests as live Home Assistant or Mealie acceptance. Follow `docs/SMART_SHOPPING_SYNC.md` before implementing or advertising shopping-list synchronization.
+GitHub Actions are disabled across the organization; use no workflows or automated release checks. Run and review these commands manually before a release. Do not describe local mock tests as live Home Assistant or Mealie acceptance. Follow `docs/SMART_SHOPPING_SYNC.md` before implementing or advertising shopping-list synchronization.
