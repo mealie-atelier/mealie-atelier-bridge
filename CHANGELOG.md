@@ -27,6 +27,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ### Fixed
 
+- Kitchen timers: finished timers are removed after two days and only active timers count against the global cap of 300, so stored finished timers can no longer block new ones for everyone. Each user may also have at most 20 active timers.
 - Photo proxy: recipe photos, step images and the original-photo backup were cut off at the first network chunk (about 64 KiB). Bodies are now read until the end or the size limit, so large photos arrive whole.
 - Four contract error codes (`invalid_request`, `mealie_auth`, `mealie_error`, `conflict`) had no translated message, so German users saw raw English. Every contract error code is now translated.
 - Invalid recipe update payloads are rejected before a backup is taken, so they cannot push real restore points out of the ten slots.

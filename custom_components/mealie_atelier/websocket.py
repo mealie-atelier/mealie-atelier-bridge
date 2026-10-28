@@ -298,7 +298,8 @@ async def ws_mutation(hass, connection, msg):
     await _respond(hass, connection, msg, run)
 
 
-# Nutrition endpoints: per-ingredient validation and nutrition writes require HA admins.
+# Nutrition endpoints: only saving nutrition to Mealie (nutrition_save) requires an HA admin;
+# prepare, search, ai and calculate are read-only previews open to any permitted reader.
 def _nutrition_entry(hass, connection, msg):
     entry = _entry(hass, msg)
     if not entry:

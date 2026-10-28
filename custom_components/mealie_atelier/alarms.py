@@ -19,6 +19,11 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+ACTIVE_STATUSES = ("scheduled", "retry", "sending")
+FINISHED_RETENTION_MS = 2 * 24 * 3600_000
+MAX_ACTIVE_TIMERS = 300
+MAX_ACTIVE_TIMERS_PER_USER = 20
+
 
 def _invalid(key: str) -> ServiceValidationError:
     """Build a translated validation error for a user-triggered timer problem."""
@@ -50,6 +55,9 @@ class TimerManager:
     async def async_start(self):
         stored = await self.store.async_load() or {"alarms": []}
         self.alarms = stored.get("alarms", [])
+        async with self.lock:
+            if self._prune(int(time.time() * 1000)):
+                await self._save()
         # Home Assistant is expected to have a running event loop here.
         self.task = asyncio.create_task(self._run(), name="mealie_atelier_alarm_scheduler")
 
@@ -61,6 +69,18 @@ class TimerManager:
             except asyncio.CancelledError:
                 pass
             self.task = None
+
+    def _prune(self, now):
+        """Drop finished timers past the retention window. Returns True if any were removed."""
+        kept = [
+            a
+            for a in self.alarms
+            if a.get("status") in ACTIVE_STATUSES
+            or a.get("deadline", 0) > now - FINISHED_RETENTION_MS
+        ]
+        changed = len(kept) != len(self.alarms)
+        self.alarms = kept
+        return changed
 
     async def _save(self):
         await self.store.async_save({"alarms": self.alarms})
@@ -90,7 +110,13 @@ class TimerManager:
                 ):
                     raise _invalid("timer_exists")
                 return deepcopy(existing)
-            if len(self.alarms) > 300:
+            if self._prune(now):
+                await self._save()
+            active = [a for a in self.alarms if a.get("status") in ACTIVE_STATUSES]
+            if (
+                len(active) > MAX_ACTIVE_TIMERS
+                or sum(1 for a in active if a["owner"] == owner) >= MAX_ACTIVE_TIMERS_PER_USER
+            ):
                 raise _invalid("too_many_timers")
             entry = {
                 "id": uid,
@@ -167,6 +193,8 @@ class TimerManager:
     async def async_tick(self):
         now = int(time.time() * 1000)
         async with self.lock:
+            if self._prune(now):
+                await self._save()
             next_alarm = next(
                 (
                     a

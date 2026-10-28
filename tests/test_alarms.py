@@ -134,13 +134,68 @@ async def test_create_is_idempotent_but_rejects_conflicting_reuse(manager: Timer
     assert caught.value.translation_key == "timer_exists"
 
 
-async def test_create_caps_the_number_of_timers(manager: TimerManager):
-    manager.alarms = [stored_alarm(status="sent") for _ in range(301)]
+async def test_create_caps_the_number_of_active_timers(manager: TimerManager):
+    manager.alarms = [
+        stored_alarm(status="scheduled", owner=f"user-{i}", deadline=now_ms() + 60_000)
+        for i in range(301)
+    ]
+
+    with pytest.raises(ServiceValidationError) as caught:
+        await manager.async_create("new-user", timer())
+
+    assert caught.value.translation_key == "too_many_timers"
+
+
+async def test_finished_timers_are_pruned_and_do_not_count_against_the_cap(
+    manager: TimerManager, hass_storage: dict[str, Any]
+):
+    old = now_ms() - 3 * 24 * 3600_000
+    manager.alarms = [
+        stored_alarm(status=status, owner=f"user-{i}", deadline=old)
+        for i, status in enumerate(["sent", "cancelled", "expired", "failed"] * 76)
+    ]
+    recent = stored_alarm(status="sent", deadline=now_ms() - 5_000)
+    manager.alarms.append(recent)
+
+    created = await manager.async_create("user-1", timer())
+
+    assert [a["id"] for a in manager.alarms] == [recent["id"], created["id"]]
+    assert [a["id"] for a in hass_storage[STORAGE_KEY]["data"]["alarms"]] == [
+        recent["id"],
+        created["id"],
+    ]
+
+
+async def test_finished_timers_do_not_count_against_the_cap_even_when_recent(
+    manager: TimerManager,
+):
+    manager.alarms = [stored_alarm(status="sent", owner=f"user-{i}") for i in range(301)]
+
+    await manager.async_create("user-1", timer())
+
+
+async def test_start_prunes_old_finished_timers(hass: HomeAssistant, hass_storage: dict[str, Any]):
+    old = stored_alarm(status="sent", deadline=now_ms() - 3 * 24 * 3600_000)
+    keep = stored_alarm(status="scheduled", deadline=now_ms() + 60_000)
+    prefill_storage(hass_storage, [old, keep])
+    manager = TimerManager(hass, "e1")
+
+    await manager.async_start()
+    await manager.async_stop()
+
+    assert [a["id"] for a in manager.alarms] == [keep["id"]]
+    assert [a["id"] for a in hass_storage[STORAGE_KEY]["data"]["alarms"]] == [keep["id"]]
+
+
+async def test_create_caps_active_timers_per_user(manager: TimerManager):
+    for _ in range(20):
+        await manager.async_create("user-1", timer())
 
     with pytest.raises(ServiceValidationError) as caught:
         await manager.async_create("user-1", timer())
-
     assert caught.value.translation_key == "too_many_timers"
+
+    await manager.async_create("user-2", timer())
 
 
 async def test_cancel_rules(manager: TimerManager, hass_storage: dict[str, Any]):
