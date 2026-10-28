@@ -1,0 +1,24 @@
+# Disposable live test rig: Mealie and Home Assistant with fictional data only.
+# Never point it at a real household instance. Driven by ./rig.sh.
+name: atelier-live
+services:
+  mealie:
+    image: ${MEALIE_IMAGE:-ghcr.io/mealie-recipes/mealie:latest}
+    ports: ["${MEALIE_PORT:-19925}:9000"]
+    environment:
+      ALLOW_SIGNUP: "false"
+      BASE_URL: http://localhost:${MEALIE_PORT:-19925}
+      TZ: Europe/Berlin
+    volumes: [mealie-data:/app/data]
+  homeassistant:
+    image: ${HA_IMAGE:-ghcr.io/home-assistant/home-assistant:beta}
+    ports: ["${HA_PORT:-18123}:8123"]
+    environment:
+      TZ: Europe/Berlin
+    volumes:
+      - ./state/ha-config:/config
+      - ../../custom_components/mealie_atelier:/config/custom_components/mealie_atelier:ro
+      # Same path the Marketplace (HACS) uses for plugins: /local/community/<repo>/
+      - ${CARDS_DIST:-../../../mealie-atelier-cards/dist}:/config/www/community/mealie-atelier-cards:ro
+volumes:
+  mealie-data:

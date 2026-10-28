@@ -23,3 +23,6 @@ CLAUDE.local.md
 .claude/
 .mcp.json
 AGENTS.md
+
+# Live test rig state (tokens, generated HA config)
+tests/live/state/
