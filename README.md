@@ -1,63 +1,101 @@
-# Mealie Atelier Bridge
+<p align="center"><img width="112" alt="Mealie Atelier Bridge icon: handmade pasta with tomatoes" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/custom_components/mealie_atelier/brand/icon@2x.png"></p>
 
-An optional Home Assistant custom integration that connects Mealie to Mealie Atelier Cards. It does not replace Home Assistant's official Mealie integration.
+<h1 align="center">Mealie Atelier Bridge</h1>
 
-<img align="right" width="132" alt="Mealie Atelier Bridge icon with pasta and tomatoes" src="custom_components/mealie_atelier/brand/icon.png">
+<p align="center"><strong>The Home Assistant integration behind Mealie Atelier.</strong><br>It keeps your Mealie token on the server and gives the Atelier cards recipe editing with backups, per-user write grants, offline shopping and Smart Shopping Sync to any To-do list, such as Bring!.</p>
 
-## What it provides
+<p align="center">
+<a href="https://github.com/mealie-atelier/mealie-atelier-bridge/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/mealie-atelier/mealie-atelier-bridge?style=flat-square&color=75465d"></a>
+<a href="https://github.com/mealie-atelier/mealie-atelier-bridge/actions/workflows/validate.yml"><img alt="Validate" src="https://img.shields.io/github/actions/workflow/status/mealie-atelier/mealie-atelier-bridge/validate.yml?branch=main&style=flat-square&label=validate"></a>
+<a href="https://hacs.xyz"><img alt="HACS Integration" src="https://img.shields.io/badge/HACS-Integration-41BDF5?style=flat-square"></a>
+<img alt="Home Assistant 2026.10 or newer" src="https://img.shields.io/badge/Home%20Assistant-2026.10%2B-41BDF5?style=flat-square">
+<a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/mealie-atelier/mealie-atelier-bridge?style=flat-square"></a>
+</p>
 
-- Secure server-side Mealie API access for the Atelier Cards.
-- Authenticated Home Assistant WebSocket commands for recipes, meal plans, shopping lists, nutrition workflows, cooking sessions, and timers.
-- German and English setup translations.
-- Optional read-only mode enforced by the backend.
-- Optional per-user write grants: pick which Home Assistant users may change shopping lists and meal plans (empty means everyone). Administrators always can; recipe editing stays admin only.
+<p align="center">
+<a href="https://mealie.alles-automatisch.de"><strong>Try the live demo</strong></a> ·
+<a href="https://alles-automatisch.de/lernen/mealie-atelier-einrichten">Setup guide</a> ·
+<a href="https://github.com/mealie-atelier/mealie-atelier-cards">Atelier Cards</a> ·
+<a href="https://github.com/orgs/mealie-atelier/discussions">Discussions</a>
+</p>
 
-- Optional Smart Shopping Sync from one Mealie shopping list to a Home Assistant To-do list, such as your Bring! list. Live acceptance against real providers is still pending.
+<p align="center"><img width="900" alt="Mealie Atelier kitchen overview in a Home Assistant dashboard, light theme" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-cards/main/assets/screens/dashboard-light.webp"></p>
 
-## Project status and help
+## Why a Bridge
 
-- [Open work and release gates](https://github.com/mealie-atelier/mealie-atelier-cards/blob/main/docs/OPEN_TODOS.md)
-- [Bridge frequently asked questions](docs/FAQ.md)
-- [Setup and troubleshooting discussions](https://github.com/orgs/mealie-atelier/discussions)
-- [Cards and standalone app](https://github.com/mealie-atelier/mealie-atelier-cards)
+The [Atelier Cards](https://github.com/mealie-atelier/mealie-atelier-cards) can already browse recipes through Home Assistant's built-in [Mealie integration](https://www.home-assistant.io/integrations/mealie/). The Bridge adds everything that needs a trusted server side. It complements the built-in integration and does not replace it.
+
+| | Built-in Mealie integration | With the Bridge |
+| --- | --- | --- |
+| Recipes, search and cooking mode | ✓ | ✓ |
+| Recipe and step photos | | ✓ |
+| Shopping lists and meal plan writes | | ✓ |
+| Recipe editor with backups and restore | | ✓ |
+| Per-user write grants and read-only mode | | ✓ |
+| Offline shopping, replayed exactly once | | ✓ |
+| Smart Shopping Sync to a To-do list | | ✓ |
+| Cooking timers that notify after the browser closes | | ✓ |
 
 ## Install
 
-For guided setup and the read-only alternative, use the [Cards setup guide](https://github.com/mealie-atelier/mealie-atelier-cards/blob/main/docs/INSTALLATION_0.9.5.md). Install this Bridge through HACS as an integration, then add it from **Settings → Devices & services**. Enter the direct Mealie base URL reachable from Home Assistant and an API token. Install the Cards package separately as a dashboard plugin.
+**1. Download.** The Bridge is submitted to the default catalog used by the Home Assistant Marketplace (Home Assistant 2026.11 and newer) and HACS. Until it is listed, add it to HACS as a custom repository of type **Integration**:
 
-Until a tagged release is published, this repository is source code for development and should not be treated as a stable catalog package.
+[![Open the repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=mealie-atelier&repository=mealie-atelier-bridge&category=integration)
 
-## Set up Smart Shopping Sync
+Download **Mealie Atelier Bridge** and restart Home Assistant. Manual install works too: copy `custom_components/mealie_atelier` into your configuration's `custom_components` folder.
 
-The sync runs in the Bridge, so it keeps working when no dashboard is open. The standalone web app does not sync.
+**2. Connect Mealie.** Add the integration and enter the Mealie address Home Assistant can reach and a Mealie API token (Mealie: **User profile → API Tokens**).
 
-1. Set up the destination first through its own Home Assistant integration (for example Bring!), so it appears as a To-do entity. The Bridge never asks for Bring credentials.
-2. As a Home Assistant administrator, open the shopping view of the Atelier Cards and start the sync setup. Read-only mode must be off.
-3. Pick the Mealie source list and the To-do destination. Lists of the core Mealie integration are not offered, so items cannot loop back into Mealie.
-4. Choose **Copy** (Mealie stays unchanged) or **Move** (an item is checked off in Mealie only after the destination accepted it or an identical open line was found there), when to sync, and the duplicate policy.
-5. Check the preview and send the first batch. Nothing syncs on its own before this confirmation.
-6. Use the rule status to pause, resume, run by hand, retry failed items and decide on conflicts.
+[![Add the integration to Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=mealie_atelier)
 
-How a rule behaves after setup, including failures and conflicts, is described in [`docs/SMART_SHOPPING_SYNC.md`](docs/SMART_SHOPPING_SYNC.md#how-it-works). Diagnostics include only counts, never item text.
+<p align="center"><img width="440" alt="Setup form asking for the Mealie server URL and API token" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/setup.webp"> <img width="440" alt="Mealie Atelier Bridge on the Home Assistant integration page" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/integration.webp"></p>
 
-## Security model
+**3. Add the cards.** Install [Mealie Atelier Cards](https://github.com/mealie-atelier/mealie-atelier-cards) and add a **Mealie Atelier** card to a dashboard. The card finds the Bridge on its own.
 
-Tokens are stored in Home Assistant config-entry data and sent server-to-server. Never put a Mealie token into card YAML or browser code. The Bridge exposes explicit, allowlisted commands rather than an arbitrary API proxy. Read-only mode blocks write operations at the backend boundary. Disable SSL verification only on a trusted private network with a known self-signed certificate.
+The integration options (**Settings → Devices & services → Mealie Atelier Bridge → Configure**) set read-only mode, which Home Assistant users may change data, structured ingredient editing, the timer notification service and the optional nutrition lookup keys (USDA, OpenAI). Every option is explained in the [installation guide](docs/INSTALLATION.md). Step-by-step guides in German: [setup](https://alles-automatisch.de/lernen/mealie-atelier-einrichten) and [troubleshooting](https://alles-automatisch.de/lernen/mealie-atelier-fehlerbehebung).
 
-## Manual local verification
+## Smart Shopping Sync
+
+Send what you need from a Mealie shopping list to the list your household actually shops with, for example Bring! through its Home Assistant integration. The sync runs in Home Assistant, so it works when no dashboard is open.
+
+<p align="center"><img width="440" alt="Shopping sync rule with its state and actions" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/sync-status.webp"> <img width="440" alt="Sync rule editor with source list, destination list and copy or move mode" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/sync-setup.webp"></p>
+
+1. Set up the destination through its own integration first, so it appears as a To-do list. The Bridge never asks for Bring credentials.
+2. As an administrator, open the Atelier shopping view and add a sync rule: Mealie source list, To-do destination, **Copy** or **Move**, when to sync and how to handle duplicates.
+3. Check the preview and send the first batch. Nothing syncs on its own before this confirmation.
+
+**Move** checks an item off in Mealie only after the destination accepted it. An uncertain delivery is checked against the destination before anything is resent, and conflicts wait for your decision. Details are in [`docs/SMART_SHOPPING_SYNC.md`](docs/SMART_SHOPPING_SYNC.md).
+
+## Security
+
+- The Mealie token lives in the Home Assistant config entry and is only used server to server. It never reaches card YAML or the browser.
+- The Bridge exposes an allowlist of WebSocket commands, not an open API proxy. Every write checks the Home Assistant user's grant and read-only mode on the server.
+- Every recipe edit is backed up first and can be restored from the editor.
+- Diagnostics and the sync log contain counts only, never item text or tokens.
+
+Found a vulnerability? Please report it privately, see the [security policy](.github/SECURITY.md).
+
+## Development
 
 ```sh
-python -m pip install aiohttp pytest ruff
-pytest -q
-ruff check custom_components tests
-ruff format --check custom_components tests
-python -m compileall -q custom_components/mealie_atelier
+uv sync
+uv run pytest -q
+uv run ruff check && uv run ruff format --check
+git config core.hooksPath .githooks
 ```
 
-The repositories intentionally have no GitHub Actions or automatic dependency-update pull requests; maintainers run and review these checks manually before release. These checks use local fixtures. They do not verify a live Home Assistant, Mealie, Bring, HACS, or physical device. See the [Cards release checklist](https://github.com/mealie-atelier/mealie-atelier-cards/blob/main/docs/RELEASE_READINESS_0.9.5.md) for the external acceptance gates.
+Live acceptance tests run against disposable Mealie and Home Assistant containers with fictional data: smoke tests, browser checks of the cards, the shopping sync end to end and the screenshots in this README. See [`tests/live/README.md`](tests/live/README.md). Changes are listed in the [changelog](CHANGELOG.md), contribution rules in [CONTRIBUTING.md](CONTRIBUTING.md), common questions in the [FAQ](docs/FAQ.md).
 
-## License and support
+## Support the project
 
-MIT licensed. This is an unofficial Mealie companion.
+Mealie Atelier is free, open source and independent. If it makes your kitchen a little calmer:
 
-Made with love by Daniel Boberg · [alles-automatisch.de](https://alles-automatisch.de/). Support is optional: [Ko-fi](https://ko-fi.com/allesautomatisch).
+- [Buy me a coffee on Ko-fi](https://ko-fi.com/allesautomatisch)
+- [Become a member of the Alles Automatisch YouTube channel](https://www.youtube.com/@alles-automatisch/join)
+- Star the repository and share your setup in [Show and tell](https://github.com/orgs/mealie-atelier/discussions)
+
+## License
+
+[MIT](LICENSE). Mealie Atelier is an unofficial companion and is not affiliated with Mealie or Home Assistant.
+
+<p align="center"><sub>Made with love by Daniel Boberg · <a href="https://alles-automatisch.de">alles-automatisch.de</a></sub></p>
