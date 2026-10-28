@@ -1,0 +1,55 @@
+name: Bug report
+description: Report a reproducible issue in Mealie Atelier
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please remove recipe names, hostnames, tokens, personal data, and unredacted logs before submitting. Check the current preview/release status first.
+  - type: input
+    id: package
+    attributes:
+      label: Package
+      description: Cards, Bridge, or standalone Web
+      placeholder: Cards
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Mealie Atelier version
+      placeholder: 0.9.5
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Relevant versions
+      description: Home Assistant, Mealie, browser and device, as applicable
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: 1. ...
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Safe evidence
+      description: Attach a screenshot or redacted log only after checking it contains no private household data or secrets.

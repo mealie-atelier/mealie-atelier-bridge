@@ -1,0 +1,18 @@
+# Local configuration and secrets.
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Python caches and local environments.
+**/__pycache__/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.mypy_cache/
+**/.venv/
+**/.coverage
+*.pyc
+.DS_Store
+**/.DS_Store

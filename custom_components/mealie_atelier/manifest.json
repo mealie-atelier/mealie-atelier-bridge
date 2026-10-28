@@ -1,0 +1,16 @@
+{
+  "domain": "mealie_atelier",
+  "name": "Mealie Atelier Bridge",
+  "codeowners": [
+    "@dnlbbrg"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/mealie-atelier/mealie-atelier-cards/blob/main/docs/INSTALLATION_0.9.5.md",
+  "issue_tracker": "https://github.com/mealie-atelier/mealie-atelier-bridge/issues",
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "version": "0.9.5",
+  "categories": [
+    "productivity_information.shopping_groceries"
+  ]
+}

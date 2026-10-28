@@ -1,0 +1,39 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mealie Atelier verbinden",
+        "description": "Dein API-Token bleibt in Home Assistant. Diese Erweiterung ergänzt die offizielle Mealie-Integration.",
+        "data": {
+          "url": "Mealie-Server-URL",
+          "api_token": "Mealie-API-Token",
+          "verify_ssl": "TLS-Zertifikat prüfen"
+        },
+        "data_description": {
+          "url": "Nutze die vollständige Adresse, die Home Assistant erreichen kann, zum Beispiel http://192.168.1.20:9000. Bei der Mealie-App für Home Assistant gilt Port 9090. Keine Ingress- oder Login-Adresse verwenden.",
+          "api_token": "Erstelle das Token in Mealie unter Profil → API-Tokens verwalten. Home Assistant speichert es sicher. Es gehört niemals in YAML oder eine Karte.",
+          "verify_ssl": "Aktiviert lassen. Nur bei einem selbst signierten Zertifikat im vertrauenswürdigen Heimnetz deaktivieren."
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Authentifizierung fehlgeschlagen. Prüfe das Token.",
+      "invalid_url": "Bitte eine gültige http(s)-URL eingeben.",
+      "cannot_connect": "Mealie ist nicht erreichbar oder antwortet mit einem Fehler.",
+      "unknown": "Ein unerwarteter Fehler ist aufgetreten."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Sicherheit und Bedienung",
+        "data": {
+          "read_only": "Nur Lesen: Änderungen an Rezepten, Wochenplan und Einkaufslisten verhindern",
+          "experimental_ingredient_edits": "Experimentell: Zutaten-Freitext-Ersetzung erlauben (nur nach Mealie-Backup, strukturierte Zutaten bleiben geschützt)",
+          "usda_fdc_api_key": "USDA FoodData Central API-Key (für Nährwertabgleich)",
+          "openai_api_key": "OpenAI API-Key (optional, nur für Lebensmittel-Suchbegriffe)"
+        }
+      }
+    }
+  }
+}

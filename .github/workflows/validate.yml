@@ -1,0 +1,39 @@
+name: Validate Home Assistant integration
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Test and lint integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install aiohttp pytest ruff
+      - run: pytest -q
+      - run: ruff check custom_components tests
+      - run: ruff format --check custom_components tests
+      - run: python -m compileall -q custom_components/mealie_atelier
+
+  hassfest:
+    name: Validate Home Assistant manifest and translations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    name: Validate HACS integration package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: hacs/action@22.5.0
+        with:
+          category: integration

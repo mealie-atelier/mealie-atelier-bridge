@@ -1,0 +1,39 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect Mealie Atelier",
+        "description": "Your API token stays in Home Assistant. This complements, not replaces, the built-in Mealie integration.",
+        "data": {
+          "url": "Mealie server URL",
+          "api_token": "Mealie API token",
+          "verify_ssl": "Verify TLS certificate"
+        },
+        "data_description": {
+          "url": "Use the full address Home Assistant can reach, for example http://192.168.1.20:9000. For the Mealie Home Assistant app, use port 9090. Do not use an ingress or login URL.",
+          "api_token": "Create a token in Mealie under Profile → Manage Your API Tokens. It is stored securely by Home Assistant and must never go in card YAML.",
+          "verify_ssl": "Leave this enabled. Disable it only for a self-signed certificate on a trusted local network."
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Authentication failed. Check the Mealie token.",
+      "invalid_url": "Enter a valid http(s) Mealie URL.",
+      "cannot_connect": "Mealie is unreachable or returned an error.",
+      "unknown": "An unexpected error occurred."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Security and interaction",
+        "data": {
+          "read_only": "Read-only: block changes to recipes, meal plans and shopping lists",
+          "experimental_ingredient_edits": "Experimental: allow free-text ingredient replacement (backup Mealie first; linked ingredients remain protected)",
+          "usda_fdc_api_key": "USDA FoodData Central API key",
+          "openai_api_key": "OpenAI API key (optional)"
+        }
+      }
+    }
+  }
+}
