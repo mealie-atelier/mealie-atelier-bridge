@@ -52,6 +52,7 @@ def client() -> SimpleNamespace:
     return SimpleNamespace(
         shopping_item=AsyncMock(return_value={"id": "item-1", "checked": False}),
         mutate=AsyncMock(return_value={"id": "item-1", "checked": True}),
+        set_shopping_item_checked=AsyncMock(return_value={"id": "item-1", "checked": True}),
     )
 
 
@@ -107,9 +108,10 @@ def test_validation_keeps_only_known_payload_keys():
 async def test_toggle_applies_and_persists_completed(ledger, client, hass_storage):
     result = await ledger.process(toggle())
     assert result == {"ok": True, "result": {"id": "item-1", "checked": True}}
-    client.mutate.assert_awaited_once_with(
-        "shopping_toggle", {"item_id": "item-1", "checked": True, "expected_checked": False}
+    client.set_shopping_item_checked.assert_awaited_once_with(
+        "item-1", True, {"id": "item-1", "checked": False}
     )
+    client.mutate.assert_not_awaited()
     record = stored(hass_storage)[uid(1)]
     assert record["state"] == "completed"
     assert record["result"] == result
@@ -121,7 +123,7 @@ async def test_completed_replay_returns_stored_result_without_a_second_write(
     first = await ledger.process(toggle())
     again = await ledger.process(toggle())
     assert again == {**first, "replayed": True}
-    client.mutate.assert_awaited_once()
+    client.set_shopping_item_checked.assert_awaited_once()
     assert client.shopping_item.await_count == 1
     assert "replayed" not in stored(hass_storage)[uid(1)]["result"]
 
@@ -134,7 +136,7 @@ async def test_toggle_already_applied_is_completed_without_a_write(ledger, clien
         "already_applied": True,
         "item": {"id": "item-1", "checked": True},
     }
-    client.mutate.assert_not_awaited()
+    client.set_shopping_item_checked.assert_not_awaited()
     assert stored(hass_storage)[uid(1)]["state"] == "completed"
 
 
@@ -142,7 +144,7 @@ async def test_toggle_conflict_is_recorded_and_sticky(ledger, client, hass_stora
     # Mealie has False; the user wants True but saw True, so Mealie moved since then.
     op = toggle(checked=True, expected=True)
     assert await code_of(ledger.process(op)) == "offline_conflict"
-    client.mutate.assert_not_awaited()
+    client.set_shopping_item_checked.assert_not_awaited()
     assert stored(hass_storage)[uid(1)]["state"] == "conflict"
     # Replaying the same operation keeps failing without touching Mealie again.
     client.shopping_item.reset_mock()
@@ -155,7 +157,7 @@ async def test_toggle_read_failure_goes_back_to_checking_and_reraises(ledger, cl
     with pytest.raises(MealieError):
         await ledger.process(toggle())
     assert stored(hass_storage)[uid(1)]["state"] == "checking"
-    client.mutate.assert_not_awaited()
+    client.set_shopping_item_checked.assert_not_awaited()
     # A later replay retries cleanly.
     client.shopping_item.side_effect = None
     client.shopping_item.return_value = {"id": "item-1", "checked": False}
@@ -168,13 +170,13 @@ async def test_toggle_invalid_item_from_mealie_is_a_mealie_error(ledger, client)
 
 
 async def test_toggle_write_failure_returns_to_checking_and_reraises(ledger, client, hass_storage):
-    client.mutate.side_effect = MealieError("boom")
+    client.set_shopping_item_checked.side_effect = MealieError("boom")
     with pytest.raises(MealieError):
         await ledger.process(toggle())
     record = stored(hass_storage)[uid(1)]
     assert record["state"] == "checking"
     assert record["message"] == "boom"
-    client.mutate.side_effect = None
+    client.set_shopping_item_checked.side_effect = None
     assert (await ledger.process(toggle()))["ok"]
 
 
@@ -211,11 +213,11 @@ async def test_sending_is_persisted_before_the_mealie_write(ledger, client, hass
 async def test_toggle_sending_is_persisted_before_the_mealie_write(ledger, client, hass_storage):
     seen: list[str] = []
 
-    async def crash(action, payload):
+    async def crash(*_args):
         seen.append(stored(hass_storage)[uid(1)]["state"])
         raise MealieError("x")
 
-    client.mutate.side_effect = crash
+    client.set_shopping_item_checked.side_effect = crash
     with pytest.raises(MealieError):
         await ledger.process(toggle())
     assert seen == ["sending"]
@@ -287,11 +289,14 @@ async def test_old_completed_records_are_pruned_on_each_call(ledger, hass_storag
             "old": record(age_days=31),
             "fresh": record(age_days=29),
             "old-conflict": record("conflict", age_days=90),
+            "old-checking": record("checking", age_days=90),
             "old-uncertain": record("uncertain", age_days=90),
+            "old-sending": record("sending", age_days=90),
         }
     )
     await ledger.process(add(2))
-    assert set(stored(hass_storage)) == {"fresh", "old-conflict", "old-uncertain", uid(2)}
+    # Old toggles may be forgotten (a replay re-reads the item); a possibly sent add may not.
+    assert set(stored(hass_storage)) == {"fresh", "old-uncertain", "old-sending", uid(2)}
 
 
 def test_cap_drops_oldest_completed_first_and_keeps_open_records():
@@ -304,6 +309,17 @@ def test_cap_drops_oldest_completed_first_and_keeps_open_records():
     assert "open" in data and "conflict" in data
     # The two oldest completed (largest age) are gone.
     assert "c1999" not in data and "c1998" not in data and "c1997" in data
+
+
+def test_cap_drops_old_toggles_after_completed_but_never_uncertain_adds():
+    now = time.time()
+    data = {f"k{i}": record("checking", age_days=i / 1000, now=now) for i in range(2001)}
+    data["done"] = record(age_days=0, now=now)
+    data["maybe-sent"] = record("uncertain", age_days=29, now=now)
+    prune(data, now)
+    assert len(data) == 2000
+    assert "done" not in data and "maybe-sent" in data
+    assert "k2000" not in data and "k1999" not in data and "k1998" in data
 
 
 def test_cap_never_drops_records_that_need_attention():
@@ -354,6 +370,7 @@ def wired(setup_integration):
     mealie = setup_integration.runtime_data.client
     mealie.shopping_item = AsyncMock(return_value={"id": "item-1", "checked": False})
     mealie.mutate = AsyncMock(return_value={"id": "item-1", "checked": True})
+    mealie.set_shopping_item_checked = AsyncMock(return_value={"id": "item-1", "checked": True})
     return setup_integration
 
 
@@ -398,7 +415,7 @@ async def test_reader_is_refused_without_touching_mealie_or_the_ledger(
     response = await send(client, command(toggle()))
     assert response["error"]["code"] == "write_not_permitted"
     wired.runtime_data.client.shopping_item.assert_not_awaited()
-    wired.runtime_data.client.mutate.assert_not_awaited()
+    wired.runtime_data.client.set_shopping_item_checked.assert_not_awaited()
     assert KEY not in hass_storage
 
 
@@ -406,7 +423,7 @@ async def test_read_only_entry_refuses(hass, wired, hass_ws_client, hass_storage
     hass.config_entries.async_update_entry(wired, options={CONF_READ_ONLY: True})
     response = await send(await hass_ws_client(), command(toggle()))
     assert response["error"]["code"] == "read_only"
-    wired.runtime_data.client.mutate.assert_not_awaited()
+    wired.runtime_data.client.set_shopping_item_checked.assert_not_awaited()
     assert KEY not in hass_storage
 
 

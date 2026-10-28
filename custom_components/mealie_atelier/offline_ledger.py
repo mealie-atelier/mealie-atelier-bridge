@@ -86,19 +86,24 @@ def _valid(data: Any) -> bool:
     )
 
 
+# A toggle re-reads the item before any write, so forgetting it is safe. An add that may have
+# reached Mealie (`sending`, `uncertain`) is never forgotten: that would allow a blind duplicate.
+_PRUNABLE = ("completed", "checking", "conflict")
+
+
 def prune(data: dict[str, dict[str, Any]], now: float) -> None:
-    """Drop completed records older than 30 days, then the oldest completed ones over the cap."""
+    """Drop prunable records older than 30 days, then the oldest ones over the cap."""
     for key, record in list(data.items()):
-        if record["state"] == "completed" and record["updated_at"] < now - _MAX_AGE_SECONDS:
+        if record["state"] in _PRUNABLE and record["updated_at"] < now - _MAX_AGE_SECONDS:
             del data[key]
     overflow = len(data) - OFFLINE_RECORD_LIMIT
     if overflow > 0:
-        # Records that still need attention are never dropped: that would allow a blind replay.
-        completed = sorted(
-            (key for key, record in data.items() if record["state"] == "completed"),
-            key=lambda key: data[key]["updated_at"],
+        # Completed records go first, then the oldest re-checkable toggles.
+        prunable = sorted(
+            (key for key, record in data.items() if record["state"] in _PRUNABLE),
+            key=lambda key: (data[key]["state"] != "completed", data[key]["updated_at"]),
         )
-        for key in completed[:overflow]:
+        for key in prunable[:overflow]:
             del data[key]
 
 
@@ -197,7 +202,13 @@ class OfflineLedger:
         # Persist the sending marker BEFORE touching Mealie, so a crash cannot cause a blind replay.
         await set_state("sending")
         try:
-            mealie_result = await self._client.mutate(op["action"], payload)
+            if op["action"] == "shopping_toggle":
+                # Write exactly the item that was just compared, not a fresh read.
+                mealie_result = await self._client.set_shopping_item_checked(
+                    payload["item_id"], payload["checked"], current
+                )
+            else:
+                mealie_result = await self._client.mutate(op["action"], payload)
         except Exception as exc:
             await set_state(
                 "checking" if op["action"] == "shopping_toggle" else "uncertain",
