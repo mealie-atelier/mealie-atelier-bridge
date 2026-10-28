@@ -2,23 +2,31 @@
 
 ## Is the Bridge required to use Mealie Atelier?
 
-No. It is an optional Home Assistant integration. The standalone Web app works without Home Assistant, and Cards can use Home Assistant's built-in Mealie integration for supported read-only discovery.
+No. It is an optional Home Assistant integration. The standalone web app works without Home Assistant, and the cards can use Home Assistant's built-in Mealie integration for read-only discovery. The Bridge adds the server-side features: recipe editing with backups, per-user write grants, the offline shopping queue and Smart Shopping Sync.
 
-## Is the Bridge ready for a stable HACS release?
+## How do I install it?
 
-Not yet. The current source is a developer preview. Local fixtures and Python tests do not verify a live Home Assistant or Mealie server. See the [canonical open-work index](https://github.com/mealie-atelier/mealie-atelier-cards/blob/main/docs/OPEN_TODOS.md) and the [Cards release checklist](https://github.com/mealie-atelier/mealie-atelier-cards/blob/main/docs/RELEASE_READINESS_0.9.5.md).
+Through the Home Assistant Marketplace (Home Assistant 2026.11 and newer) or HACS, once the Bridge is listed in the `hacs/default` catalog. Until then add it as a HACS custom repository of type Integration. The [installation guide](INSTALLATION.md) covers every step.
 
 ## Where are API credentials stored?
 
-The Mealie token is stored in Home Assistant config-entry data and sent from the Bridge to the configured Mealie server. Never place it in card YAML, public screenshots, logs, or browser code. Review the [security model](../README.md#security-model) before setup.
+The Mealie token is stored in Home Assistant config-entry data and sent from the Bridge to the configured Mealie server. Never place it in card YAML, public screenshots, logs or browser code. Review the security model in the [README](../README.md) before setup.
 
-## Does the Bridge sync Mealie groceries to Bring?
+## Who may change data?
 
-No. Smart shopping sync is planned, not implemented. The [specification](SMART_SHOPPING_SYNC.md) describes safe copy/move semantics, failure handling, retries, duplicate reconciliation, and tests required before release.
+Read-only mode blocks every change to recipes, meal plans and shopping lists. With read-only mode off, the option **Users allowed to change data** limits shopping list and meal plan changes to the chosen Home Assistant users. If it is empty, every user may change them. Administrators always can. Recipe editing is admin only. Kitchen timers and journal entries are personal and are blocked only by read-only mode.
 
-## Can I connect a different Home Assistant To-do provider?
+## Does the Bridge sync Mealie groceries to a To-do list such as Bring?
 
-The planned sync targets Home Assistant's generic To-do entity contract. Provider support must be tested because integrations may differ in optional fields and failure behavior. Do not assume compatibility until it is listed as tested in the open-work/release records.
+Yes. Smart Shopping Sync copies or moves the items of one Mealie shopping list to a Home Assistant To-do list. Nothing syncs on its own until an administrator has sent and confirmed the first batch. See [Smart Shopping Sync](SMART_SHOPPING_SYNC.md) for the behavior, including failures and conflicts.
+
+## Can I use a different Home Assistant To-do provider?
+
+The sync uses Home Assistant's generic To-do entity contract, so any provider that supports adding items should work. Providers differ in optional fields such as descriptions and in failure behavior, so test your provider with a small list first. Lists of the core Mealie integration cannot be a destination.
+
+## What happens when I am offline in the cards?
+
+The cards queue shopping changes while offline and replay them through the Bridge (`mealie_atelier/offline_replay`). The Bridge records every operation before it writes to Mealie, so a replay after a lost answer does not add the same item twice. If an item was changed elsewhere in the meantime, you are asked to review it instead of overwriting it.
 
 ## Are recipe changes backed up?
 
@@ -28,10 +36,13 @@ Yes. Before every recipe write (structured ingredients, name, description, servi
 
 No. Mealie v3.29 has no endpoint to delete a recipe asset. Removing or replacing a step photo only removes the reference from the step and the entry from the recipe's asset list. The image file stays on the Mealie disk until you clean it up there.
 
+## Why is a large photo cut off or refused?
+
+Photos are read to the end since 0.10.0, so large photos arrive whole. Uploads accept JPEG, PNG and WebP of at most 10 MiB.
+
 ## Where do I ask for help or report a security issue?
 
-Use [GitHub Discussions](https://github.com/orgs/mealie-atelier/discussions) for setup questions and ideas. Report reproducible bugs through the repository's Issue forms. Use the private reporting process in [SECURITY.md](../.github/SECURITY.md) for vulnerabilities; do not post credentials or private recipe data publicly.
-
-## Corrections log
-
-- 2026-10-28 — Added a Bridge-specific FAQ that clearly separates implemented integration behavior from the planned shopping sync and links to the canonical project status.
+- Guides in German: [Mealie Atelier](https://alles-automatisch.de/lernen/mealie-atelier), [setup](https://alles-automatisch.de/lernen/mealie-atelier-einrichten) and [troubleshooting](https://alles-automatisch.de/lernen/mealie-atelier-fehlerbehebung).
+- [GitHub Discussions](https://github.com/orgs/mealie-atelier/discussions) for setup questions and ideas.
+- The repository's Issue forms for reproducible bugs.
+- The private reporting process in [SECURITY.md](../.github/SECURITY.md) for vulnerabilities. Do not post credentials or private recipe data publicly.

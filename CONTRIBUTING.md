@@ -11,8 +11,9 @@
 ## Project layout
 
 - `custom_components/mealie_atelier/`: integration, API client, config flow, translations, and WebSocket commands.
-- `tests/`: local unit and contract tests.
-- `docs/`: feature specifications, release gates, and dated corrections.
+- `tests/`: local unit and contract tests. `tests/live/` holds the disposable Docker rig (Mealie and Home Assistant) for live acceptance.
+- `docs/`: installation guide, FAQ and feature specifications.
+- `CHANGELOG.md`: user-facing changes. Add an entry with every change that users can notice.
 
 ## Manual verification
 
@@ -26,4 +27,4 @@ uv run ruff format --check
 uv run pytest -q
 ```
 
-GitHub Actions are disabled across the organization; use no workflows or automated release checks. Run and review these commands manually before a release. Do not describe local mock tests as live Home Assistant or Mealie acceptance. Follow `docs/SMART_SHOPPING_SYNC.md` before implementing or advertising shopping-list synchronization.
+The only GitHub workflow is `.github/workflows/validate.yml`, which runs the HACS action and hassfest for the catalog. Tests and linting run locally: the `.githooks/pre-commit` hook runs the three commands above before every commit, so run them before you open a pull request. Do not describe local mock tests as live Home Assistant or Mealie acceptance; the rig in `tests/live/` is the live check. Follow `docs/SMART_SHOPPING_SYNC.md` when changing shopping-list synchronization.

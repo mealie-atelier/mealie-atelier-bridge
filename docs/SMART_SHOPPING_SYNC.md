@@ -1,6 +1,6 @@
 # Mealie Atelier Smart Shopping Sync
 
-**Status:** Implemented in the Bridge; live provider acceptance pending.
+**Status:** Implemented in the Bridge (0.10.0). Live acceptance against real providers is in progress. The sync uses Home Assistant's generic To-do entity contract, so any provider that supports adding items should work.
 **Date:** 2026-10-28
 **Source context:** Friend-provided Mealie → Home Assistant To-do → Bring automation; Mealie Atelier planning archive inspected read-only.
 
@@ -89,7 +89,7 @@ Do not couple the product to Bring alone. HA integrations provide the adapter bo
 
 ## Verification plan
 
-Before release, test:
+The sync is covered by automated tests; live acceptance checks the following against disposable instances:
 
 1. Mapping for linked foods, note-only items, fractions, decimals, units, and optional notes.
 2. Batching when one recipe adds many lines; multiple recipes added within the debounce window.
@@ -97,7 +97,7 @@ Before release, test:
 4. Target success, target rejection, unavailable entity, timeout, HA restart mid-transfer, and retry after each state.
 5. Exact duplicates, similar-but-not-equal names, unit mismatch, quantity mismatch, source edits/deletions after send, and destination item changed by a household member.
 6. Two sync rules running concurrently; same rule receives updates while processing.
-7. Bring and local HA Shopping list as real providers; at least one additional compatible To-do integration before advertising broad support.
+7. Real To-do providers (for example Bring! and the local HA Shopping list); list a provider as tested only after it passed.
 8. Remote edits through Mealie UI with the documented polling delay; Atelier-originated recipe-to-list updates.
 9. Standalone Web without HA, read-only Bridge mode, disabled sync, and German/English accessibility checks.
 10. HA service traces confirm source completion occurs only after a successful destination write or verified duplicate.

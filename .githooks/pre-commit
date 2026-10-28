@@ -1,5 +1,5 @@
 #!/bin/sh
-# Local quality gate. GitHub Actions are intentionally disabled for this organization.
+# Local quality gate: lint, format and tests. The only GitHub workflow is validate.yml (HACS and hassfest).
 set -e
 if git diff --cached --name-only | grep -qiE '(^|/)(CLAUDE(\.local)?\.md|\.claude/|\.mcp\.json|AGENTS\.md)'; then
   echo 'AI assistant files must not be committed.' >&2; exit 1
