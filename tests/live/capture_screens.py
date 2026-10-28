@@ -106,6 +106,8 @@ def main() -> None:
                         device_scale_factor=2,
                         is_mobile=device == "phone",
                         has_touch=device == "phone",
+                        # HA's service worker can hold requests and stall screenshots; tests skip it.
+                        service_workers="block",
                     )
                     page = context.new_page()
                     sign_in(page)

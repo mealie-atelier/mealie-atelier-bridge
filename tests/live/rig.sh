@@ -5,6 +5,7 @@
 #   ./rig.sh status  show container state and versions
 #   ./rig.sh down    stop the rig and delete its volumes and state
 # Images: HA_IMAGE (default home-assistant:beta), MEALIE_IMAGE (default mealie:latest).
+# Language of seed data and HA user: SEED_LANGUAGE (de or en).
 # Ports: HA_PORT (18123), MEALIE_PORT (19925). Cards bundle: CARDS_DIST (../../../mealie-atelier-cards/dist).
 set -euo pipefail
 umask 077 # tokens and generated config stay private from the first write
@@ -50,7 +51,7 @@ up() {
   if [ ! -s "$STATE/ha-token" ]; then
     # The onboarding API exists only until onboarding is done.
     wait_for "$HA/api/onboarding" 100
-    python3 -I ha_onboard.py "$HA" "$STATE/ha-token"
+    python3 -I ha_onboard.py "$HA" "$STATE/ha-token" "$LANGUAGE"
   fi
   python3 -I ha_setup_entry.py "$HA" "$STATE/ha-token" "$STATE/mealie-token"
   status
@@ -73,5 +74,5 @@ case "${1:-}" in
   up) up ;;
   status) status ;;
   down) down ;;
-  *) sed -n '2,8p' "$0"; exit 2 ;;
+  *) sed -n '2,9p' "$0"; exit 2 ;;
 esac

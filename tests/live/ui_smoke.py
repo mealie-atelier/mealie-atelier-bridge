@@ -4,7 +4,8 @@ Usage: uv run --with playwright python tests/live/ui_smoke.py [ha-url] [out-dir]
 
 Registers the bundle as a Lovelace module resource at the Marketplace plugin path, creates a
 dashboard with the main card, signs in as the rig user and checks that seeded recipes render
-without console errors and that the recipe dialog opens in the top layer. Saves light and dark screenshots to out-dir (default: state/screens).
+without console errors and that the recipe dialog opens in the top layer. Saves light and
+dark screenshots to out-dir (default: state/screens).
 """
 
 from __future__ import annotations
@@ -74,7 +75,10 @@ def main() -> None:
         try:
             for scheme in ("light", "dark"):
                 context = browser.new_context(
-                    viewport={"width": 1440, "height": 960}, color_scheme=scheme, locale="de-DE"
+                    viewport={"width": 1440, "height": 960},
+                    color_scheme=scheme,
+                    locale="de-DE",
+                    service_workers="block",
                 )
                 page = context.new_page()
                 page.on(

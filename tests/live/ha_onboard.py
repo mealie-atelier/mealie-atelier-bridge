@@ -1,6 +1,6 @@
 """Onboard a disposable Home Assistant container and write a long-lived access token.
 
-Usage: python3 -I ha_onboard.py <ha-url> <token-out-file>
+Usage: python3 -I ha_onboard.py <ha-url> <token-out-file> [language]
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ import urllib.parse
 import urllib.request
 
 BASE, OUT = sys.argv[1].rstrip("/"), sys.argv[2]
+LANGUAGE = sys.argv[3] if len(sys.argv) > 3 else "de"
 CLIENT = BASE + "/"
 
 
@@ -82,7 +83,7 @@ def main() -> None:
         "name": "Atelier Test",
         "username": "atelier",
         "password": "atelier-test-only",
-        "language": "de",
+        "language": LANGUAGE,
     }
     code = post("/api/onboarding/users", user)["auth_code"]
     grant = {"grant_type": "authorization_code", "code": code, "client_id": CLIENT}
