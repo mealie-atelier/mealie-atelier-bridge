@@ -40,7 +40,7 @@ The [Atelier Cards](https://github.com/mealie-atelier/mealie-atelier-cards) can 
 
 ## Install
 
-Requirements: Home Assistant 2026.10 or newer and a Mealie server that Home Assistant can reach (Mealie 3.x recommended).
+Requirements: Home Assistant 2026.10 or newer and a Mealie server that Home Assistant can reach (Mealie 3.x recommended, tested with v3.29).
 
 ### 1. Download the integration
 

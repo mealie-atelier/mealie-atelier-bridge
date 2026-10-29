@@ -12,7 +12,7 @@ You can try the cards against the public demo at https://mealie.alles-automatisc
 ## Requirements
 
 - Home Assistant 2026.10 or newer.
-- A Mealie server that Home Assistant can reach over the network. Mealie 3.x is recommended.
+- A Mealie server that Home Assistant can reach over the network. Mealie 3.x is recommended (tested with v3.29).
 - A Mealie API token (see below).
 
 ## 1. Install the Bridge

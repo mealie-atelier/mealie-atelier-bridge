@@ -13,8 +13,6 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 ### Changed
 
 - The German copy says "Backup" (like the cards and Home Assistant) instead of "Sicherung".
-- AI calls without an API key (alternatives, recipe review, nutrition estimate) fail with the error code `ai_not_configured` instead of `invalid_request`, so cards can show their own translated message. Cards that list the codes must add it.
-- The error code `timer_dispatched` is retired: cancelling a timer that was already delivered succeeds, so the Bridge never raises it. Cards must not expect it.
 
 ## [0.10.1] - 2026-10-29
 
@@ -26,7 +24,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 - Install docs match Home Assistant 2026.11 (Marketplace "Add from link" with GitHub login, manual resource under Dashboards, "By card" tab, editor wording), name Mealie 3.x as recommended and gain an uninstall section. The Smart Shopping Sync doc uses the UI policy names. The comparison table no longer claims the built-in integration cannot write. README screenshot pairs fit GitHub's column width.
 - Consistent German and English copy: "das Token", "Benachrichtigungsdienst", the Mealie page name "API-Token" and "die Mealie Atelier Bridge".
-- Cancelling a kitchen timer that already finished or is being delivered succeeds instead of failing, so the card can remove it.
+- Cancelling a kitchen timer that already finished or is being delivered succeeds instead of failing, so the card can remove it. The error code `timer_dispatched` is therefore never raised.
 - Kitchen timer notifications follow the Home Assistant language (German or English).
 - `notify.persistent_notification` is no longer offered as the timer notification service and no longer creates a second notification. `notify.send_message` is rejected, because it can never deliver.
 - Translated validation errors (too many timers, foreign timer, recipe changed, protected nutrition values, AI not configured) reach the card with their own error code instead of `invalid_request`.

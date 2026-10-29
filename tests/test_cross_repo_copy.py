@@ -22,8 +22,8 @@ CARDS_DE = CARDS / "src" / "i18n" / "de.json"
 TERMS = [
     (r"\bSicherung", "Backup"),
     (
-        r"\b(?i:(der|den|dem|des|einen|einem|keinen|dein|deinen|deinem|diesen|diesem|jeden|jeder|"
-        r"seinen|ihren|unseren|welchen|mein|meinen)) (API-)?Token(s)?\b",
+        r"\b(?i:(der|den|dem|des|einen|einem|keinen|deinen|deinem|diesen|diesem|jeden|jeder|"
+        r"seinen|ihren|unseren|welchen|meinen)) (API-)?Token(s)?\b",
         "das Token",
     ),
     (r"\bAPI-Tokens\b", "API-Token"),
