@@ -22,8 +22,8 @@ CARDS_DE = CARDS / "src" / "i18n" / "de.json"
 TERMS = [
     (r"\bSicherung", "Backup"),
     (
-        r"\b(?i:(der|den|dem|des|einen|einem|keinen|deinen|deinem|diesen|diesem|jeden|jeder|"
-        r"seinen|ihren|unseren|welchen|meinen)) (API-)?Token(s)?\b",
+        r"\b(?i:(der|den|einen|keinen|deinen|diesen|jeden|jeder|"
+        r"seinen|ihren|unseren|welchen|meinen)) (API-)?Token\b",
         "das Token",
     ),
     (r"\bAPI-Tokens\b", "API-Token"),
@@ -82,15 +82,22 @@ def test_shopping_error_codes_use_the_same_wording_in_both_repositories(
         "Der Token ist abgelaufen",
         "Prüfe deinen Token",
         "Jeden API-Token prüfen",
-        "Mit dem Token geht es",
         "Der API-Token fehlt",
     ],
 )
 def test_masculine_token_pattern_catches_every_case(text: str) -> None:
     pattern = next(p for p, term in TERMS if term == "das Token")
-    assert re.search(pattern, text) or re.search(pattern, text)
+    assert re.search(pattern, text)
 
 
 def test_neuter_token_is_not_flagged() -> None:
     pattern = next(p for p, term in TERMS if term == "das Token")
-    assert not re.search(pattern, "Das Token ist abgelaufen. Prüfe das Token.")
+    for text in (
+        "Das Token ist abgelaufen. Prüfe das Token.",
+        "Mealie erlaubt diesem Token diese Aktion nicht.",
+        "Mit dem Token kannst du das tun.",
+        "Die Gültigkeit des Tokens endet.",
+        "Mit deinem API-Token geht es.",
+        "Die Rechte der Tokens und mit den Tokens.",
+    ):
+        assert not re.search(pattern, text), text

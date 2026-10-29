@@ -5,14 +5,13 @@ Run capture_screens.py first (it builds the screenshot dashboards). Saves the se
 integration page and the Smart Shopping Sync dialogs in light theme. A sync rule is created for the
 dialog shots and deleted again; it is never activated, so nothing is sent.
 
-Set CARDS_BUNDLE to a built mealie-atelier-cards.js to capture a cards build other than the one the
-rig mounts, for example a worktree's dist, without touching the mounted files.
+The cards build is the one the rig mounts (`CARDS_DIST`, see rig.sh), so the shots always show a cards
+build that exists in the cards repository.
 """
 
 from __future__ import annotations
 
 import asyncio
-import os
 import json
 import re
 import sys
@@ -27,7 +26,6 @@ HERE = Path(__file__).parent
 OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "state" / "shots"
 LANGUAGE = sys.argv[2] if len(sys.argv) > 2 else "de"
 TOKEN = str(HERE / "state" / "ha-token")
-CARDS_BUNDLE = os.environ.get("CARDS_BUNDLE")
 
 
 MEALIE = "http://localhost:19925"
@@ -101,14 +99,6 @@ def main() -> None:
                     device_scale_factor=2,
                     service_workers="block",
                 )
-                if CARDS_BUNDLE:
-                    bundle = Path(CARDS_BUNDLE).read_bytes()
-                    context.route(
-                        "**/mealie-atelier-cards.js*",
-                        lambda route: route.fulfill(
-                            body=bundle, content_type="text/javascript; charset=utf-8"
-                        ),
-                    )
                 # The dashboards are saved in German; the card's own language setting and Home
                 # Assistant's profile language both come from the browser.
                 context.add_init_script(

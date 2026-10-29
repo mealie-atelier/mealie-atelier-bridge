@@ -48,5 +48,5 @@ Photos are read to the end since 0.10.0, so large photos arrive whole. Uploads a
 
 - Guides in German: [Mealie Atelier](https://alles-automatisch.de/lernen/mealie-atelier), [setup](https://alles-automatisch.de/lernen/mealie-atelier-einrichten) and [troubleshooting](https://alles-automatisch.de/lernen/mealie-atelier-fehlerbehebung).
 - [GitHub Discussions](https://github.com/orgs/mealie-atelier/discussions) for setup questions and ideas.
-- The repository's Issue forms for reproducible bugs.
+- The repository's bug report template for reproducible bugs.
 - The private reporting process in [SECURITY.md](../.github/SECURITY.md) for vulnerabilities. Do not post credentials or private recipe data publicly.

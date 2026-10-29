@@ -56,7 +56,8 @@ def test_bridge_capture_pins_the_card_language_and_uses_a_throwaway_list() -> No
     """Mixed-language or stale-bundle screenshots came from an unpinned capture."""
     text = (ROOT / "tests" / "live" / "capture_bridge.py").read_text(encoding="utf-8")
     assert "mealie-atelier:design" in text
-    assert "CARDS_BUNDLE" in text
+    assert "CARDS_BUNDLE" not in text
+    assert "route(" not in text
     assert "/api/households/shopping/lists" in text
     assert 'f"/api/households/shopping/lists/{list_id}"' in text
 
