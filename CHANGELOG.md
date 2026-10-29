@@ -10,6 +10,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ### Fixed
 
+- Consistent German and English copy: "das Token", "Sicherung", "Benachrichtigungsdienst", the Mealie page name "API-Token" and "die Mealie Atelier Bridge".
 - Cancelling a kitchen timer that already finished or is being delivered succeeds instead of failing, so the card can remove it.
 - Kitchen timer notifications follow the Home Assistant language (German or English).
 - `notify.persistent_notification` is no longer offered as the timer notification service and no longer creates a second notification. `notify.send_message` is rejected, because it can never deliver.

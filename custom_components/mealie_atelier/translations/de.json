@@ -11,18 +11,18 @@
         },
         "data_description": {
           "url": "Die vollständige Adresse, die Home Assistant erreichen kann, mit http:// oder https:// und Port, zum Beispiel `http://192.168.1.20:9925`. Bei der Mealie-App für Home Assistant gilt Port 9090. Verwende keine Ingress- oder Login-Adresse.",
-          "api_token": "Erstelle in Mealie unter Benutzerprofil > API-Tokens ein Token und füge es hier ein. Home Assistant speichert es sicher. Es gehört niemals in die Karten-YAML.",
+          "api_token": "Erstelle in Mealie unter Benutzerprofil > API-Token ein Token und füge es hier ein. Home Assistant speichert es sicher. Es gehört niemals in die Karten-YAML.",
           "verify_ssl": "Lass diese Option aktiviert. Deaktiviere sie nur bei einem selbst signierten Zertifikat in einem vertrauenswürdigen Heimnetz."
         }
       },
       "reauth_confirm": {
         "title": "Mealie Atelier Bridge erneut anmelden",
-        "description": "Mealie hat das gespeicherte API-Token für {url} abgelehnt. Erstelle in Mealie unter Benutzerprofil > API-Tokens ein neues Token und gib es hier ein.",
+        "description": "Mealie hat das gespeicherte API-Token für {url} abgelehnt. Erstelle in Mealie unter Benutzerprofil > API-Token ein neues Token und gib es hier ein.",
         "data": {
           "api_token": "Neues Mealie-API-Token"
         },
         "data_description": {
-          "api_token": "Ein neues Token für dasselbe Mealie-Konto. Du findest es in Mealie unter Benutzerprofil > API-Tokens."
+          "api_token": "Ein neues Token für dasselbe Mealie-Konto. Du findest es in Mealie unter Benutzerprofil > API-Token."
         }
       },
       "reconfigure": {
@@ -35,7 +35,7 @@
         },
         "data_description": {
           "url": "Die vollständige Adresse, die Home Assistant erreichen kann, mit http:// oder https:// und Port, zum Beispiel `http://192.168.1.20:9925`. Bei der Mealie-App für Home Assistant gilt Port 9090. Verwende keine Ingress- oder Login-Adresse.",
-          "api_token": "Optional. Leer lassen, um das gespeicherte Token zu behalten. Ein neues Token erstellst du in Mealie unter Benutzerprofil > API-Tokens. Home Assistant speichert es sicher.",
+          "api_token": "Optional. Leer lassen, um das gespeicherte Token zu behalten. Ein neues Token erstellst du in Mealie unter Benutzerprofil > API-Token. Home Assistant speichert es sicher.",
           "verify_ssl": "Lass diese Option aktiviert. Deaktiviere sie nur bei einem selbst signierten Zertifikat in einem vertrauenswürdigen Heimnetz."
         }
       }
@@ -71,17 +71,17 @@
         "data_description": {
           "read_only": "Verhindert alle Änderungen an Rezepten, Wochenplan und Einkaufslisten. Praktisch für gemeinsam genutzte Tablets.",
           "write_users": "Leer lassen, damit alle Home-Assistant-Nutzer Einkaufslisten und Wochenpläne ändern dürfen. Wählst du mindestens einen Nutzer aus, dürfen nur die Ausgewählten und Administratoren schreiben. Administratoren dürfen immer schreiben und stehen deshalb nicht in der Liste. Rezepte bearbeiten bleibt Administratoren vorbehalten.",
-          "experimental_ingredient_edits": "Erlaubt Administratoren, Zutaten mit verknüpften Lebensmitteln und Einheiten zu bearbeiten. Vor jeder Änderung wird ein Backup gespeichert.",
+          "experimental_ingredient_edits": "Erlaubt Administratoren, Zutaten mit verknüpften Lebensmitteln und Einheiten zu bearbeiten. Vor jeder Änderung wird eine Sicherung gespeichert.",
           "usda_fdc_api_key": "Optional. Nur für das Nährwertlabor: Die Bridge sucht damit Zutaten in der freien US-Lebensmitteldatenbank FoodData Central und rechnet Nährwerte pro Portion aus. Aus Sicherheitsgründen zeigt das Feld einen gespeicherten Key nicht an: Leer lassen behält ihn. Ohne Key bleibt nur die Nährwertsuche aus. Den Key gibt es kostenlos mit Name und E-Mail unter [fdc.nal.usda.gov/api-key-signup]({usda_signup_url}).",
           "clear_fdc_key": "Aktiviere das und speichere, um den Key zu löschen.",
           "openai_api_key": "Optional und pro Anfrage kostenpflichtig. Schaltet drei KI-Hilfen frei, die du jeweils selbst startest: englische Suchbegriffe im Nährwertlabor, Ersatzvorschläge für eine Zutat und die Rezeptprüfung. Dafür gehen Zutaten und je nach Hilfe auch Rezeptname, Mengen und Kochschritte an OpenAI oder Anthropic, je nach Key. Nährwerte kommen immer aus FoodData Central, Rezepte ändert die KI nie selbst. Aus Sicherheitsgründen zeigt das Feld einen gespeicherten Key nicht an: Leer lassen behält ihn, zum Löschen nutze die Option darunter. Key für OpenAI unter [platform.openai.com/api-keys]({openai_keys_url}), für Anthropic unter [platform.claude.com/settings/keys]({anthropic_keys_url}). Keys von Anthropic beginnen mit sk-ant-.",
           "clear_ai_key": "Aktiviere das und speichere, um den Key zu löschen. Die KI ist danach ausgeschaltet.",
-          "timer_notify_service": "Optional. Ein Notify-Dienst wie notify.mobile_app_dein_handy, der eine Push-Nachricht erhält, wenn ein Küchentimer abläuft. Leer lassen, um nur Hinweise in der App zu bekommen."
+          "timer_notify_service": "Optional. Ein Benachrichtigungsdienst wie notify.mobile_app_dein_handy, der eine Push-Nachricht erhält, wenn ein Küchentimer abläuft. Leer lassen, um nur Hinweise in der App zu bekommen."
         }
       }
     },
     "error": {
-      "invalid_notify_service": "Gib einen Notify-Dienst an, zum Beispiel notify.mobile_app_dein_handy."
+      "invalid_notify_service": "Gib einen Benachrichtigungsdienst an, zum Beispiel notify.mobile_app_dein_handy."
     }
   },
   "exceptions": {
@@ -95,13 +95,13 @@
       "message": "Dein Home-Assistant-Nutzer darf keine Daten ändern. Ein Administrator kann dir in den Mealie-Atelier-Optionen Zugriff geben."
     },
     "auth_failed": {
-      "message": "Mealie hat den Zugriff verweigert. Prüfe den API-Token und seine Berechtigungen."
+      "message": "Mealie hat den Zugriff verweigert. Prüfe das API-Token und seine Berechtigungen."
     },
     "cannot_connect": {
       "message": "Verbindung zu Mealie nicht möglich: {error}"
     },
     "not_configured": {
-      "message": "Richte zuerst Mealie Atelier Bridge ein."
+      "message": "Richte zuerst die Mealie Atelier Bridge ein."
     },
     "recipe_changed": {
       "message": "Das Rezept hat sich seit der Vorschau geändert. Öffne die Analyse erneut, bevor du fortfährst."
@@ -131,13 +131,13 @@
       "message": "Bearbeite Zutaten mit dem strukturierten Zutaten-Editor. Das Ersetzen per Freitext gibt es nicht mehr."
     },
     "write_unverified": {
-      "message": "Mealie hat die Änderung angenommen, aber das gespeicherte Rezept weicht ab. Backup {backup_id} macht sie rückgängig."
+      "message": "Mealie hat die Änderung angenommen, aber das gespeicherte Rezept weicht ab. Sicherung {backup_id} macht sie rückgängig."
     },
     "backup_failed": {
-      "message": "Das Backup konnte nicht gespeichert werden, deshalb wurde nichts geändert. Prüfe den freien Speicherplatz und versuche es erneut."
+      "message": "Die Sicherung konnte nicht gespeichert werden, deshalb wurde nichts geändert. Prüfe den freien Speicherplatz und versuche es erneut."
     },
     "backup_not_found": {
-      "message": "Dieses Backup existiert nicht mehr. Öffne den Versionsverlauf erneut."
+      "message": "Diese Sicherung existiert nicht mehr. Öffne den Versionsverlauf erneut."
     },
     "upload_invalid": {
       "message": "Das Foto wurde abgelehnt. Nutze ein JPEG, PNG oder WebP mit höchstens 10 MB."
@@ -185,7 +185,7 @@
       "message": "Die Anfrage war unvollständig oder ungültig. Lade die Seite neu und versuche es erneut."
     },
     "mealie_auth": {
-      "message": "Mealie hat den API-Token abgelehnt. Erstelle in Mealie einen neuen Token und authentifiziere die Integration neu."
+      "message": "Mealie hat das API-Token abgelehnt. Erstelle in Mealie ein neues Token und authentifiziere die Integration neu."
     },
     "mealie_error": {
       "message": "Mealie ist nicht erreichbar oder hat einen Fehler gemeldet. Prüfe, ob Mealie läuft, und versuche es erneut."

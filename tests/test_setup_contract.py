@@ -137,3 +137,21 @@ def test_translations_carry_no_urls(name: str) -> None:
     texts = _strings(json.loads((INTEGRATION / name).read_text()))
     assert texts
     assert not [text for text in texts if re.search(r"https?://[a-z][\w-]*(\.[\w-]+)+", text)]
+
+
+def test_german_copy_uses_one_term_per_concept() -> None:
+    texts = _strings(json.loads((INTEGRATION / "translations/de.json").read_text()))
+    joined = "\n".join(texts)
+
+    assert "API-Tokens" not in joined  # Mealie DE names the page "API-Token"
+    assert not re.search(r"\b(den|einen) (API-)?Token\b", joined)  # das Token
+    assert "Backup" not in joined  # one word: Sicherung
+    assert "Notify-Dienst" not in joined
+    assert "Richte zuerst die Mealie Atelier Bridge ein." in joined
+
+
+def test_english_copy_is_consistent() -> None:
+    for name in ("strings.json", "translations/en.json"):
+        joined = "\n".join(_strings(json.loads((INTEGRATION / name).read_text())))
+        assert "To-do list" not in joined
+        assert "reauthenticate" not in joined

@@ -158,7 +158,7 @@
       "message": "This shopping sync rule no longer exists. Reload the sync settings."
     },
     "sync_destination_unsupported": {
-      "message": "Choose a To-do list that can add items. Mealie's own lists cannot be a destination."
+      "message": "Choose a to-do list that can add items. Mealie's own lists cannot be a destination."
     },
     "sync_source_taken": {
       "message": "Another sync rule already uses this Mealie list. Edit that rule instead."
@@ -185,7 +185,7 @@
       "message": "The request was incomplete or invalid. Reload the page and try again."
     },
     "mealie_auth": {
-      "message": "Mealie refused the API token. Create a new token in Mealie and reauthenticate the integration."
+      "message": "Mealie refused the API token. Create a new token in Mealie and re-authenticate the integration."
     },
     "mealie_error": {
       "message": "Mealie is unreachable or returned an error. Check that Mealie is running and try again."
