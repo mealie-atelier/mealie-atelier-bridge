@@ -140,7 +140,7 @@
       "message": "Dieses Backup existiert nicht mehr. Öffne den Versionsverlauf erneut."
     },
     "upload_invalid": {
-      "message": "Das Foto wurde abgelehnt. Nutze ein JPEG, PNG oder WebP mit höchstens 10 MiB."
+      "message": "Das Foto wurde abgelehnt. Nutze ein JPEG, PNG oder WebP mit höchstens 10 MB."
     },
     "upload_expired": {
       "message": "Der Upload ist abgelaufen. Wähle das Foto erneut aus."
@@ -195,6 +195,12 @@
     },
     "conflict": {
       "message": "Jemand anderes hat das inzwischen geändert. Lade neu und versuche es erneut."
+    },
+    "usda_key_invalid": {
+      "message": "Der USDA-FoodData-Central-Schlüssel wurde abgelehnt. Prüfe den Schlüssel in den Optionen von Mealie Atelier."
+    },
+    "usda_rate_limited": {
+      "message": "Das Limit von USDA FoodData Central ist erreicht. Versuche es später noch einmal."
     }
   }
 }

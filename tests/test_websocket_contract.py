@@ -282,7 +282,7 @@ async def test_translated_errors_reach_the_websocket_client(
     response = await send(
         client, {"type": "mealie_atelier/nutrition_prepare", "slug": "soup", "entry_id": "missing"}
     )
-    assert response["error"]["code"] == "invalid_request"
+    assert response["error"]["code"] == "not_configured"
     assert response["error"]["message"].startswith("Configure Mealie Atelier Bridge first")
 
     mock_mealie.get(
@@ -299,7 +299,7 @@ async def test_translated_errors_reach_the_websocket_client(
             "entries": [],
         },
     )
-    assert response["error"]["code"] == "invalid_request"
+    assert response["error"]["code"] == "existing_values_protected"
     assert "protected" in response["error"]["message"]
 
 
@@ -389,3 +389,15 @@ def test_ai_failures_use_their_own_error_code():
         connection = MagicMock()
         _fail(connection, {"id": 7}, exc)
         connection.send_error.assert_called_once_with(7, code, str(exc))
+
+
+def test_translated_validation_errors_keep_their_own_code():
+    from unittest.mock import MagicMock
+
+    from custom_components.mealie_atelier.websocket import _fail, _translated
+
+    connection = MagicMock()
+    _fail(connection, {"id": 9}, _translated("too_many_timers"))
+    args, kwargs = connection.send_error.call_args
+    assert args[:2] == (9, "too_many_timers")
+    assert kwargs["translation_key"] == "too_many_timers"

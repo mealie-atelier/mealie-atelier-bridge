@@ -453,6 +453,7 @@ async def test_status_reports_permissions_of_the_calling_user(
             "uploads",
             "recipe_filters",
             "offline_queue",
+            "ai",
         }
         assert row["limits"] == {"upload_max_bytes": 10485760, "upload_chunk_bytes": 262144}
 

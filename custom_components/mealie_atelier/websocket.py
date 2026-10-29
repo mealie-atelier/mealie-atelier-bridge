@@ -92,10 +92,26 @@ def _translated(key: str) -> ServiceValidationError:
     return ServiceValidationError(translation_domain=DOMAIN, translation_key=key)
 
 
+def _ai_language(hass: HomeAssistant, msg: dict) -> str:
+    """The AI answer language: the card's choice, else the Home Assistant language."""
+    return str(msg.get("language") or hass.config.language or "en")
+
+
 def _fail(connection, msg: dict, exc: Exception) -> None:
     """Return an error; no tokens, tracebacks or upstream URLs in frontend payload."""
     if isinstance(exc, AtelierError):
         send_atelier_error(connection, msg, exc)
+        return
+    key = getattr(exc, "translation_key", None) if isinstance(exc, ServiceValidationError) else None
+    if key:
+        # A translated validation error keeps its own code so the card can show an actionable text.
+        connection.send_error(
+            msg["id"],
+            key,
+            str(exc)[:220],
+            translation_key=key,
+            translation_domain=DOMAIN,
+        )
         return
     if isinstance(exc, (ValueError, ServiceValidationError)):
         code = "invalid_request"
@@ -150,6 +166,7 @@ async def ws_status(hass, connection, msg):
                     "uploads": True,
                     "recipe_filters": True,
                     "offline_queue": True,
+                    "ai": bool(entry.options.get(CONF_AI_KEY)),
                 },
                 "limits": {
                     "upload_max_bytes": UPLOAD_MAX_BYTES,
@@ -603,6 +620,7 @@ async def ws_studio_update(hass, connection, msg):
         probatio.Optional("entry_id"): str,
         probatio.Required("ingredient"): str,
         probatio.Required("recipe"): str,
+        probatio.Optional("language"): str,
     }
 )
 @websocket_api.async_response
@@ -617,6 +635,7 @@ async def ws_studio_substitute(hass, connection, msg):
             entry.options.get(CONF_AI_KEY, ""),
             msg["ingredient"],
             msg["recipe"],
+            _ai_language(hass, msg),
         )
         connection.send_result(msg["id"], result)
     except (ValueError, MealieError, HomeAssistantError) as exc:
@@ -628,6 +647,7 @@ async def ws_studio_substitute(hass, connection, msg):
         probatio.Required("type"): "mealie_atelier/studio_ai_audit",
         probatio.Optional("entry_id"): str,
         probatio.Required("slug"): str,
+        probatio.Optional("language"): str,
     }
 )
 @websocket_api.async_response
@@ -639,7 +659,10 @@ async def ws_studio_ai_audit(hass, connection, msg):
     try:
         recipe = await entry.runtime_data.client.recipe(msg["slug"])
         result = await ai_audit(
-            async_get_clientsession(hass), entry.options.get(CONF_AI_KEY, ""), recipe
+            async_get_clientsession(hass),
+            entry.options.get(CONF_AI_KEY, ""),
+            recipe,
+            _ai_language(hass, msg),
         )
         connection.send_result(msg["id"], result)
     except (ValueError, MealieError, HomeAssistantError) as exc:

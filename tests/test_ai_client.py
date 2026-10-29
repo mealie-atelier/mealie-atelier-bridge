@@ -231,3 +231,33 @@ async def test_ai_helpers_raise_ai_error_on_bad_shape(fake):
         await studio_ai.substitutes(session, ANT_KEY, "Butter", "Kuchen")
     with pytest.raises(ai_client.AiError):
         await studio_ai.audit_recipe(session, ANT_KEY, RECIPE)
+
+
+@pytest.mark.parametrize(
+    ("language", "name", "word", "disclaimer"),
+    [
+        ("en", "English", "Non-binding", "AI review that may contain mistakes"),
+        ("de", "German", "Unverbindliche", "KI-Prüfung"),
+        ("de-DE", "German", "Unverbindliche", "KI-Prüfung"),
+        ("fr", "English", "Non-binding", "AI review"),
+    ],
+)
+async def test_ai_answers_follow_the_requested_language(language, name, word, disclaimer):
+    from unittest.mock import AsyncMock, patch
+
+    answers = {
+        "substitute_options": {"alternatives": [], "warning": "w"},
+        "recipe_audit": {"issues": [], "summary": "s"},
+    }
+
+    async def fake_request(*args, **kwargs):
+        return answers[kwargs["schema_name"]]
+
+    mock = AsyncMock(side_effect=fake_request)
+    with patch.object(studio_ai, "request_json", mock):
+        subs = await studio_ai.substitutes(None, "k", "Butter", "Kuchen", language)
+        audit = await studio_ai.audit_recipe(None, "k", RECIPE, language)
+    for call in mock.call_args_list:
+        assert f"in {name}" in call.kwargs["instructions"]
+    assert subs["disclaimer"].startswith(word)
+    assert disclaimer in audit["disclaimer"]

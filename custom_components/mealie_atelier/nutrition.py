@@ -15,6 +15,7 @@ from typing import Any
 import aiohttp
 
 from .ai_client import AiError, request_json
+from .errors import AtelierError
 from .api import MealieError
 
 _FDC = "https://api.nal.usda.gov/fdc/v1"
@@ -144,6 +145,12 @@ async def _fdc_fetch(
             timeout=aiohttp.ClientTimeout(total=18),
             allow_redirects=False,
         ) as response:
+            if response.status in (400, 401, 403):
+                raise AtelierError("usda_key_invalid", "The USDA FoodData Central key was refused")
+            if response.status == 429:
+                raise AtelierError(
+                    "usda_rate_limited", "The USDA FoodData Central limit is reached"
+                )
             if response.status >= 300:
                 raise MealieError(f"FoodData Central returned HTTP {response.status}")
             result = await response.json()

@@ -13,6 +13,7 @@ from aiohttp import ClientSession, web
 
 from custom_components.mealie_atelier import ai_client
 from custom_components.mealie_atelier import nutrition as n
+from custom_components.mealie_atelier.errors import AtelierError
 
 RECIPE = {
     "slug": "haferflocken-mit-beeren",
@@ -197,6 +198,11 @@ class NutritionTests(unittest.IsolatedAsyncioTestCase):
                 [lines[0], {"index": 1, "grams": True, "fdc_id": 102}],
                 expected_hash=info["hash"],
             )
+
+    async def test_rejected_usda_key_has_its_own_error_code(self):
+        with self.assertRaises(AtelierError) as caught:
+            await n.search(self.session, "WRONG_KEY", "oats")
+        self.assertEqual(caught.exception.code, "usda_key_invalid")
 
     async def test_optional_ai_only_proposes_search_text(self):
         suggestions = await n.ai_suggest(

@@ -244,6 +244,16 @@ async def test_options_flow_rejects_bad_notify_service(hass):
     assert result["errors"] == {CONF_TIMER_NOTIFY_SERVICE: "invalid_notify_service"}
 
 
+async def test_options_flow_rejects_notify_send_message(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_TIMER_NOTIFY_SERVICE: "notify.send_message"}
+    )
+    assert result["errors"] == {CONF_TIMER_NOTIFY_SERVICE: "invalid_notify_service"}
+
+
 async def _options_form(hass, entry):
     result = await hass.config_entries.options.async_init(entry.entry_id)
     schema = result["data_schema"].schema

@@ -140,7 +140,7 @@
       "message": "This backup no longer exists. Open the version history again."
     },
     "upload_invalid": {
-      "message": "The photo was refused. Use a JPEG, PNG or WebP of at most 10 MiB."
+      "message": "The photo was refused. Use a JPEG, PNG or WebP of at most 10 MB."
     },
     "upload_expired": {
       "message": "The upload expired. Choose the photo again."
@@ -195,6 +195,12 @@
     },
     "conflict": {
       "message": "Someone else changed this in the meantime. Reload and try again."
+    },
+    "usda_key_invalid": {
+      "message": "The USDA FoodData Central key was refused. Check the key in the Mealie Atelier options."
+    },
+    "usda_rate_limited": {
+      "message": "The USDA FoodData Central limit is reached. Try again later."
     }
   }
 }

@@ -102,7 +102,8 @@ SECRET_SELECTOR = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD
 CONF_CLEAR_FDC_KEY = "clear_fdc_key"
 CONF_CLEAR_AI_KEY = "clear_ai_key"
 _CLEARABLE_KEYS = ((CONF_FDC_KEY, CONF_CLEAR_FDC_KEY), (CONF_AI_KEY, CONF_CLEAR_AI_KEY))
-NOTIFY_SERVICE_RE = re.compile(r"notify\.[a-z0-9_]+")
+# notify.send_message needs an entity_id and can never deliver a timer.
+NOTIFY_SERVICE_RE = re.compile(r"notify\.(?!send_message$)[a-z0-9_]+")
 
 
 class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -278,7 +279,11 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
         # Offer the notify services that exist right now, but still allow typing one that
         # is not registered yet (for example a phone that is currently offline).
         services = self.hass.services.async_services_for_domain("notify")
-        notify_options = sorted(f"notify.{name}" for name in services if name != "send_message")
+        notify_options = sorted(
+            f"notify.{name}"
+            for name in services
+            if name not in ("send_message", "persistent_notification")
+        )
         schema = vol.Schema(
             {
                 vol.Required(CONF_READ_ONLY, default=False): bool,

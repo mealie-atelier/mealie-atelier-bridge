@@ -24,6 +24,12 @@ FINISHED_RETENTION_MS = 2 * 24 * 3600_000
 MAX_ACTIVE_TIMERS = 300
 MAX_ACTIVE_TIMERS_PER_USER = 20
 
+# Delivery text per Home Assistant language: (title, message template). Anything but German is English.
+_TEXTS = {
+    "de": ("Mealie Atelier · Küchentimer", "{label} ist fertig!"),
+    "en": ("Mealie Atelier · Kitchen timer", "{label} is ready!"),
+}
+
 
 def _invalid(key: str) -> ServiceValidationError:
     """Build a translated validation error for a user-triggered timer problem."""
@@ -46,6 +52,7 @@ class TimerManager:
             if isinstance(notify_service, str)
             and notify_service.startswith("notify.")
             and notify_service[7:].replace("_", "").isalnum()
+            and notify_service[7:] != "send_message"
             else ""
         )
         self.alarms = []
@@ -140,7 +147,10 @@ class TimerManager:
                 raise _invalid("timer_not_found")
             if entry["owner"] != actor and not is_admin:
                 raise _invalid("timer_not_permitted")
-            if entry["status"] in ("sending", "sent"):
+            if entry["status"] == "sent":
+                # A finished timer is already gone from the user's point of view: removing it is a no-op.
+                return deepcopy(entry)
+            if entry["status"] == "sending":
                 raise _invalid("timer_dispatched")
             entry["status"] = "cancelled"
             await self._save()
@@ -150,8 +160,8 @@ class TimerManager:
         return {"alarms": deepcopy([a for a in self.alarms if admin or a["owner"] == actor])}
 
     async def _deliver(self, entry):
-        title = "Mealie Atelier · Küchentimer"
-        message = f"{entry['label']} ist fertig!"
+        title, template = _TEXTS["de" if self.hass.config.language == "de" else "en"]
+        message = template.format(label=entry["label"])
         channels = []
         # HA always receives an internal persistent notification (visible after reopening HA).
         try:
@@ -170,7 +180,8 @@ class TimerManager:
             _LOGGER.warning(
                 "Kitchen timer persistent notification failed (%s)", type(error).__name__
             )
-        if self.notify_service:
+        # notify.persistent_notification would only repeat the notification created above.
+        if self.notify_service and self.notify_service != "notify.persistent_notification":
             service = self.notify_service.split(".", 1)[1]
             try:
                 await self.hass.services.async_call(

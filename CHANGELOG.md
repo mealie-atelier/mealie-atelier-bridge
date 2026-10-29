@@ -10,6 +10,13 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ### Fixed
 
+- Cancelling a kitchen timer that already finished succeeds instead of failing, so the card can remove it.
+- Kitchen timer notifications follow the Home Assistant language (German or English).
+- `notify.persistent_notification` is no longer offered as timer notification service and no longer creates a second notification. `notify.send_message` is rejected, because it can never deliver.
+- Translated validation errors (too many timers, foreign timer, recipe changed, protected nutrition values) reach the card with their own error code instead of `invalid_request`.
+- A refused USDA FoodData Central key is reported as `usda_key_invalid` (and a reached limit as `usda_rate_limited`) instead of a Mealie error.
+- AI alternatives and the AI recipe review answer in the requested language (optional `language` field, else the Home Assistant language) with a matching disclaimer. The status lists `features.ai` so cards can hide the AI review without a key.
+- The photo size limit reads 10 MB in the Bridge messages, like the cards.
 - A Mealie account can only be set up once, even when it is reachable under two addresses. Existing entries are migrated to an account based id.
 - Existing entries with the old generated title are renamed during the upgrade, and reconfiguring the address renames a generated title too. Administrators stored in the write list are dropped during the upgrade. A list that held only administrators becomes empty, so every user may change data again.
 - Entries are titled `Mealie Atelier Bridge · user@host`, so several servers stay distinguishable. The setup dialogs use the same product name.
@@ -40,7 +47,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 - Per-user write grants. A new option limits who may change shopping lists and meal plans to selected Home Assistant users. An empty selection keeps the old behavior for everyone, administrators always can, and read-only mode still wins over any grant. Recipe management stays admin only. Journal entries and kitchen timers are personal and are blocked only by read-only mode. Every mutating command passes the same permission gate, and the status payload reports the permissions of the calling user.
 - Structured recipe editing backend: ingredients with linked foods and units, recipe basics (name, description, servings), steps, cover photo, step photos and restore. Food and unit search creates a new entry only when no exact match exists.
 - Recipe backups. Before every recipe write the Bridge saves a snapshot in Home Assistant storage (newest 10 per recipe, up to 200 recipes, the newest 3 cover photos as private files). If the snapshot cannot be saved, nothing is changed in Mealie. Backups can be listed and restored, and they are deleted when the integration is removed.
-- Photo uploads in ordered chunks with size, checksum and file type checks (JPEG, PNG or WebP, at most 10 MiB).
+- Photo uploads in ordered chunks with size, checksum and file type checks (JPEG, PNG or WebP, at most 10 MB).
 - Smart Shopping Sync. One Mealie shopping list can be copied or moved to a Home Assistant To-do list. The sync uses Home Assistant's generic To-do entity contract, so a provider that supports adding items should work. It keeps a persisted outbox per rule, checks an item off in Mealie (move mode) only after the destination accepted it, reconciles timeouts against the destination before sending again, flags edits made after sending as conflicts, and never runs automatically before an administrator confirmed the first batch. At most 5 rules, with pause, resume, run, retry and conflict handling. Diagnostics contain counts only. See [Smart Shopping Sync](docs/SMART_SHOPPING_SYNC.md).
 - Offline replay ledger for the offline shopping queue of the cards (`mealie_atelier/offline_replay`). Queued toggles and adds are replayed idempotently: the operation is persisted before the Mealie write, conflicts with changes made elsewhere are detected, and a possibly sent add is never posted twice. The status payload advertises `features.offline_queue`.
 - Config flow steps for re-authentication and reconfiguration, with a guard against switching an entry to a different Mealie account. Every option has a label and a help text, in German and English.

@@ -38,7 +38,7 @@ No. Mealie v3.29 has no endpoint to delete a recipe asset. Removing or replacing
 
 ## Why is a large photo cut off or refused?
 
-Photos are read to the end since 0.10.0, so large photos arrive whole. Uploads accept JPEG, PNG and WebP of at most 10 MiB.
+Photos are read to the end since 0.10.0, so large photos arrive whole. Uploads accept JPEG, PNG and WebP of at most 10 MB.
 
 ## Where do I ask for help or report a security issue?
 

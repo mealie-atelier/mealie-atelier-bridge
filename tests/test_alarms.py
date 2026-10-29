@@ -212,11 +212,17 @@ async def test_cancel_rules(manager: TimerManager, hass_storage: dict[str, Any])
     assert cancelled["status"] == "cancelled"
     assert hass_storage[STORAGE_KEY]["data"]["alarms"][0]["status"] == "cancelled"
 
-    for status in ("sending", "sent"):
-        manager.alarms.append(stored_alarm(status=status))
-        with pytest.raises(ServiceValidationError) as caught:
-            await manager.async_cancel("user-1", manager.alarms[-1]["id"])
-        assert caught.value.translation_key == "timer_dispatched"
+    manager.alarms.append(stored_alarm(status="sending"))
+    with pytest.raises(ServiceValidationError) as caught:
+        await manager.async_cancel("user-1", manager.alarms[-1]["id"])
+    assert caught.value.translation_key == "timer_dispatched"
+
+
+async def test_cancelling_a_finished_timer_succeeds_without_changing_it(manager: TimerManager):
+    manager.alarms.append(stored_alarm(status="sent"))
+    result = await manager.async_cancel("user-1", manager.alarms[-1]["id"])
+    assert result["status"] == "sent"
+    assert manager.alarms[-1]["status"] == "sent"
 
 
 async def test_list_is_scoped_to_the_owner_unless_admin(manager: TimerManager):
@@ -350,3 +356,38 @@ async def test_stop_without_start_is_harmless(manager: TimerManager):
     await manager.async_stop()
 
     assert manager.task is None
+
+
+@pytest.mark.parametrize(
+    ("language", "title", "message"),
+    [
+        ("de", "Mealie Atelier · Küchentimer", "Pasta ist fertig!"),
+        ("en", "Mealie Atelier · Kitchen timer", "Pasta is ready!"),
+        ("fr", "Mealie Atelier · Kitchen timer", "Pasta is ready!"),
+    ],
+)
+async def test_delivery_text_follows_the_home_assistant_language(
+    hass: HomeAssistant, manager: TimerManager, language: str, title: str, message: str
+):
+    hass.config.language = language
+    persistent = async_mock_service(hass, "persistent_notification", "create")
+    manager.alarms = [stored_alarm()]
+
+    assert await manager.async_tick() is True
+    assert persistent[0].data["title"] == title
+    assert persistent[0].data["message"] == message
+
+
+async def test_notify_persistent_notification_does_not_duplicate(hass: HomeAssistant):
+    manager = TimerManager(hass, "e1", "notify.persistent_notification")
+    persistent = async_mock_service(hass, "persistent_notification", "create")
+    duplicate = async_mock_service(hass, "notify", "persistent_notification")
+    manager.alarms = [stored_alarm()]
+
+    assert await manager.async_tick() is True
+    assert len(persistent) == 1
+    assert duplicate == []
+
+
+def test_notify_send_message_is_ignored(hass: HomeAssistant):
+    assert TimerManager(hass, "e1", "notify.send_message").notify_service == ""
