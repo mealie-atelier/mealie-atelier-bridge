@@ -86,13 +86,16 @@ def validate_operation(operation: Any) -> dict[str, Any]:
             raise _invalid("Toggle needs item ID, desired and original state")
         clean = {key: payload[key] for key in ("item_id", "checked", "expected_checked")}
     elif action == "shopping_update":
+        # A missing or blank note means "leave the note alone": items Mealie adds from a recipe
+        # have a linked food and usually no note, and their quantity must stay editable.
         note = payload.get("note")
+        if isinstance(note, str) and not note.strip():
+            note = None
         expected_note = payload.get("expected_note")
         expected_quantity = payload.get("expected_quantity")
         if (
             not _is_id(payload.get("item_id"))
-            or not isinstance(note, str)
-            or not 0 < len(note.strip()) <= 250
+            or not (note is None or (isinstance(note, str) and len(note.strip()) <= 250))
             or not _is_quantity(payload.get("quantity"))
             or not (expected_note is None or isinstance(expected_note, str))
             or not (expected_quantity is None or _is_quantity(expected_quantity))
@@ -258,15 +261,16 @@ class OfflineLedger:
             except Exception:
                 await set_state("checking")
                 raise
-            if _same_text(current.get("note"), payload["note"]) and _same_quantity(
-                current.get("quantity"), payload["quantity"]
-            ):
+            note_changes = payload["note"] is not None
+            if (
+                not note_changes or _same_text(current.get("note"), payload["note"])
+            ) and _same_quantity(current.get("quantity"), payload["quantity"]):
                 result = {"ok": True, "already_applied": True, "item": current}
                 await set_state("completed", result=result)
                 return result
-            if not _same_text(current.get("note"), payload["expected_note"]) or not _same_quantity(
-                current.get("quantity"), payload["expected_quantity"]
-            ):
+            if (
+                note_changes and not _same_text(current.get("note"), payload["expected_note"])
+            ) or not _same_quantity(current.get("quantity"), payload["expected_quantity"]):
                 message = "This item was changed on another device. Review both values"
                 await set_state("conflict", message=message)
                 raise AtelierError("offline_conflict", message)
@@ -298,10 +302,11 @@ class OfflineLedger:
                     payload["item_id"], payload["checked"], current
                 )
             elif action == "shopping_update":
+                changes: dict[str, Any] = {"quantity": payload["quantity"]}
+                if payload["note"] is not None:
+                    changes["note"] = payload["note"].strip()
                 mealie_result = await self._client.update_shopping_item(
-                    payload["item_id"],
-                    {"note": payload["note"].strip(), "quantity": payload["quantity"]},
-                    current,
+                    payload["item_id"], changes, current
                 )
             else:
                 mealie_result = await self._client.mutate(action, payload)

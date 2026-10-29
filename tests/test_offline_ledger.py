@@ -517,8 +517,8 @@ def test_cap_tolerates_a_stored_operation_without_action():
 @pytest.mark.parametrize(
     "bad",
     [
-        {"note": "  "},
         {"note": "x" * 251},
+        {"note": 5},
         {"quantity": True},
         {"quantity": -1},
         {"quantity": 10000},
@@ -532,6 +532,30 @@ def test_update_payload_is_validated(bad):
     with pytest.raises(AtelierError) as err:
         validate_operation(op)
     assert err.value.code == "invalid_request"
+
+
+def test_update_without_a_note_is_valid_and_keeps_the_note_unset():
+    for payload_note in ({}, {"note": ""}, {"note": "   "}, {"note": None}):
+        op = update(expected_note=None)
+        op["payload"].pop("note")
+        op["payload"].update(payload_note)
+        assert validate_operation(op)["payload"]["note"] is None
+
+
+async def test_quantity_only_update_of_an_item_without_a_note(ledger, client):
+    item = {"id": "item-1", "note": "", "quantity": 1, "foodId": "food-1"}
+    client.shopping_item.return_value = item
+    op = update(note="", quantity=3, expected_note="")
+    result = await ledger.process(op)
+    assert result["ok"] is True
+    client.update_shopping_item.assert_awaited_once_with("item-1", {"quantity": 3}, item)
+
+
+async def test_quantity_only_update_still_conflicts_on_a_changed_quantity(ledger, client):
+    client.shopping_item.return_value = {"id": "item-1", "note": "Added", "quantity": 5}
+    assert await code_of(ledger.process(update(note="", quantity=3, expected_note=""))) == (
+        "offline_conflict"
+    )
 
 
 def test_delete_and_clear_need_ids():
