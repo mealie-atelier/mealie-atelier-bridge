@@ -1,18 +1,7 @@
 # Bridge brand assets
 
-Bridge uses the same original pasta-and-tomato photograph as Cards, with a distinct wordmark and a crisp geometric home connection mark. Its square, full-bleed composition uses straight edges, a restrained gold rule, and the shared aubergine palette.
+The Week Dial mark, Bridge variant: a plate seen from above, its rim notched into seven day sections (today in paprika), with a three-arch bridge on the plate. The masters live in the `mealie-atelier/.github` repository under `brand/` (palette, clear space and usage rules are in its `BRAND.md`). The files here are generated copies; change the masters there, never edit these by hand.
 
-- `icon.svg` is the self-contained master; its source photo is embedded so common SVG renderers produce the same result.
-- `icon-192.png`, `icon-512.png` and `icon-1024.png` are ready-to-use exports.
-- `social-preview.svg` is the editable artwork; `social-preview.png` is the 1280 × 640 export, and `social-preview.jpg` is the optimized GitHub upload (under 1 MB).
-- `CREDITS.md` records the photograph attribution and source license.
-
-Regenerate the square icon exports on macOS with the built-in `sips` tool:
-
-```sh
-for size in 192 512 1024; do
-  sips -s format png -z "$size" "$size" icon.svg --out "icon-$size.png"
-done
-sips -s format png social-preview.svg --out social-preview.png
-sips -s format jpeg -s formatOptions 86 social-preview.png --out social-preview.jpg
-```
+- `icon.svg` is the app tile master (night tile, cream plate). `icon-192.png`, `icon-512.png` and `icon-1024.png` are PNG exports of it.
+- `social-preview.svg` is the 1280 × 640 GitHub social preview (Bridge lockup on the night plate colour with a one-line tagline). `social-preview.png` is the export and `social-preview.jpg` the upload version (both well under 1 MB).
+- The Home Assistant brand files live in `custom_components/mealie_atelier/brand/` and are read by Home Assistant from there: `icon.png` (256) and `icon@2x.png` (512) on a transparent square for light UI, `dark_icon*.png` for dark UI, and the landscape `logo*.png` and `dark_logo*.png` lockups (shortest side 128 and 256).

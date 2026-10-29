@@ -1,4 +1,4 @@
-<p align="center"><img width="112" alt="Mealie Atelier Bridge icon: handmade pasta with tomatoes" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/custom_components/mealie_atelier/brand/icon@2x.png"></p>
+<p align="center"><img width="112" alt="Mealie Atelier Bridge icon: a three-arch bridge on a seven-section plate" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/custom_components/mealie_atelier/brand/icon@2x.png"></p>
 
 <h1 align="center">Mealie Atelier Bridge</h1>
 
