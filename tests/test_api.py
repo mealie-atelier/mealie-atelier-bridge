@@ -241,6 +241,17 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):
             apply_shopping_changes({"id": "i", "note": "Milk"}, {"note": ""})
 
+    async def test_online_update_and_delete_of_a_vanished_item(self):
+        async def gone(*args, **kwargs):
+            raise MealieError("gone", status=404)
+
+        self.client.request = gone
+        with self.assertRaises(AtelierError) as ctx:
+            await self.client.mutate("shopping_update", {"item_id": "item-1", "note": "x"})
+        self.assertEqual(ctx.exception.code, "shopping_item_not_found")
+        result = await self.client.mutate("shopping_delete", {"item_id": "item-1"})
+        self.assertEqual(result, {"ok": True, "already_applied": True})
+
     async def test_shopping_delete_and_clear_checked(self):
         await self.client.mutate("shopping_delete", {"item_id": "item-1"})
         self.assertEqual(self.calls[-1]["method"], "DELETE")
