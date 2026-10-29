@@ -869,19 +869,20 @@ async def test_a_free_text_name_with_a_number_still_matches_itself(ledger, clien
     assert (await ledger.process(update(name="Soja", expected_name="2 Milch")))["ok"]
 
 
-async def test_the_label_the_card_shows_for_an_empty_display_matches_the_unchanged_item(
-    ledger, client
-):
-    # The card shows display, else note, else food name, and sends exactly that text.
+async def test_a_food_changed_on_another_device_never_matches_an_empty_display(ledger, client):
+    # The user saw the note "fettarm" of a Milch item. Another device changed the food to Hafer,
+    # so the rename must not turn the item into free text and drop that food.
     client.shopping_item.return_value = {
         "id": "item-1",
         "note": "fettarm",
         "display": "",
         "isFood": True,
-        "food": {"name": "Milch"},
+        "food": {"name": "Hafer"},
         "quantity": 0,
     }
-    assert (await ledger.process(update(name="Soja", expected_name="fettarm")))["ok"]
+    op = update(name="Soja", expected_name="fettarm", expected_quantity=0)
+    assert await code_of(ledger.process(op)) == "offline_conflict"
+    client.update_shopping_item.assert_not_awaited()
 
 
 async def test_a_number_the_user_saw_as_free_text_is_kept_when_another_device_sets_a_quantity(

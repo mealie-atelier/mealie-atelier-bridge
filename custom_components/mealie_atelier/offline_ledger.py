@@ -449,18 +449,16 @@ def _without_amount(text: str, item: dict[str, Any], shown: Any = None) -> str:
 def _seen(key: str, item: dict[str, Any], wanted: Any = None, shown: Any = None) -> Any:
     """The value of an item as the user saw it for one changed field.
 
-    The cards derive the label of an edited item themselves (display, else note, else food name),
-    so a name matches when it equals that label, the display text, the label Mealie rebuilds, or
-    the name and note without a quantity and unit. Another device that changed the note or the name
-    never matches, only a quantity edit does.
+    The cards derive the label of an edited item themselves, so a name matches when it equals the
+    display text, the label Mealie rebuilds, or the food name and note without a quantity and unit.
+    The note alone of an item with a food never matches: another device may have changed the food.
+    A name or note changed by another device never matches, only a quantity edit does.
     """
     if key != "name":
         return item.get(key)
     bare = _bare_label(item)
-    food = item.get("food") if isinstance(item.get("food"), dict) else {}
-    card = item.get("display") or item.get("note") or food.get("name") or ""
     candidates = [
-        card,
+        item.get("display") or bare,
         item.get("display") or "",
         bare,
         *_rebuilt_labels(item),
