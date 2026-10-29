@@ -804,3 +804,40 @@ async def test_rename_still_conflicts_when_another_device_renamed_the_item(ledge
     }
     op = update(name="Hafermilch", expected_name="2 Milch")
     assert await code_of(ledger.process(op)) == "offline_conflict"
+
+
+async def test_a_note_added_on_another_device_makes_a_rename_a_conflict(ledger, client):
+    client.shopping_item.return_value = {
+        "id": "item-1",
+        "note": "fettarm",
+        "display": "Milch fettarm",
+        "isFood": True,
+        "food": {"name": "Milch"},
+        "quantity": 0,
+    }
+    op = update(name="Hafermilch", expected_name="Milch")
+    assert await code_of(ledger.process(op)) == "offline_conflict"
+    client.update_shopping_item.assert_not_awaited()
+
+
+async def test_a_quantity_edit_on_another_device_is_no_conflict_for_a_rename(ledger, client):
+    # The user saw "2 Milch" or "Milch"; another device set the quantity to 3.
+    for number, expected in enumerate(("2 Milch", "Milch"), start=1):
+        client.shopping_item.return_value = {
+            "id": "item-1",
+            "note": "Milch",
+            "display": "3 Milch",
+            "isFood": False,
+            "quantity": 3,
+        }
+        assert (await ledger.process(update(number, name="Soja", expected_name=expected)))["ok"]
+
+
+async def test_a_unit_prefix_of_the_seen_label_is_ignored(ledger, client):
+    client.shopping_item.return_value = {
+        **FOOD_ITEM,
+        "display": "",
+        "quantity": 5,
+        "unit": {"name": "g"},
+    }
+    assert (await ledger.process(update(name="Rohrzucker", expected_name="2 g Zucker")))["ok"]

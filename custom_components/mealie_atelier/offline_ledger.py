@@ -400,22 +400,45 @@ def _rebuilt_labels(item: dict[str, Any]) -> list[str]:
     return labels
 
 
+def _bare_label(item: dict[str, Any]) -> str:
+    """The text of an item without quantity and unit: food name plus note, or the note alone."""
+    food = item.get("food") if isinstance(item.get("food"), dict) else None
+    note = str(item.get("note") or "").strip()
+    name = str(food.get("name") or "").strip() if food else ""
+    return " ".join(part for part in (name, note) if part)
+
+
+def _without_amount(text: str, item: dict[str, Any]) -> str:
+    """Drop a leading quantity and the unit of the item from a label the user saw."""
+    stripped = re.sub(r"^\s*\d+(?:[.,]\d+)?\s+", "", text)
+    if stripped == text:
+        return text
+    unit = item.get("unit") if isinstance(item.get("unit"), dict) else {}
+    for unit_name in (unit.get("name"), unit.get("abbreviation")):
+        prefix = str(unit_name or "").strip()
+        if prefix and stripped.lower().startswith(prefix.lower() + " "):
+            return stripped[len(prefix) :].strip()
+    return stripped.strip()
+
+
 def _seen(key: str, item: dict[str, Any], wanted: Any = None) -> Any:
     """The value of an item as the user saw it for one changed field.
 
     The cards derive the label of an edited item themselves, so a name matches when it equals the
-    display text, the note or the food name that Mealie holds.
+    display text, the label Mealie rebuilds, or the name and note without a quantity and unit.
+    Another device that changed the note or the name never matches, only a quantity edit does.
     """
     if key != "name":
         return item.get(key)
-    food = item.get("food")
+    bare = _bare_label(item)
     candidates = [
         shopping_item_name(item),
         item.get("display"),
-        item.get("note"),
-        food.get("name") if isinstance(food, dict) else None,
+        bare,
         *_rebuilt_labels(item),
     ]
+    if isinstance(wanted, str) and _same("name", _without_amount(wanted.strip(), item), bare):
+        return wanted
     for value in candidates:
         if isinstance(value, str) and _same("name", value, wanted):
             return value

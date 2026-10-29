@@ -52,7 +52,7 @@ The other codes (`read_only`, `write_not_permitted`, `backup_failed`, `upload_*`
 `mealie_atelier/offline_replay` takes the same actions inside `operation.payload` with these extra fields, so a change made on another device meanwhile is reported instead of overwritten:
 
 - `shopping_toggle` needs `expected_checked`.
-- `shopping_update` may carry `expected_name` (the text the list showed: display text, note, food name or the label rebuilt from quantity, unit and name, so chained offline edits do not conflict with themselves), `expected_note` and `expected_quantity` for each changed field. Without one, that edit wins.
+- `shopping_update` may carry `expected_name` (the text the list showed: the display text, the label rebuilt from quantity, unit, name and note, or the name and note without quantity and unit, so chained offline edits and a quantity edit on another device do not conflict, while a changed name or note does), `expected_note` and `expected_quantity` for each changed field. Without one, that edit wins.
 - `shopping_clear_checked` needs `expected_ids`, the IDs of the ticked items the user saw (1 to 1000). It becomes a conflict when another device ticked or unticked an item meanwhile. Items the user saw ticked that are gone are fine.
 
 Codes: `offline_conflict` (the record stays a conflict until the card discards it), `shopping_item_not_found` (an update targets an item that no longer exists; a replay reports it again) and `invalid_request` for malformed payloads. The web app server answers the same payloads and codes on `/api/bridge`.
