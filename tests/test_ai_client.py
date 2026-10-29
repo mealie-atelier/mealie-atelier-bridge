@@ -261,3 +261,21 @@ async def test_ai_answers_follow_the_requested_language(language, name, word, di
         assert f"in {name}" in call.kwargs["instructions"]
     assert subs["disclaimer"].startswith(word)
     assert disclaimer in audit["disclaimer"]
+
+
+def test_german_disclaimers_address_the_reader_with_du():
+    for text in studio_ai._DISCLAIMERS["de"].values():
+        assert "Prüfe" in text
+
+
+def test_ui_texts_name_the_integration_in_full():
+    from pathlib import Path
+
+    root = Path(studio_ai.__file__).parent
+    for name in ("strings.json", "translations/en.json", "translations/de.json", "permissions.py"):
+        assert "Mealie Atelier options" not in (root / name).read_text(encoding="utf-8")
+        assert "Optionen von Mealie Atelier." not in (root / name).read_text(encoding="utf-8")
+        assert "Mealie-Atelier-Optionen" not in (root / name).read_text(encoding="utf-8")
+        assert "Optionen von Mealie Atelier Bridge" not in (root / name).read_text(encoding="utf-8")
+        assert "Mealie Atelier is in" not in (root / name).read_text(encoding="utf-8")
+        assert "Mealie Atelier ist im" not in (root / name).read_text(encoding="utf-8")

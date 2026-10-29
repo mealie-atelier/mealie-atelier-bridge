@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import logging
+import math
 import re
 import time
 from typing import Any
@@ -18,7 +19,13 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
-from .api import MealieClient
+from .api import (
+    MealieClient,
+    MealieError,
+    apply_shopping_changes,
+    shopping_item_name,
+    shopping_rename_applied,
+)
 from .const import OFFLINE_PRUNE_DAYS, OFFLINE_RECORD_LIMIT, OFFLINE_STORE_VERSION
 from .errors import AtelierError
 from .recipe_editing import _run
@@ -33,12 +40,75 @@ _STATES = frozenset({"checking", "sending", "completed", "conflict", "uncertain"
 _MAX_AGE_SECONDS = OFFLINE_PRUNE_DAYS * 86400
 
 
+# Actions that read Mealie before any write and can be repeated safely, so a lost answer or a
+# crash never needs a blind-replay guard. Only an add must never be sent twice.
+_RECHECKABLE = frozenset(
+    {"shopping_toggle", "shopping_update", "shopping_delete", "shopping_clear_checked"}
+)
+_ACTIONS = _RECHECKABLE | {"shopping_add"}
+
+
 def _invalid(message: str) -> AtelierError:
     return AtelierError("invalid_request", message)
 
 
 def _is_id(value: Any) -> bool:
     return isinstance(value, str) and _ID.fullmatch(value) is not None
+
+
+def _is_number(value: Any) -> bool:
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+        and 0 <= value <= 100000
+    )
+
+
+def _clean_update(payload: dict[str, Any]) -> dict[str, Any]:
+    """An update names its item, the new name, note and/or quantity, and the value seen for each."""
+    if not _is_id(payload.get("item_id")):
+        raise _invalid("Update needs an item ID")
+    clean: dict[str, Any] = {"item_id": payload["item_id"]}
+    if "name" in payload:
+        name = payload["name"]
+        expected = payload.get("expected_name")
+        if (
+            "note" in payload
+            or not isinstance(name, str)
+            or not 0 < len(name.strip()) <= 250
+            or not (expected is None or isinstance(expected, str))
+            or "expected_name" not in payload
+        ):
+            raise _invalid("A rename needs the new and the original name, and no note")
+        clean["name"] = name.strip()
+        clean["expected_name"] = expected
+    if "note" in payload:
+        note = payload["note"]
+        expected = payload.get("expected_note")
+        if (
+            not isinstance(note, str)
+            or len(note.strip()) > 250
+            or not (expected is None or isinstance(expected, str))
+            or "expected_note" not in payload
+        ):
+            raise _invalid("A note change needs the new and the original note")
+        clean["note"] = note.strip()
+        clean["expected_note"] = expected
+    if "quantity" in payload:
+        quantity = payload["quantity"]
+        expected = payload.get("expected_quantity")
+        if (
+            not _is_number(quantity)
+            or not (expected is None or _is_number(expected))
+            or "expected_quantity" not in payload
+        ):
+            raise _invalid("A quantity change needs the new and the original quantity")
+        clean["quantity"] = quantity
+        clean["expected_quantity"] = expected
+    if len(clean) == 1:
+        raise _invalid("Update needs a name, a note or a quantity")
+    return clean
 
 
 def validate_operation(operation: Any) -> dict[str, Any]:
@@ -50,7 +120,7 @@ def validate_operation(operation: Any) -> dict[str, Any]:
     ):
         raise _invalid("Invalid offline operation ID")
     action = operation.get("action")
-    if action not in ("shopping_toggle", "shopping_add"):
+    if action not in _ACTIONS:
         raise _invalid("Unsupported offline operation")
     payload = operation.get("payload")
     if not isinstance(payload, dict):
@@ -63,6 +133,19 @@ def validate_operation(operation: Any) -> dict[str, Any]:
         ):
             raise _invalid("Toggle needs item ID, desired and original state")
         clean = {key: payload[key] for key in ("item_id", "checked", "expected_checked")}
+    elif action == "shopping_delete":
+        if not _is_id(payload.get("item_id")):
+            raise _invalid("Delete needs an item ID")
+        clean = {"item_id": payload["item_id"]}
+    elif action == "shopping_clear_checked":
+        if not _is_id(payload.get("list_id")):
+            raise _invalid("Clearing ticked items needs a list ID")
+        ids = payload.get("expected_ids")
+        if not isinstance(ids, list) or not 0 < len(ids) <= 1000 or not all(map(_is_id, ids)):
+            raise _invalid("Clearing ticked items needs the IDs of the items the user saw")
+        clean = {"list_id": payload["list_id"], "expected_ids": list(dict.fromkeys(ids))}
+    elif action == "shopping_update":
+        clean = _clean_update(payload)
     else:
         note = payload.get("note")
         if (
@@ -86,7 +169,7 @@ def _valid(data: Any) -> bool:
     )
 
 
-# A toggle re-reads the item before any write, so forgetting it is safe. An add that may have
+# A toggle, update, delete or clear re-reads Mealie first, so forgetting it is safe. An add that may have
 # reached Mealie (`sending`, `uncertain`) is never forgotten: that would allow a blind duplicate.
 _PRUNABLE = ("completed", "checking", "conflict")
 
@@ -193,7 +276,9 @@ class OfflineLedger:
             await self._save()
 
         payload = op["payload"]
-        if op["action"] == "shopping_toggle":
+        action = op["action"]
+        current: dict[str, Any] | None = None
+        if action == "shopping_toggle":
             try:
                 current = await self._client.shopping_item(payload["item_id"])
             except Exception:
@@ -209,28 +294,107 @@ class OfflineLedger:
                 message = "This item was changed on another device. Review both values"
                 await set_state("conflict", message=message)
                 raise AtelierError("offline_conflict", message)
-        elif record["state"] in ("uncertain", "sending"):
+        elif action == "shopping_update":
+            try:
+                current = await self._client.shopping_item(payload["item_id"])
+            except MealieError as err:
+                if err.status == 404:
+                    # Not sticky: a replay must report the same code again.
+                    await set_state("checking")
+                    raise AtelierError(
+                        "shopping_item_not_found", "This item no longer exists in Mealie"
+                    ) from err
+                await set_state("checking")
+                raise
+            except Exception:
+                await set_state("checking")
+                raise
+            changes = _update_changes(payload)
+            if all(_applied(key, current, value) for key, value in changes.items()):
+                result = {"ok": True, "already_applied": True, "item": current}
+                await set_state("completed", result=result)
+                return result
+            for key in changes:
+                if not _same(key, _seen(key, current), payload[f"expected_{key}"]):
+                    message = "This item was changed on another device. Review both values"
+                    await set_state("conflict", message=message)
+                    raise AtelierError("offline_conflict", message)
+            try:
+                apply_shopping_changes(current, changes)
+            except ValueError as err:
+                await set_state("checking")
+                raise _invalid(str(err)) from err
+        elif action == "shopping_clear_checked":
+            try:
+                items = await self._client.shopping_items(payload["list_id"])
+            except Exception:
+                await set_state("checking")
+                raise
+            ticked = {i["id"] for i in items if i.get("checked") is True and "id" in i}
+            existing = {i.get("id") for i in items}
+            expected = set(payload["expected_ids"])
+            # Items the user saw ticked that were deleted meanwhile are fine. Any other
+            # difference means another device ticked or unticked something the user never saw.
+            if ticked != {i for i in expected if i in existing}:
+                message = "The ticked items changed on another device. Review the list"
+                await set_state("conflict", message=message)
+                raise AtelierError("offline_conflict", message)
+        elif record["state"] in ("uncertain", "sending") and action not in _RECHECKABLE:
             raise _add_uncertain()
 
         # Persist the sending marker BEFORE touching Mealie, so a crash cannot cause a blind replay.
         await set_state("sending")
         try:
-            if op["action"] == "shopping_toggle":
+            if action == "shopping_toggle":
                 # Write exactly the item that was just compared, not a fresh read.
                 mealie_result = await self._client.set_shopping_item_checked(
                     payload["item_id"], payload["checked"], current
                 )
+            elif action == "shopping_update":
+                changes = _update_changes(payload)
+                mealie_result = await self._client.update_shopping_item(
+                    payload["item_id"], changes, current
+                )
+            elif action == "shopping_delete":
+                mealie_result = await self._client.mutate(action, payload)
+                if isinstance(mealie_result, dict) and mealie_result.get("already_applied"):
+                    # Already gone: the wish of the user is fulfilled.
+                    result = {"ok": True, "already_applied": True}
+                    await set_state("completed", result=result)
+                    return result
             else:
-                mealie_result = await self._client.mutate(op["action"], payload)
+                mealie_result = await self._client.mutate(action, payload)
         except Exception as exc:
             await set_state(
-                "checking" if op["action"] == "shopping_toggle" else "uncertain",
+                "checking" if action in _RECHECKABLE else "uncertain",
                 message=str(exc)[:200],
             )
             raise
         response = {"ok": True, "result": mealie_result}
         await set_state("completed", result=response)
         return response
+
+
+def _update_changes(payload: dict[str, Any]) -> dict[str, Any]:
+    return {key: payload[key] for key in ("name", "note", "quantity") if key in payload}
+
+
+def _seen(key: str, item: dict[str, Any]) -> Any:
+    """The value of an item as the user saw it for one changed field."""
+    return shopping_item_name(item) if key == "name" else item.get(key)
+
+
+def _applied(key: str, item: dict[str, Any], wanted: Any) -> bool:
+    if key == "name":
+        return shopping_rename_applied(item, wanted)
+    return _same(key, item.get(key), wanted)
+
+
+def _same(key: str, current: Any, wanted: Any) -> bool:
+    """Compare a name, note or quantity; an empty note equals none, a missing quantity zero."""
+    if key in ("note", "name"):
+        return (current or "").strip() == (wanted or "").strip()
+    return (current or 0) == (wanted or 0)
 
 
 def _add_uncertain() -> AtelierError:

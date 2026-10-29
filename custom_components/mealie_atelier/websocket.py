@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .ai_client import AiError
+from .ai_client import AiError, provider_for
 from .api import MealieAuthError, MealieError, recipe_update_changes, safe_slug
 from .const import (
     VERSION,
@@ -153,6 +153,7 @@ async def ws_status(hass, connection, msg):
         writer = can_write(entry, connection.user)
         admin = can_admin(entry, connection.user)
         structured = bool(entry.options.get(CONF_EXPERIMENTAL_INGREDIENTS, False)) and not read_only
+        ai_key = str(entry.options.get(CONF_AI_KEY) or "").strip()
         entries.append(
             {
                 "entry_id": entry.entry_id,
@@ -166,8 +167,11 @@ async def ws_status(hass, connection, msg):
                     "uploads": True,
                     "recipe_filters": True,
                     "offline_queue": True,
-                    "ai": bool(entry.options.get(CONF_AI_KEY)),
+                    "shopping_edit": True,
+                    "ai": bool(ai_key),
                 },
+                "ai_enabled": bool(ai_key),
+                "ai_provider": provider_for(ai_key) if ai_key else "none",
                 "limits": {
                     "upload_max_bytes": UPLOAD_MAX_BYTES,
                     "upload_chunk_bytes": UPLOAD_CHUNK_BYTES,

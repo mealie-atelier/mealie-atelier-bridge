@@ -28,7 +28,7 @@ body:
       multiple: true
       options:
         - Standalone Web (no Home Assistant)
-        - Home Assistant with Atelier Bridge
+        - Home Assistant with Mealie Atelier Bridge
         - Home Assistant Core Mealie provider
         - Not sure
     validations:

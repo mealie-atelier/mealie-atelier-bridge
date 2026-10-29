@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import math
 import re
 from typing import Any
 from urllib.parse import quote, urlsplit
@@ -10,7 +11,7 @@ from urllib.parse import quote, urlsplit
 import aiohttp
 
 from .const import MAX_PAGE_SIZE, MAX_PARALLEL_REQUESTS, UPLOAD_MAX_BYTES
-from .errors import structured_editor_required
+from .errors import AtelierError, structured_editor_required
 
 _RECIPE_SLUG = re.compile(r"^[\w\-]{1,150}$", re.ASCII)
 _ITEM_ID = re.compile(r"^[\w\-]{1,150}$", re.ASCII)
@@ -63,6 +64,81 @@ def safe_text(value: Any, limit: int = 500) -> str:
     if not cleaned or len(cleaned) > limit:
         raise ValueError("Text length outside allowed range")
     return cleaned
+
+
+def safe_quantity(value: Any) -> int | float:
+    """A shopping quantity: a finite, non-negative number of at most 100000."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError("Quantity must be a number")  # noqa: TRY004
+    if not math.isfinite(value) or not 0 <= value <= 100000:
+        raise ValueError("Quantity outside allowed range")
+    return value
+
+
+def shopping_item_name(item: dict) -> str:
+    """The name a list shows for an item: its display text, its note or its food name."""
+    for value in (item.get("display"), item.get("note")):
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    food = item.get("food")
+    if isinstance(food, dict) and isinstance(food.get("name"), str):
+        return food["name"].strip()
+    return ""
+
+
+def shopping_rename_applied(item: dict, name: str) -> bool:
+    """True when an item is already a free text item that carries exactly this name."""
+    return (
+        not item.get("food")
+        and not item.get("isFood")
+        and (item.get("note") or "").strip() == name.strip()
+    )
+
+
+def apply_shopping_changes(current: dict, changes: dict) -> dict:
+    """Return the item with the changes applied, preserving everything else.
+
+    A rename turns the item into a free text item: the link to its food is dropped, because the
+    food name would otherwise keep being shown instead of the new name.
+    """
+    updated = {**current}
+    if "name" in changes:
+        updated.update(
+            note=changes["name"],
+            display=changes["name"],
+            isFood=False,
+            food=None,
+            foodId=None,
+        )
+    for key in ("note", "quantity"):
+        if key in changes:
+            updated[key] = changes[key]
+    if not updated.get("food") and not (updated.get("note") or "").strip():
+        raise ValueError("An item without a food needs a name")
+    return updated
+
+
+def shopping_update_changes(payload: dict) -> tuple[str, dict]:
+    """Validate a shopping_update payload: the item ID and the fields to change.
+
+    `name` renames the item, `note` sets or (when empty) removes its note, `quantity` sets the amount.
+    """
+    item_id = safe_id(payload.get("item_id"))
+    changes: dict[str, Any] = {}
+    if "name" in payload:
+        if "note" in payload:
+            raise ValueError("Rename and note cannot be combined")
+        changes["name"] = safe_text(payload["name"], 250)
+    if "note" in payload:
+        note = payload["note"]
+        if not isinstance(note, str) or len(note.strip()) > 250:
+            raise ValueError("Text length outside allowed range")
+        changes["note"] = note.strip()
+    if "quantity" in payload:
+        changes["quantity"] = safe_quantity(payload["quantity"])
+    if not changes:
+        raise ValueError("Nothing to change")
+    return item_id, changes
 
 
 def check_image(data: bytes, ext: str) -> str:
@@ -478,6 +554,15 @@ class MealieClient:
             return await self.request(
                 "PUT", f"/api/households/shopping/items/{item_id}", data=updated
             )
+        if action == "shopping_update":
+            item_id, changes = shopping_update_changes(payload)
+            return await self.update_shopping_item(item_id, changes)
+        if action == "shopping_delete":
+            return await self.delete_shopping_item(safe_id(payload.get("item_id")))
+        if action == "shopping_clear_checked":
+            return await self.clear_checked_shopping(
+                safe_id(payload.get("list_id")), clear_expected_ids(payload)
+            )
         if action == "shopping_list_create":
             return await self.request(
                 "POST",
@@ -603,6 +688,72 @@ class MealieClient:
             data={**current, "checked": checked},
         )
         return result if isinstance(result, dict) else {**current, "checked": checked}
+
+    async def update_shopping_item(
+        self, item_id: str, changes: dict, current: dict | None = None
+    ) -> dict:
+        """Rename an item or change its note or quantity, preserving unit and checked state.
+
+        Pass the item that was just read as `current` to write exactly the state that was compared.
+        """
+        try:
+            if current is None:
+                current = await self.shopping_item(item_id)
+            updated = apply_shopping_changes(current, changes)
+            result = await self.request(
+                "PUT", f"/api/households/shopping/items/{safe_id(item_id)}", data=updated
+            )
+        except MealieError as err:
+            if err.status == 404:
+                raise AtelierError(
+                    "shopping_item_not_found", "This item no longer exists in Mealie"
+                ) from err
+            raise
+        return result if isinstance(result, dict) else updated
+
+    async def delete_shopping_item(self, item_id: str) -> dict:
+        """Delete one item. An item that is already gone counts as done."""
+        try:
+            await self.request("DELETE", f"/api/households/shopping/items/{safe_id(item_id)}")
+        except MealieError as err:
+            if err.status != 404:
+                raise
+            return {"ok": True, "already_applied": True}
+        return {"ok": True}
+
+    async def clear_checked_shopping(
+        self, list_id: str, expected_ids: list[str] | None = None
+    ) -> dict:
+        """Delete the ticked items of one list. Items that vanished meanwhile count as done.
+
+        With `expected_ids` only those items are deleted, and only while they are still ticked,
+        so an item ticked elsewhere after the user looked is never removed.
+        """
+        deleted = 0
+        for item in await self.shopping_items(list_id):
+            if item.get("checked") is not True or not isinstance(item.get("id"), str):
+                continue
+            if expected_ids is not None and item["id"] not in expected_ids:
+                continue
+            try:
+                await self.request(
+                    "DELETE", f"/api/households/shopping/items/{safe_id(item['id'])}"
+                )
+            except MealieError as err:
+                if err.status != 404:
+                    raise
+            deleted += 1
+        return {"deleted": deleted}
+
+
+def clear_expected_ids(payload: dict) -> list[str] | None:
+    """The optional list of ticked item IDs the user saw when asking to clear them."""
+    if "expected_ids" not in payload:
+        return None
+    ids = payload["expected_ids"]
+    if not isinstance(ids, list) or not 0 < len(ids) <= 1000:
+        raise ValueError("expected_ids must be a list of 1 to 1000 item IDs")
+    return [safe_id(item) for item in ids]
 
 
 def recipe_update_changes(payload: dict) -> tuple[str, dict]:

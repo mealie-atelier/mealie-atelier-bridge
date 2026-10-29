@@ -17,9 +17,11 @@ from custom_components.mealie_atelier.errors import AtelierError
 from custom_components.mealie_atelier.api import (
     MealieClient,
     MealieError,
+    apply_shopping_changes,
     safe_date,
     safe_id,
     safe_slug,
+    shopping_item_name,
 )
 
 
@@ -109,6 +111,28 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
                 )
             if path == "/api/households/shopping/items/item-1" and request.method == "PUT":
                 return web.json_response(data)
+            if path == "/api/households/shopping/items" and request.method == "GET":
+                return web.json_response(
+                    {
+                        "items": [
+                            {"id": "item-1", "shoppingListId": "list-1", "checked": True},
+                            {"id": "item-2", "shoppingListId": "list-1", "checked": False},
+                            {"id": "item-3", "shoppingListId": "list-1", "checked": True},
+                            {"id": "item-4", "shoppingListId": "other", "checked": True},
+                        ]
+                    }
+                )
+            if (
+                path
+                in (
+                    "/api/households/shopping/items/item-1",
+                    "/api/households/shopping/items/item-3",
+                )
+                and request.method == "DELETE"
+            ):
+                if path.endswith("item-3"):
+                    return web.json_response({"error": "Not found"}, status=404)
+                return web.json_response({"message": "deleted"})
             return web.json_response({"error": "Not found"}, status=404)
 
         self.app = web.Application()
@@ -173,6 +197,93 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
             await self.client.mutate(
                 "shopping_from_recipe", {"list_id": "../secret", "recipe_id": "recipe-1"}
             )
+
+    async def test_shopping_update_keeps_the_other_fields(self):
+        item = await self.client.mutate(
+            "shopping_update", {"item_id": "item-1", "note": " Oat milk ", "quantity": 2.5}
+        )
+        self.assertEqual(self.calls[-1]["method"], "PUT")
+        self.assertEqual(item["note"], "Oat milk")
+        self.assertEqual(item["quantity"], 2.5)
+        self.assertEqual(item["shoppingListId"], "list-1")
+        for bad in (
+            {"item_id": "item-1"},
+            {"item_id": "item-1", "quantity": True},
+            {"item_id": "item-1", "quantity": -1},
+            {"item_id": "item-1", "quantity": float("nan")},
+            {"item_id": "item-1", "note": " "},
+            {"item_id": "item-1", "name": " "},
+            {"item_id": "item-1", "name": "A", "note": "b"},
+            {"item_id": "item-1", "note": "x" * 251},
+            {"item_id": "../x", "note": "a"},
+        ):
+            with self.assertRaises(ValueError):
+                await self.client.mutate("shopping_update", bad)
+
+    def test_rename_unlinks_the_food_and_an_empty_note_is_allowed_with_a_food(self):
+        food_item = {
+            "id": "i",
+            "note": "bio",
+            "display": "2 g Zucker",
+            "isFood": True,
+            "food": {"name": "Zucker"},
+            "foodId": "f1",
+            "quantity": 2,
+        }
+        renamed = apply_shopping_changes(food_item, {"name": "Rohrzucker"})
+        self.assertEqual(shopping_item_name(renamed), "Rohrzucker")
+        self.assertIsNone(renamed["food"])
+        self.assertFalse(renamed["isFood"])
+        self.assertEqual(renamed["quantity"], 2)
+        cleared = apply_shopping_changes(food_item, {"note": ""})
+        self.assertEqual(cleared["note"], "")
+        self.assertEqual(shopping_item_name(cleared), "2 g Zucker")
+        with self.assertRaises(ValueError):
+            apply_shopping_changes({"id": "i", "note": "Milk"}, {"note": ""})
+
+    async def test_online_update_and_delete_of_a_vanished_item(self):
+        async def gone(*args, **kwargs):
+            raise MealieError("gone", status=404)
+
+        self.client.request = gone
+        with self.assertRaises(AtelierError) as ctx:
+            await self.client.mutate("shopping_update", {"item_id": "item-1", "note": "x"})
+        self.assertEqual(ctx.exception.code, "shopping_item_not_found")
+        result = await self.client.mutate("shopping_delete", {"item_id": "item-1"})
+        self.assertEqual(result, {"ok": True, "already_applied": True})
+
+    async def test_shopping_delete_and_clear_checked(self):
+        await self.client.mutate("shopping_delete", {"item_id": "item-1"})
+        self.assertEqual(self.calls[-1]["method"], "DELETE")
+        with self.assertRaises(ValueError):
+            await self.client.mutate("shopping_delete", {"item_id": "a/b"})
+        self.calls.clear()
+        with self.assertRaises(ValueError):
+            await self.client.mutate(
+                "shopping_clear_checked", {"list_id": "list-1", "expected_ids": []}
+            )
+        self.calls.clear()
+        # Only items the user saw ticked go: item-3 was ticked elsewhere and survives.
+        result = await self.client.mutate(
+            "shopping_clear_checked", {"list_id": "list-1", "expected_ids": ["item-1"]}
+        )
+        self.assertEqual(result, {"deleted": 1})
+        self.assertEqual(
+            [c["path"] for c in self.calls if c["method"] == "DELETE"],
+            ["/api/households/shopping/items/item-1"],
+        )
+        self.calls.clear()
+        result = await self.client.mutate("shopping_clear_checked", {"list_id": "list-1"})
+        # item-3 vanished meanwhile (404) and still counts; the other list and item-2 are untouched.
+        self.assertEqual(result, {"deleted": 2})
+        deletes = [c["path"] for c in self.calls if c["method"] == "DELETE"]
+        self.assertEqual(
+            deletes,
+            [
+                "/api/households/shopping/items/item-1",
+                "/api/households/shopping/items/item-3",
+            ],
+        )
 
     async def test_metadata_includes_household_cookbooks(self):
         result = await self.client.metadata()

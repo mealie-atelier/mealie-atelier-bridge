@@ -43,6 +43,27 @@ def add(n: int = 1, note: str = "Milk") -> dict[str, Any]:
     return {"id": uid(n), "action": "shopping_add", "payload": {"list_id": "list-1", "note": note}}
 
 
+def delete(n: int = 1, item="item-1") -> dict[str, Any]:
+    return {"id": uid(n), "action": "shopping_delete", "payload": {"item_id": item}}
+
+
+def clear(n: int = 1, ids: tuple[str, ...] = ("item-1", "item-2")) -> dict[str, Any]:
+    return {
+        "id": uid(n),
+        "action": "shopping_clear_checked",
+        "payload": {"list_id": "list-1", "expected_ids": list(ids)},
+    }
+
+
+def update(n: int = 1, **payload: Any) -> dict[str, Any]:
+    payload = payload or {"note": "Oat milk", "expected_note": "Milk"}
+    return {
+        "id": uid(n),
+        "action": "shopping_update",
+        "payload": {"item_id": "item-1", **payload},
+    }
+
+
 def stored(hass_storage: dict) -> dict[str, Any]:
     return hass_storage[KEY]["data"]
 
@@ -53,6 +74,14 @@ def client() -> SimpleNamespace:
         shopping_item=AsyncMock(return_value={"id": "item-1", "checked": False}),
         mutate=AsyncMock(return_value={"id": "item-1", "checked": True}),
         set_shopping_item_checked=AsyncMock(return_value={"id": "item-1", "checked": True}),
+        update_shopping_item=AsyncMock(return_value={"id": "item-1", "note": "Oat milk"}),
+        shopping_items=AsyncMock(
+            return_value=[
+                {"id": "item-1", "checked": True},
+                {"id": "item-2", "checked": True},
+                {"id": "item-3", "checked": False},
+            ]
+        ),
     )
 
 
@@ -77,7 +106,29 @@ async def code_of(awaitable) -> str:
         [],
         {**toggle(), "id": "not-a-uuid"},
         {**toggle(), "id": uid(1).replace("-4c0e-", "-9c0e-")},
-        {**toggle(), "action": "shopping_delete"},
+        {**toggle(), "action": "shopping_rename"},
+        {**delete(), "payload": {"item_id": "bad id!"}},
+        {**clear(), "payload": {"list_id": "", "expected_ids": ["item-1"]}},
+        {**clear(), "payload": {"list_id": "list-1"}},
+        {**clear(), "payload": {"list_id": "list-1", "expected_ids": []}},
+        {**clear(), "payload": {"list_id": "list-1", "expected_ids": ["bad id!"]}},
+        {**update(), "payload": {"item_id": "item-1", "name": "Sugar"}},
+        {**update(), "payload": {"item_id": "item-1", "name": " ", "expected_name": "A"}},
+        {
+            **update(),
+            "payload": {"item_id": "item-1", "name": "S", "expected_name": "A", "note": "x"},
+        },
+        {**update(), "payload": {"item_id": "item-1"}},
+        {**update(), "payload": {"item_id": "item-1", "note": "Oat milk"}},
+        {**update(), "payload": {"item_id": "item-1", "note": "x" * 251, "expected_note": "M"}},
+        {**update(), "payload": {"item_id": "item-1", "note": "x", "expected_note": 5}},
+        {**update(), "payload": {"item_id": "item-1", "quantity": 2}},
+        {**update(), "payload": {"item_id": "item-1", "quantity": True, "expected_quantity": 1}},
+        {**update(), "payload": {"item_id": "item-1", "quantity": -1, "expected_quantity": 1}},
+        {
+            **update(),
+            "payload": {"item_id": "item-1", "quantity": float("inf"), "expected_quantity": 1},
+        },
         {**toggle(), "payload": None},
         {**toggle(), "payload": {"item_id": "x", "checked": 1, "expected_checked": False}},
         {**toggle(), "payload": {"item_id": "x", "checked": True}},
@@ -191,6 +242,192 @@ async def test_toggle_stuck_in_sending_is_rechecked_not_blocked(ledger, client, 
     ledger = await OfflineLedger.async_load(ledger._store.hass, ENTRY_ID, client)
     client.shopping_item.return_value = {"id": "item-1", "checked": True}
     assert (await ledger.process(toggle()))["already_applied"] is True
+
+
+# Update, delete and clear ticked
+
+
+async def test_update_writes_the_compared_item_and_completes(ledger, client, hass_storage):
+    client.shopping_item.return_value = {"id": "item-1", "note": "Milk", "quantity": 1}
+    op = update(note="Oat milk", expected_note="Milk", quantity=2, expected_quantity=1)
+    result = await ledger.process(op)
+    assert result == {"ok": True, "result": {"id": "item-1", "note": "Oat milk"}}
+    client.update_shopping_item.assert_awaited_once_with(
+        "item-1",
+        {"note": "Oat milk", "quantity": 2},
+        {"id": "item-1", "note": "Milk", "quantity": 1},
+    )
+    assert stored(hass_storage)[uid(1)]["state"] == "completed"
+    assert (await ledger.process(op))["replayed"] is True
+    client.update_shopping_item.assert_awaited_once()
+
+
+async def test_update_already_applied_skips_the_write(ledger, client):
+    client.shopping_item.return_value = {"id": "item-1", "note": "Oat milk"}
+    result = await ledger.process(update())
+    assert result["already_applied"] is True
+    client.update_shopping_item.assert_not_awaited()
+
+
+async def test_update_conflict_when_another_device_changed_it(ledger, client, hass_storage):
+    client.shopping_item.return_value = {"id": "item-1", "note": "Soy milk"}
+    assert await code_of(ledger.process(update())) == "offline_conflict"
+    assert stored(hass_storage)[uid(1)]["state"] == "conflict"
+    client.update_shopping_item.assert_not_awaited()
+
+
+async def test_update_of_a_deleted_item_reports_the_same_code_on_replay(
+    ledger, client, hass_storage
+):
+    client.shopping_item.side_effect = MealieError("gone", status=404)
+    assert await code_of(ledger.process(update())) == "shopping_item_not_found"
+    assert stored(hass_storage)[uid(1)]["state"] == "checking"
+    assert await code_of(ledger.process(update())) == "shopping_item_not_found"
+
+
+async def test_update_read_and_write_failures_stay_retryable(ledger, client, hass_storage):
+    client.shopping_item.side_effect = MealieError("down", status=500)
+    with pytest.raises(MealieError):
+        await ledger.process(update())
+    assert stored(hass_storage)[uid(1)]["state"] == "checking"
+    client.shopping_item.side_effect = None
+    client.shopping_item.return_value = {"id": "item-1", "note": "Milk"}
+    client.update_shopping_item.side_effect = MealieError("boom")
+    with pytest.raises(MealieError):
+        await ledger.process(update())
+    assert stored(hass_storage)[uid(1)]["state"] == "checking"
+    client.update_shopping_item.side_effect = None
+    assert (await ledger.process(update()))["ok"]
+
+
+async def test_delete_calls_mealie_once_and_replays(ledger, client, hass_storage):
+    client.mutate.return_value = None
+    result = await ledger.process(delete())
+    assert result == {"ok": True, "result": None}
+    client.mutate.assert_awaited_once_with("shopping_delete", {"item_id": "item-1"})
+    assert (await ledger.process(delete()))["replayed"] is True
+    client.mutate.assert_awaited_once()
+
+
+async def test_delete_of_a_missing_item_is_already_applied(ledger, client, hass_storage):
+    client.mutate.return_value = {"ok": True, "already_applied": True}
+    result = await ledger.process(delete())
+    assert result == {"ok": True, "already_applied": True}
+    assert stored(hass_storage)[uid(1)]["state"] == "completed"
+
+
+async def test_delete_failure_is_retryable_not_uncertain(ledger, client, hass_storage):
+    client.mutate.side_effect = MealieError("down", status=500)
+    with pytest.raises(MealieError):
+        await ledger.process(delete())
+    assert stored(hass_storage)[uid(1)]["state"] == "checking"
+    client.mutate.side_effect = None
+    assert (await ledger.process(delete()))["ok"]
+
+
+async def test_clear_checked_is_retryable_after_a_crash(ledger, client, hass_storage):
+    client.mutate.side_effect = RuntimeError("process died")
+    with pytest.raises(RuntimeError):
+        await ledger.process(clear())
+    assert stored(hass_storage)[uid(1)]["state"] == "checking"
+    client.mutate.side_effect = None
+    client.mutate.return_value = {"deleted": 2}
+    assert await ledger.process(clear()) == {"ok": True, "result": {"deleted": 2}}
+    client.mutate.assert_awaited_with(
+        "shopping_clear_checked", {"list_id": "list-1", "expected_ids": ["item-1", "item-2"]}
+    )
+
+
+async def test_clear_checked_conflicts_on_an_item_ticked_elsewhere(ledger, client, hass_storage):
+    client.shopping_items.return_value = [
+        {"id": "item-1", "checked": True},
+        {"id": "item-2", "checked": True},
+        {"id": "item-4", "checked": True},
+    ]
+    assert await code_of(ledger.process(clear())) == "offline_conflict"
+    assert stored(hass_storage)[uid(1)]["state"] == "conflict"
+    client.mutate.assert_not_awaited()
+
+
+async def test_clear_checked_conflicts_on_an_item_unticked_elsewhere(ledger, client):
+    client.shopping_items.return_value = [
+        {"id": "item-1", "checked": True},
+        {"id": "item-2", "checked": False},
+    ]
+    assert await code_of(ledger.process(clear())) == "offline_conflict"
+    client.mutate.assert_not_awaited()
+
+
+async def test_clear_checked_ignores_seen_items_deleted_meanwhile(ledger, client):
+    client.shopping_items.return_value = [{"id": "item-1", "checked": True}]
+    client.mutate.return_value = {"deleted": 1}
+    assert (await ledger.process(clear()))["ok"]
+    client.mutate.assert_awaited_once()
+
+
+async def test_clear_checked_read_failure_stays_retryable(ledger, client, hass_storage):
+    client.shopping_items.side_effect = MealieError("down", status=500)
+    with pytest.raises(MealieError):
+        await ledger.process(clear())
+    assert stored(hass_storage)[uid(1)]["state"] == "checking"
+    client.mutate.assert_not_awaited()
+
+
+FOOD_ITEM = {
+    "id": "item-1",
+    "note": "",
+    "display": "2 g Zucker",
+    "isFood": True,
+    "food": {"name": "Zucker"},
+    "quantity": 2,
+}
+
+
+async def test_rename_of_a_food_item_is_written_after_the_name_check(ledger, client):
+    client.shopping_item.return_value = FOOD_ITEM
+    op = update(name="Rohrzucker", expected_name="2 g Zucker")
+    assert (await ledger.process(op))["ok"]
+    client.update_shopping_item.assert_awaited_once_with(
+        "item-1", {"name": "Rohrzucker"}, FOOD_ITEM
+    )
+
+
+async def test_rename_conflicts_when_the_name_changed_elsewhere(ledger, client):
+    client.shopping_item.return_value = {**FOOD_ITEM, "display": "Brauner Zucker"}
+    op = update(name="Rohrzucker", expected_name="2 g Zucker")
+    assert await code_of(ledger.process(op)) == "offline_conflict"
+    client.update_shopping_item.assert_not_awaited()
+
+
+async def test_rename_already_applied_when_unlinked_with_that_name(ledger, client):
+    client.shopping_item.return_value = {"id": "item-1", "note": "Rohrzucker", "isFood": False}
+    op = update(name="Rohrzucker", expected_name="2 g Zucker")
+    assert (await ledger.process(op))["already_applied"] is True
+    client.update_shopping_item.assert_not_awaited()
+
+
+async def test_removing_the_note_of_a_food_item_is_allowed(ledger, client):
+    client.shopping_item.return_value = {**FOOD_ITEM, "note": "bio"}
+    assert (await ledger.process(update(note="", expected_note="bio")))["ok"]
+    client.update_shopping_item.assert_awaited_once()
+
+
+async def test_emptying_the_note_of_a_plain_item_is_invalid(ledger, client, hass_storage):
+    client.shopping_item.return_value = {"id": "item-1", "note": "Milk", "food": None}
+    client.update_shopping_item.side_effect = AssertionError("must not write")
+    # The real validation lives in apply_shopping_changes; the ledger reports it before writing.
+    assert await code_of(ledger.process(update(note="", expected_note="Milk"))) == "invalid_request"
+    assert stored(hass_storage)[uid(1)]["state"] == "checking"
+
+
+async def test_stuck_sending_delete_is_rechecked_not_blocked(ledger, client, hass_storage):
+    hass_storage[KEY] = {
+        "version": 1,
+        "key": KEY,
+        "data": {uid(1): {"operation": delete(), "state": "sending", "updated_at": time.time()}},
+    }
+    ledger = await OfflineLedger.async_load(ledger._store.hass, ENTRY_ID, client)
+    assert (await ledger.process(delete()))["ok"]
 
 
 # Crash safety and add
@@ -482,3 +719,21 @@ def test_cap_tolerates_a_stored_operation_without_action():
     data["odd"] = record(now=now, operation={"payload": {}})
     prune(data, now)
     assert "odd" not in data and len(data) == 2000
+
+
+async def test_status_advertises_shopping_edit(wired, hass_ws_client):
+    response = await send(await hass_ws_client(), {"type": "mealie_atelier/status"})
+    assert response["result"]["entries"][0]["features"]["shopping_edit"] is True
+
+
+async def test_command_replays_a_delete_and_a_clear(wired, hass_ws_client, hass_storage):
+    wired.runtime_data.client.mutate.return_value = {"deleted": 1}
+    wired.runtime_data.client.shopping_items = AsyncMock(
+        return_value=[{"id": "item-1", "checked": True}, {"id": "item-2", "checked": True}]
+    )
+    client = await hass_ws_client()
+    deleted = await send(client, command(delete()))
+    assert deleted["success"] and deleted["result"]["ok"] is True
+    cleared = await send(client, command(clear(2)))
+    assert cleared["result"]["result"] == {"deleted": 1}
+    assert hass_storage[KEY]["data"][uid(2)]["state"] == "completed"
