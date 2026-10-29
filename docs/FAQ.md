@@ -6,7 +6,7 @@ No. It is an optional Home Assistant integration. The standalone web app works w
 
 ## How do I install it?
 
-Through the Home Assistant Marketplace (Home Assistant 2026.11 and newer) or HACS, once the Bridge is listed in the `hacs/default` catalog. Until then add it as a HACS custom repository of type Integration. The [installation guide](INSTALLATION.md) covers every step.
+Through the Home Assistant Marketplace (Home Assistant 2026.11 and newer) or HACS, once the Bridge is listed in the `hacs/default` catalog. Until then add it as a custom repository: in the Marketplace choose **Add from link** (this needs a one-time GitHub login), in classic HACS use **Custom repositories** with the type Integration. The [installation guide](INSTALLATION.md) covers every step.
 
 ## Where are API credentials stored?
 
@@ -35,6 +35,10 @@ Yes. Before every recipe write (structured ingredients, name, description, servi
 ## Does removing a step photo delete the file in Mealie?
 
 No. Mealie v3.29 has no endpoint to delete a recipe asset. Removing or replacing a step photo only removes the reference from the step and the entry from the recipe's asset list. The image file stays on the Mealie disk until you clean it up there.
+
+## How do I uninstall it?
+
+Remove the Mealie Atelier cards from your dashboards first, because a leftover card shows **Configuration error**. Then delete the integration entry (this deletes the backups and the offline outbox), uninstall the Bridge and the cards via the Marketplace or HACS (for a manual install, remove the resource and the files by hand), and restart Home Assistant.
 
 ## Why is a large photo cut off or refused?
 

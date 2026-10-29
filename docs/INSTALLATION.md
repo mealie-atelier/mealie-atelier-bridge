@@ -12,7 +12,7 @@ You can try the cards against the public demo at https://mealie.alles-automatisc
 ## Requirements
 
 - Home Assistant 2026.10 or newer.
-- A Mealie server that Home Assistant can reach over the network.
+- A Mealie server that Home Assistant can reach over the network. Mealie 3.x is recommended.
 - A Mealie API token (see below).
 
 ## 1. Install the Bridge
@@ -21,11 +21,10 @@ Choose one route.
 
 **Catalog (Marketplace or HACS).** The Bridge and the cards are submitted to the `hacs/default` catalog, which the Home Assistant Marketplace (Home Assistant 2026.11 and newer, where HACS moved into core) and HACS both read. Once listed, search for **Mealie Atelier Bridge**, download it and continue with the restart.
 
-**HACS custom repository (until the catalog listing is live).**
+**Custom repository (until the catalog listing is live).**
 
-1. In HACS open the menu, choose **Custom repositories** and add `https://github.com/mealie-atelier/mealie-atelier-bridge` with the type **Integration**.
-2. Download **Mealie Atelier Bridge**.
-3. For the cards, add `https://github.com/mealie-atelier/mealie-atelier-cards` the same way with the type **Dashboard**, and download it too.
+- **Marketplace (Home Assistant 2026.11 and newer):** Open the Marketplace and choose **Add from link**. Paste `https://github.com/mealie-atelier/mealie-atelier-bridge`. Adding a repository needs a GitHub connection, so complete the one-time **Connect GitHub** login (a free GitHub account is enough). Then download **Mealie Atelier Bridge**. For the cards, add `https://github.com/mealie-atelier/mealie-atelier-cards` the same way and download it too.
+- **Classic HACS:** Open the HACS menu, choose **Custom repositories** and add the Bridge repository with the type **Integration**. Add the cards repository with the type **Dashboard**. Download both.
 
 Manual installation also works: copy the `custom_components/mealie_atelier` folder into the `custom_components` folder of your Home Assistant configuration.
 
@@ -52,7 +51,7 @@ Open the integration and choose **Configure**. The options page is called **Secu
 | --- | --- |
 | **Read-only mode** | Blocks all changes to recipes, meal plans and shopping lists. Useful for shared tablets, and a good start while you evaluate the Bridge. It wins over every write grant. |
 | **Users allowed to change data** | Limits shopping list and meal plan changes to the chosen Home Assistant users. Empty means every user. Administrators can always write. Recipe editing stays admin only. |
-| **Structured ingredient editing** | Experimental. Lets administrators edit ingredients with linked foods and units. A backup is saved before every change. |
+| **Structured ingredient editing** | Lets administrators edit ingredients with linked foods and units. A backup is saved before every change. |
 | **USDA FoodData Central API key** | Optional. Free key used for nutrition lookup. |
 | **AI API key (OpenAI or Anthropic)** | Optional. Powers the AI helpers: food search terms, ingredient substitutes and the recipe check. The provider follows the key: keys starting with `sk-ant-` go to Anthropic, any other key to OpenAI. Leave empty to disable. |
 | **Timer notification service** | Optional. A notify service such as `notify.mobile_app_your_phone` that receives a push message when a kitchen timer ends. Leave empty for in-app notifications only. |
@@ -61,11 +60,19 @@ Make a Mealie backup before you test recipe edits.
 
 ## 5. Verify with a card
 
-1. Make sure the Mealie Atelier Cards are installed (type **Dashboard** in HACS) and add a Mealie Atelier card to a dashboard. No YAML is needed for the usual HACS installation and card setup. If you manage Lovelace resources in YAML, register the built `dist/mealie-atelier-cards.js` file as a JavaScript module.
-2. Choose the Bridge as the provider.
-3. Confirm recipe search, recipe detail and cooking steps. With read-only mode off, try a small change such as ticking a shopping item.
+1. Make sure the Mealie Atelier Cards are installed and registered as a resource. The Marketplace and HACS do this for you on dashboards you manage in the UI. No YAML is needed for that. For a manual install, turn on **Advanced mode** in your user profile, open **Settings → Dashboards → ⋮ → Resources** and add `/local/community/mealie-atelier-cards/mealie-atelier-cards.js` as a **JavaScript module**, then reload the browser page. Only if you manage Lovelace resources in YAML, add the same URL with `type: module` under `lovelace: resources:`. See the [cards README](https://github.com/mealie-atelier/mealie-atelier-cards#yaml-resource).
+2. Edit a dashboard, choose **Add card**, switch to the **By card** tab (the cards create no entities, so **By entity** finds nothing) and search for **Mealie Atelier**.
+3. In the editor step **Connect kitchen**, pick your connection under **Your Mealie connection** if several are listed. The default (**Automatic · Atelier first**) already prefers the Bridge.
+4. Confirm recipe search, recipe detail and cooking steps. With read-only mode off, try a small change such as ticking a shopping item.
 
 If a card shows an error, the message names the cause (for example a rejected token or an unreachable Mealie). Download the integration's diagnostics from **Settings → Devices & services** when you ask for help. They hide credentials and contain counts instead of content.
+
+## Uninstall
+
+1. Remove the Mealie Atelier cards from your dashboards first. A card left behind shows **Configuration error** once its files are gone.
+2. Open **Settings → Devices & services → Mealie Atelier Bridge**, then use the menu of the entry and choose **Delete**. This also deletes the recipe backups and the offline outbox stored by the Bridge.
+3. Uninstall the Bridge and the cards in the Marketplace or HACS. For a manual install, remove the cards resource under **Settings → Dashboards → ⋮ → Resources** and delete the `custom_components/mealie_atelier` folder and the cards files.
+4. Restart Home Assistant.
 
 ## Next steps
 

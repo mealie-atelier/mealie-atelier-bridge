@@ -10,6 +10,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ### Fixed
 
+- Install docs match Home Assistant 2026.11 (Marketplace "Add from link" with GitHub login, manual resource under Dashboards, "By card" tab, editor wording), name Mealie 3.x as recommended and gain an uninstall section. The Smart Shopping Sync doc uses the UI policy names. The comparison table no longer claims the built-in integration cannot write. README screenshot pairs fit GitHub's column width.
 - Consistent German and English copy: "das Token", "Sicherung", "Benachrichtigungsdienst", the Mealie page name "API-Token" and "die Mealie Atelier Bridge".
 - Cancelling a kitchen timer that already finished or is being delivered succeeds instead of failing, so the card can remove it.
 - Kitchen timer notifications follow the Home Assistant language (German or English).
@@ -39,7 +40,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 - New Home Assistant brand icons and logos (the Week Dial bridge mark), in light and dark variants, at normal and 2x size. They replace the photo icon.
 - Live tests: `sync_live.py` can target a dedicated Bring list (`SYNC_TODO`), and `capture_sync.py` records the sync setup for the guide. It writes only to the list named `SYNC_TEST_LIST` (default "Mealie Atelier") and fails if an account address would be visible.
-- The options explain what the USDA FoodData Central and OpenAI keys are for, what is lost without them and where to get them, with links.
+- The options explain what the USDA FoodData Central key and the OpenAI or Anthropic key are for, what is lost without them and where to get them, with links.
 
 ## [0.10.0] - 2026-10-29
 

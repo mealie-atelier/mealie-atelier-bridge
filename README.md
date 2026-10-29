@@ -25,22 +25,22 @@
 
 ## Why a Bridge
 
-The [Atelier Cards](https://github.com/mealie-atelier/mealie-atelier-cards) can already browse recipes through Home Assistant's built-in [Mealie integration](https://www.home-assistant.io/integrations/mealie/). The Bridge adds everything that needs a trusted server side. It complements the built-in integration and does not replace it.
+The [Atelier Cards](https://github.com/mealie-atelier/mealie-atelier-cards) can already browse recipes through Home Assistant's built-in [Mealie integration](https://www.home-assistant.io/integrations/mealie/). The built-in integration offers to-do entities for shopping lists and basic meal plan actions. The Bridge adds everything that needs a trusted server side. It complements the built-in integration and does not replace it.
 
 | | Built-in Mealie integration | With the Bridge |
 | --- | --- | --- |
 | Recipes, search and cooking mode | ✓ | ✓ |
 | Recipe and step photos | | ✓ |
-| Shopping lists and meal plan writes | | ✓ |
+| Shopping list and meal plan writes | | ✓ |
 | Recipe editor with backups and restore | | ✓ |
 | Per-user write grants and read-only mode | | ✓ |
-| Offline shopping, replayed exactly once | | ✓ |
+| Offline shopping that replays safely when you are back online | | ✓ |
 | Smart Shopping Sync to a to-do list | | ✓ |
 | Cooking timers that notify after the browser closes | | ✓ |
 
 ## Install
 
-Requirements: Home Assistant 2026.10 or newer and a Mealie server that Home Assistant can reach.
+Requirements: Home Assistant 2026.10 or newer and a Mealie server that Home Assistant can reach (Mealie 3.x recommended).
 
 ### 1. Download the integration
 
@@ -49,7 +49,7 @@ The Bridge is submitted to the default catalog (`hacs/default`) that the Home As
 | Route | Steps |
 | --- | --- |
 | **Home Assistant Marketplace** (Home Assistant 2026.11 and newer) | Open the Marketplace, search for **Mealie Atelier Bridge** and download it. Available as soon as the catalog listing is merged. |
-| **HACS custom repository** (available now) | Add the repository as a custom repository of type **Integration**, then download it. The button below does this in one click. |
+| **Custom repository** (Home Assistant 2026.10 and newer) | Marketplace (2026.11 and newer): choose **Add from link**, paste the repository URL and complete the one-time **Connect GitHub** login (a free GitHub account is needed). Classic HACS: add it as a custom repository of type **Integration**. Then download it. The button below opens the add dialog. |
 | **Manual** | Download the source of the [latest release](https://github.com/mealie-atelier/mealie-atelier-bridge/releases/latest) and copy `custom_components/mealie_atelier` into the `custom_components` folder of your configuration. |
 
 [![Open the repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=mealie-atelier&repository=mealie-atelier-bridge&category=integration)
@@ -62,7 +62,7 @@ Add the integration and enter the Mealie address Home Assistant can reach and a 
 
 [![Add the integration to Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=mealie_atelier)
 
-<p align="center"><img width="440" alt="Setup form asking for the Mealie server URL and API token" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/setup.webp"> <img width="440" alt="Mealie Atelier Bridge on the Home Assistant integration page" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/integration.webp"></p>
+<p align="center"><img width="400" alt="Setup form asking for the Mealie server URL and API token" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/setup.webp"> <img width="400" alt="Mealie Atelier Bridge on the Home Assistant integration page" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/integration.webp"></p>
 
 ### 3. Add the cards
 
@@ -102,13 +102,17 @@ Re-authentication and **Reconfigure** are available from the integration page. D
 
 Send what you need from a Mealie shopping list to the list your household actually shops with, for example Bring! through its Home Assistant integration. The sync runs in Home Assistant, so it works when no dashboard is open.
 
-<p align="center"><img width="440" alt="Shopping sync rule with its state and actions" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/sync-status.webp"> <img width="440" alt="Sync rule editor with source list, destination list and copy or move mode" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/sync-setup.webp"></p>
+<p align="center"><img width="400" alt="Shopping sync rule with its state and actions" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/sync-status.webp"> <img width="400" alt="Sync rule editor with source list, destination list and copy or move mode" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/sync-setup.webp"></p>
 
-1. Set up the destination through its own integration first, so it appears as a to-do list. The Bridge never asks for Bring credentials.
+1. Set up the destination through its own integration first, so it appears as a to-do list. The Bridge never asks for Bring! credentials.
 2. As an administrator, open the Atelier shopping view and add a sync rule: Mealie source list, To-do destination, **Copy** or **Move**, when to sync and how to handle duplicates.
 3. Check the preview and send the first batch. Nothing syncs on its own before this confirmation.
 
 **Move** checks an item off in Mealie only after the destination accepted it. An uncertain delivery is checked against the destination before anything is resent, and conflicts wait for your decision. Details are in [`docs/SMART_SHOPPING_SYNC.md`](docs/SMART_SHOPPING_SYNC.md).
+
+## Uninstall
+
+Remove the Mealie Atelier cards from your dashboards first, because a leftover card shows **Configuration error**. Then delete the integration entry under **Settings → Devices & services** (this also deletes the recipe backups and the offline outbox), uninstall the Bridge in the Marketplace or HACS (or delete `custom_components/mealie_atelier`) and restart Home Assistant.
 
 ## Security
 
