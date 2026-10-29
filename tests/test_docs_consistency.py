@@ -43,3 +43,10 @@ def test_sync_docs_record_the_bring_live_result() -> None:
     row = next(line for line in table.splitlines() if line.startswith("| Bring!"))
     assert "Passed" in row
     assert "Mealie v" in row
+
+
+def test_brand_readme_names_artwork_source_and_font_license() -> None:
+    text = (ROOT / "brand" / "README.md").read_text(encoding="utf-8")
+    assert "SIL Open Font License" in text
+    assert "brand/source/" in text
+    assert "photograph of" not in text

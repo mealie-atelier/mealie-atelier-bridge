@@ -31,7 +31,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 - A refused USDA FoodData Central key is reported as `usda_key_invalid` (and an exhausted rate limit as `usda_rate_limited`) instead of a Mealie error.
 - AI alternatives and the AI recipe review answer in the requested language (optional `language` field, else the Home Assistant language) with a matching disclaimer. The status lists `features.ai` so cards can hide the AI review without a key.
 - The photo size limit reads 10 MB in all Bridge messages, like the cards.
-- The security policy, the sponsor links and the Show and tell link match the organization defaults. The brand README no longer promises a license in CREDITS.md. The social preview mark is complete. The changelog links its version headings.
+- The security policy, the sponsor links and the Show and tell link point to the right targets. The brand README names the artwork source and the font license. The social preview mark is complete. The changelog links its version headings.
 - A Mealie account can only be set up once, even when it is reachable under two addresses. Existing entries are migrated to an account based id.
 - Existing entries with the old generated title are renamed during the upgrade, and reconfiguring the address renames a generated title too. The rename happens once, only for entries migrated from the old version, and only for the exact generated title, so a title you choose yourself stays. Stored write lists are left as they are.
 - Entries are titled `Mealie Atelier Bridge · user@host`, so several servers stay distinguishable. The setup dialogs use the same product name.
