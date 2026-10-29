@@ -4,7 +4,7 @@ from __future__ import annotations
 
 DOMAIN = "mealie_atelier"
 # Kept equal to manifest.json and pyproject.toml (tests/test_setup_contract.py).
-VERSION = "0.10.0"
+VERSION = "0.10.1"
 CONF_API_TOKEN = "api_token"
 CONF_VERIFY_SSL = "verify_ssl"
 CONF_READ_ONLY = "read_only"
