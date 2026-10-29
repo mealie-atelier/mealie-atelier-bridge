@@ -28,7 +28,11 @@ TITLES = {
     "de": ["Küche", "Rezepte", "Wochenplan", "Einkauf", "Kochinspo"],
     "en": ["Kitchen", "Recipes", "Meal plan", "Shopping", "Cook ideas"],
 }
-DEVICES = {"desktop": {"width": 1440, "height": 960}, "phone": {"width": 390, "height": 844}}
+DEVICES = {
+    "desktop": {"width": 1440, "height": 900},
+    "tablet": {"width": 1180, "height": 820},
+    "phone": {"width": 390, "height": 844},
+}
 
 
 async def prepare() -> None:
@@ -84,6 +88,13 @@ def sign_in(page: Page) -> None:
     page.wait_for_load_state("networkidle")
 
 
+def hide_sidebar(page: Page) -> None:
+    """Hide Home Assistant's own sidebar, as on a kitchen tablet, so only one menu shows."""
+    page.evaluate("localStorage.setItem('dockedSidebar', JSON.stringify('always_hidden'))")
+    page.reload()
+    page.wait_for_load_state("networkidle")
+
+
 def settle(page: Page) -> None:
     """Wait until the card shows content and every visible photo has decoded."""
     page.locator("mealie-atelier-card .view-stage").first.wait_for(timeout=60_000)
@@ -113,13 +124,14 @@ def main() -> None:
                         color_scheme=theme,
                         locale="de-DE" if LANGUAGE == "de" else "en-US",
                         device_scale_factor=2,
-                        is_mobile=device == "phone",
-                        has_touch=device == "phone",
+                        is_mobile=device != "desktop",
+                        has_touch=device != "desktop",
                         # HA's service worker can hold requests and stall screenshots; tests skip it.
                         service_workers="block",
                     )
                     page = context.new_page()
                     sign_in(page)
+                    hide_sidebar(page)
                     for mode in MODES:
                         page.goto(f"{BASE}/{DASHBOARD}-{theme}/{mode}")
                         settle(page)
