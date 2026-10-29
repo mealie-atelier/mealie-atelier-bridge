@@ -20,6 +20,7 @@ from homeassistant.helpers.selector import (
 
 from .api import MealieAuthError, MealieClient, MealieError
 from .const import (
+    ANTHROPIC_KEYS_URL,
     CONF_AI_KEY,
     CONF_API_TOKEN,
     CONF_EXPERIMENTAL_INGREDIENTS,
@@ -260,6 +261,7 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
             # Hassfest rejects URLs inside translations, so the sign-up links are placeholders.
             description_placeholders={
                 "openai_keys_url": OPENAI_KEYS_URL,
+                "anthropic_keys_url": ANTHROPIC_KEYS_URL,
                 "usda_signup_url": USDA_SIGNUP_URL,
             },
         )

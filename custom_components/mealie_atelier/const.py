@@ -12,6 +12,7 @@ CONF_WRITE_USERS = "write_users"
 CONF_EXPERIMENTAL_INGREDIENTS = "experimental_ingredient_edits"
 # Sign-up pages linked from the options form (hassfest forbids URLs inside translations).
 OPENAI_KEYS_URL = "https://platform.openai.com/api-keys"
+ANTHROPIC_KEYS_URL = "https://platform.claude.com/settings/keys"
 USDA_SIGNUP_URL = "https://fdc.nal.usda.gov/api-key-signup"
 DEFAULT_TIMEOUT = 20
 MAX_PAGE_SIZE = 60

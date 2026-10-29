@@ -203,7 +203,7 @@ async def test_options_form_fills_every_link_placeholder(hass):
         strings = json.loads((INTEGRATION / "translations" / f"{locale}.json").read_text())
         help_texts = strings["options"]["step"]["init"]["data_description"].values()
         used = {name for text in help_texts for name in re.findall(r"\{(\w+)\}", text)}
-        assert used == {"openai_keys_url", "usda_signup_url"}
+        assert used == {"openai_keys_url", "anthropic_keys_url", "usda_signup_url"}
         assert used <= set(placeholders)
     assert all(url.startswith("https://") for url in placeholders.values())
 

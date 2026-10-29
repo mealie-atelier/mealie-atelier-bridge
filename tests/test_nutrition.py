@@ -11,6 +11,7 @@ from unittest.mock import patch
 import pytest
 from aiohttp import ClientSession, web
 
+from custom_components.mealie_atelier import ai_client
 from custom_components.mealie_atelier import nutrition as n
 
 RECIPE = {
@@ -111,7 +112,9 @@ class NutritionTests(unittest.IsolatedAsyncioTestCase):
         port = self.site._server.sockets[0].getsockname()[1]
         self.session = ClientSession()
         self.fdc_patch = patch.object(n, "_FDC", f"http://127.0.0.1:{port}/fdc")
-        self.ai_patch = patch.object(n, "_AI", f"http://127.0.0.1:{port}/v1/responses")
+        self.ai_patch = patch.object(
+            ai_client, "OPENAI_URL", f"http://127.0.0.1:{port}/v1/responses"
+        )
         self.fdc_patch.start()
         self.ai_patch.start()
 

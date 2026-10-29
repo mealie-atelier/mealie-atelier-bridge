@@ -4,6 +4,10 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
+### Added
+
+- The AI helpers also work with an Anthropic API key (Claude); the provider follows the key.
+
 ### Fixed
 
 - `mealie_atelier/status` accepts the `entry_id` that a card bound to one entry sends, instead of rejecting the request.
