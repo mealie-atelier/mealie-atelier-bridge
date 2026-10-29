@@ -2,7 +2,7 @@
 
 Usage: python3 tests/live/sync_live.py [ha-url] [mealie-url]
 Syncs a throwaway Mealie list into Home Assistant's built-in shopping list (`todo.shopping_list`,
-or the To-do entity named in `SYNC_TODO`, for example a dedicated Bring test list) and checks the preview, the first-batch gate, exact-once delivery, duplicate skipping, the
+or the To-do entity named in `SYNC_TODO`, for example a dedicated Bring! test list) and checks the preview, the first-batch gate, exact-once delivery, duplicate skipping, the
 after-add trigger and move mode. Every list, rule and To-do item it creates is removed again.
 """
 
@@ -228,7 +228,7 @@ async def move_rule(check: SyncCheck, tag: str) -> None:
 
 async def cleanup(check: SyncCheck) -> None:
     leftovers = [
-        # Bring puts the quantity in front ("1 Live sync basil"), so match anywhere in the title.
+        # Match anywhere in the title, because a destination may decorate the text it stores.
         item["uid"]
         for item in await check.todo_items()
         if PREFIX in item["summary"]

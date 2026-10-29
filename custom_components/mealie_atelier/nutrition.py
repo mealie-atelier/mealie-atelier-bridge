@@ -297,7 +297,9 @@ def mealie_nutrition(result: dict) -> dict:
 
 async def ai_suggest(session: aiohttp.ClientSession, key: str, ingredient_texts: list[str]) -> list:
     if not key:
-        raise ValueError("AI is not configured; provide an API key in integration options")
+        raise AtelierError(
+            "ai_not_configured", "AI is not configured; add an API key in the integration options"
+        )
     if (
         not isinstance(ingredient_texts, list)
         or not 1 <= len(ingredient_texts) <= 60

@@ -363,10 +363,10 @@ async def test_stop_without_start_is_harmless(manager: TimerManager):
 @pytest.mark.parametrize(
     ("language", "title", "message"),
     [
-        ("de", "Mealie Atelier · Küchentimer", "Pasta ist fertig!"),
-        ("de-CH", "Mealie Atelier · Küchentimer", "Pasta ist fertig!"),
-        ("en", "Mealie Atelier · Kitchen timer", "Pasta is ready!"),
-        ("fr", "Mealie Atelier · Kitchen timer", "Pasta is ready!"),
+        ("de", "Mealie Atelier Bridge · Küchentimer", "Pasta ist fertig!"),
+        ("de-CH", "Mealie Atelier Bridge · Küchentimer", "Pasta ist fertig!"),
+        ("en", "Mealie Atelier Bridge · Kitchen timer", "Pasta is ready!"),
+        ("fr", "Mealie Atelier Bridge · Kitchen timer", "Pasta is ready!"),
     ],
 )
 async def test_delivery_text_follows_the_home_assistant_language(

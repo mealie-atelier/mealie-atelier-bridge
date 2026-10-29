@@ -857,7 +857,7 @@ class SyncManager:
         ):
             raise SyncError(
                 "sync_destination_unsupported",
-                "Choose a To-do list that can add items and is not a Mealie list",
+                "Choose a to-do list that can add items. Mealie's own lists cannot be a destination.",
             )
         if any(
             rule["source_list_id"] == fields["source_list_id"] and rule["id"] != rule_id
@@ -1036,7 +1036,7 @@ class SyncManager:
         if self.hass.states.get(entity_id) is None or not self._usable(destination):
             raise SyncError(
                 "sync_destination_unsupported",
-                "Choose a To-do list that can add items and is not a Mealie list",
+                "Choose a to-do list that can add items. Mealie's own lists cannot be a destination.",
             )
         language = (self.hass.config.language or "en").lower()
         options = {

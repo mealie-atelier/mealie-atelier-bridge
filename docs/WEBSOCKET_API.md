@@ -31,6 +31,7 @@ A failed command returns an error whose `code` is stable and whose message is En
 | `usda_key_invalid` | The USDA FoodData Central key was refused. |
 | `usda_rate_limited` | The USDA FoodData Central limit has been reached. |
 | `ai_error` | The AI provider failed or returned something unusable. |
+| `ai_not_configured` | An AI call was made without an API key in the options. |
 | `invalid_request` | Any other invalid input. |
 | `mealie_auth`, `mealie_error` | Mealie refused or failed the request. |
 | `not_configured` | No loaded Mealie Atelier Bridge entry. |

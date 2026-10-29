@@ -262,8 +262,8 @@ async def _options_form(hass, entry):
 
 
 async def test_options_flow_lists_only_active_non_system_users(hass):
-    # The first user is the owner and therefore an admin: never offered, always allowed.
-    await hass.auth.async_create_user("Owner")
+    # Administrators are offered too, so an administrators only list can be shown and chosen.
+    owner = await hass.auth.async_create_user("Owner")
     anna = await hass.auth.async_create_user("Anna")
     ben = await hass.auth.async_create_user("Ben")
     gone = await hass.auth.async_create_user("Inactive")
@@ -275,7 +275,11 @@ async def test_options_flow_lists_only_active_non_system_users(hass):
     _, selector, _ = await _options_form(hass, entry)
 
     options = selector.config["options"]
-    assert [(o["value"], o["label"]) for o in options] == [(anna.id, "Anna"), (ben.id, "Ben")]
+    assert [(o["value"], o["label"]) for o in options] == [
+        (anna.id, "Anna"),
+        (ben.id, "Ben"),
+        (owner.id, "Owner"),
+    ]
     assert selector.config["multiple"] is True
 
 
@@ -512,15 +516,13 @@ async def test_options_empty_key_keeps_saved_and_clear_removes(hass):
     assert entry.options[CONF_FDC_KEY] == "new-fdc"
 
 
-async def test_options_flow_does_not_offer_admins(hass):
+async def test_options_flow_offers_admins(hass):
     owner = await hass.auth.async_create_user("Owner")
     anna = await hass.auth.async_create_user("Anna")
     entry = _entry()
     entry.add_to_hass(hass)
     _, selector, _ = await _options_form(hass, entry)
-    values = [o["value"] for o in selector.config["options"]]
-    assert owner.id not in values
-    assert values == [anna.id]
+    assert [o["value"] for o in selector.config["options"]] == [anna.id, owner.id]
 
 
 async def test_options_flow_does_not_offer_services_that_cannot_notify(hass):

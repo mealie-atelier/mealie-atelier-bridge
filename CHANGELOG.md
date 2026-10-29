@@ -6,8 +6,14 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ### Added
 
-- Shopping list editing. The mutate command accepts `shopping_update` (rename, note and quantity; a rename of an item linked to a food turns it into a free text item, and an empty note removes the note), `shopping_delete` and `shopping_clear_checked`, behind the same write permission as the other shopping actions. The offline replay ledger accepts the same three actions: an update is compared with the value the user saw and becomes a conflict when another device changed it, a delete of an item that is already gone counts as done (online and offline), and an offline clear must name the ticked item IDs the user saw and becomes a conflict when another device ticked or unticked an item meanwhile. None of them is ever blocked as a possible duplicate after a crash. A new error code `shopping_item_not_found` reports an update of an item that no longer exists, online and offline. The status payload advertises `features.shopping_edit`.
+- Shopping list editing. The mutate command accepts `shopping_update` (rename, note and quantity; a rename of an item linked to a food turns it into a free text item, and an empty note removes the note), `shopping_delete` and `shopping_clear_checked`, behind the same write permission as the other shopping actions. The offline replay ledger accepts the same three actions: an update is compared with the value the user saw (`expected_name`, `expected_note`, `expected_quantity`, each optional: without it the edit wins) and becomes a conflict when another device changed it, a delete of an item that is already gone counts as done (online and offline), and an offline clear must name the ticked item IDs the user saw and becomes a conflict when another device ticked or unticked an item meanwhile. None of them is ever blocked as a possible duplicate after a crash. A new error code `shopping_item_not_found` reports an update of an item that no longer exists, online and offline. The status payload advertises `features.shopping_edit`.
 - Each status entry carries `ai_enabled` and `ai_provider` (`openai`, `anthropic` or `none`). The WebSocket contract with every error code is documented in `docs/WEBSOCKET_API.md`.
+
+### Changed
+
+- The German copy says "Backup" (like the cards and Home Assistant) instead of "Sicherung".
+- AI calls without an API key (alternatives, recipe review, nutrition estimate) fail with the error code `ai_not_configured` instead of `invalid_request`, so cards can show their own translated message. Cards that list the codes must add it.
+- The error code `timer_dispatched` is retired: cancelling a timer that was already delivered succeeds, so the Bridge never raises it. Cards must not expect it.
 
 ## [0.10.1] - 2026-10-29
 
@@ -18,21 +24,21 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 ### Fixed
 
 - Install docs match Home Assistant 2026.11 (Marketplace "Add from link" with GitHub login, manual resource under Dashboards, "By card" tab, editor wording), name Mealie 3.x as recommended and gain an uninstall section. The Smart Shopping Sync doc uses the UI policy names. The comparison table no longer claims the built-in integration cannot write. README screenshot pairs fit GitHub's column width.
-- Consistent German and English copy: "das Token", "Sicherung", "Benachrichtigungsdienst", the Mealie page name "API-Token" and "die Mealie Atelier Bridge".
+- Consistent German and English copy: "das Token", "Benachrichtigungsdienst", the Mealie page name "API-Token" and "die Mealie Atelier Bridge".
 - Cancelling a kitchen timer that already finished or is being delivered succeeds instead of failing, so the card can remove it.
 - Kitchen timer notifications follow the Home Assistant language (German or English).
 - `notify.persistent_notification` is no longer offered as the timer notification service and no longer creates a second notification. `notify.send_message` is rejected, because it can never deliver.
-- Translated validation errors (too many timers, foreign timer, recipe changed, protected nutrition values) reach the card with their own error code instead of `invalid_request`.
+- Translated validation errors (too many timers, foreign timer, recipe changed, protected nutrition values, AI not configured) reach the card with their own error code instead of `invalid_request`.
 - A refused USDA FoodData Central key is reported as `usda_key_invalid` (and an exhausted rate limit as `usda_rate_limited`) instead of a Mealie error.
 - AI alternatives and the AI recipe review answer in the requested language (optional `language` field, else the Home Assistant language) with a matching disclaimer. The status lists `features.ai` so cards can hide the AI review without a key.
 - The photo size limit reads 10 MB in all Bridge messages, like the cards.
-- The security policy, the sponsor links and the Show and tell link match the organization defaults. The brand README no longer promises a license in CREDITS.md. The social preview mark is complete. The changelog links its version headings.
+- The security policy, the sponsor links and the Show and tell link point to the right targets. The brand README names the artwork source and the font license. The social preview mark is complete. The changelog links its version headings.
 - A Mealie account can only be set up once, even when it is reachable under two addresses. Existing entries are migrated to an account based id.
-- Existing entries with the old generated title are renamed during the upgrade, and reconfiguring the address renames a generated title too. Administrators stored in the write list are dropped during the upgrade. A list that held only administrators becomes empty, so every user may change data again.
+- Existing entries with the old generated title are renamed during the upgrade, and reconfiguring the address renames a generated title too. The rename happens once, only for entries migrated from the old version, and only for the exact generated title, so a title you choose yourself stays. Stored write lists are left as they are.
 - Entries are titled `Mealie Atelier Bridge · user@host`, so several servers stay distinguishable. The setup dialogs use the same product name.
 - A pasted browser address such as `/login`, `/api` or `/g/home` is cut back to the server address. A port above 65535 is reported as an invalid address.
 - Reconfigure and the options no longer send the saved Mealie token, USDA key or AI key to the browser. Leave a key field empty to keep it, or use the new remove switch.
-- Administrators are no longer listed under the users allowed to change data, and the help text explains that a selection restricts everyone else.
+- Administrators are listed under the users allowed to change data. The help text explains that a selection restricts everyone else, and that selecting only administrators limits writing to administrators.
 - The reconfigure step shows the port 9090 hint for the Mealie Home Assistant app, and the example address uses port 9925.
 - The setup retry message names only the HTTP status or error type, instead of mixing English text into the German message.
 - The Mealie token, the USDA key and the AI key are entered in masked password fields.
@@ -42,12 +48,11 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 - `mealie_atelier/status` accepts the `entry_id` that a card bound to one entry sends, instead of rejecting the request.
 - The sign-up links in the options are passed as description placeholders, because hassfest rejects URLs inside translations.
 - At most six requests per entry reach Mealie at the same time. Mealie stops answering for good once about 30 arrive at once, which a tablet with several cards could trigger.
-- The live sync test also removes test items whose title Bring prefixes with a quantity.
 
 ### Changed
 
 - New Home Assistant brand icons and logos (the Week Dial bridge mark), in light and dark variants, at normal and 2x size. They replace the photo icon.
-- Live tests: `sync_live.py` can target a dedicated Bring list (`SYNC_TODO`), and `capture_sync.py` records the sync setup for the guide. It writes only to the list named `SYNC_TEST_LIST` (default "Mealie Atelier") and fails if an account address would be visible.
+- Live tests: `sync_live.py` can target a dedicated Bring! list (`SYNC_TODO`) and passed all 30 checks against one (Mealie v3.29.0, Home Assistant 2026.11.0b0). `capture_sync.py` records the sync setup for the guide. It writes only to the list named `SYNC_TEST_LIST` (default "Mealie Atelier") and fails if an account address would be visible.
 - The options explain what the USDA FoodData Central key and the OpenAI or Anthropic key are for, what is lost without them and where to get them, with links.
 
 ## [0.10.0] - 2026-10-29
@@ -58,7 +63,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 - Structured recipe editing backend: ingredients with linked foods and units, recipe basics (name, description, servings), steps, cover photo, step photos and restore. Food and unit search creates a new entry only when no exact match exists.
 - Recipe backups. Before every recipe write the Bridge saves a snapshot in Home Assistant storage (newest 10 per recipe, up to 200 recipes, the newest 3 cover photos as private files). If the snapshot cannot be saved, nothing is changed in Mealie. Backups can be listed and restored, and they are deleted when the integration is removed.
 - Photo uploads in ordered chunks with size, checksum and file type checks (JPEG, PNG or WebP, at most 10 MB).
-- Smart Shopping Sync. One Mealie shopping list can be copied or moved to a Home Assistant to-do list. The sync uses Home Assistant's generic To-do entity contract, so a provider that supports adding items should work. It keeps a persisted outbox per rule, checks an item off in Mealie (move mode) only after the destination accepted it, reconciles timeouts against the destination before sending again, flags edits made after sending as conflicts, and never runs automatically before an administrator confirmed the first batch. At most 5 rules, with pause, resume, run, retry and conflict handling. Diagnostics contain counts only. See [Smart Shopping Sync](docs/SMART_SHOPPING_SYNC.md).
+- Smart Shopping Sync. One Mealie shopping list can be copied or moved to a Home Assistant to-do list. The sync uses Home Assistant's generic to-do entity contract, so a provider that supports adding items should work. It keeps a persisted outbox per rule, checks an item off in Mealie (move mode) only after the destination accepted it, reconciles timeouts against the destination before sending again, flags edits made after sending as conflicts, and never runs automatically before an administrator confirmed the first batch. At most 5 rules, with pause, resume, run, retry and conflict handling. Diagnostics contain counts only. See [Smart Shopping Sync](docs/SMART_SHOPPING_SYNC.md).
 - Offline replay ledger for the offline shopping queue of the cards (`mealie_atelier/offline_replay`). Queued toggles and adds are replayed idempotently: the operation is persisted before the Mealie write, conflicts with changes made elsewhere are detected, and a possibly sent add is never posted twice. The status payload advertises `features.offline_queue`.
 - Config flow steps for re-authentication and reconfiguration, with a guard against switching an entry to a different Mealie account. Every option has a label and a help text, in German and English.
 - Diagnostics with redacted credentials and counts instead of content.

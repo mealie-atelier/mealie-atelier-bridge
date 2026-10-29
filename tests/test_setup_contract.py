@@ -74,6 +74,7 @@ CONTRACT_ERROR_CODES = {
     "mealie_auth",
     "mealie_error",
     "ai_error",
+    "ai_not_configured",
     "usda_key_invalid",
     "usda_rate_limited",
     "invalid_timer",
@@ -81,7 +82,6 @@ CONTRACT_ERROR_CODES = {
     "too_many_timers",
     "timer_not_found",
     "timer_not_permitted",
-    "timer_dispatched",
     "existing_values_protected",
     "read_only",
     "unauthorized",
@@ -146,7 +146,7 @@ def test_german_copy_uses_one_term_per_concept() -> None:
 
     assert "API-Tokens" not in joined  # Mealie DE names the page "API-Token"
     assert not re.search(r"\b(den|einen) (API-)?Token\b", joined)  # das Token
-    assert "Backup" not in joined  # one word: Sicherung
+    assert "Sicherung" not in joined  # one word, like the cards and Home Assistant: Backup
     assert "Notify-Dienst" not in joined
     assert "Richte zuerst die Mealie Atelier Bridge ein." in joined
 

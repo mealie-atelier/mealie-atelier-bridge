@@ -279,3 +279,17 @@ def test_ui_texts_name_the_integration_in_full():
         assert "Optionen von Mealie Atelier Bridge" not in (root / name).read_text(encoding="utf-8")
         assert "Mealie Atelier is in" not in (root / name).read_text(encoding="utf-8")
         assert "Mealie Atelier ist im" not in (root / name).read_text(encoding="utf-8")
+
+
+async def test_studio_ai_without_key_raises_the_coded_error():
+    import pytest
+
+    from custom_components.mealie_atelier.errors import AtelierError
+
+    for call in (
+        studio_ai.substitutes(None, "", "Butter", "Kuchen"),
+        studio_ai.audit_recipe(None, "", RECIPE),
+    ):
+        with pytest.raises(AtelierError) as caught:
+            await call
+        assert caught.value.code == "ai_not_configured"

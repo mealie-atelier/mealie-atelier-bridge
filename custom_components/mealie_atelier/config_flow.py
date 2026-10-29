@@ -247,13 +247,14 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
 
     async def async_step_init(self, user_input=None):
         errors = {}
-        # Home Assistant has no user selector. Offer active, non-system, non-admin users and forget stored
-        # ids of users that were deleted or deactivated, so the form never submits a stale one.
+        # Home Assistant has no user selector. Offer active, non-system users (administrators too, so a
+        # list of administrators only can be shown and chosen) and forget stored ids of users that were
+        # deleted or deactivated, so the form never submits a stale one.
         users = sorted(
             (
                 user
                 for user in await self.hass.auth.async_get_users()
-                if not user.system_generated and user.is_active and not user.is_admin
+                if not user.system_generated and user.is_active
             ),
             key=lambda user: (user.name or user.id).casefold(),
         )

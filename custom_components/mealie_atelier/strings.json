@@ -70,7 +70,7 @@
         },
         "data_description": {
           "read_only": "Blocks all changes to recipes, meal plans and shopping lists. Useful for shared tablets.",
-          "write_users": "Leave empty to let every Home Assistant user change shopping lists and meal plans. If you select at least one user, only the selected users and administrators can write. Administrators can always write, so they are not listed. Recipe editing stays admin only.",
+          "write_users": "Leave empty to let every Home Assistant user change shopping lists and meal plans. If you select at least one user, only the selected users and administrators can write. Administrators can always write. Select only administrators to allow administrators alone. Recipe editing stays admin only.",
           "experimental_ingredient_edits": "Lets administrators edit ingredients with linked foods and units. A backup is saved before every change.",
           "usda_fdc_api_key": "Optional. Only for the nutrition lab: the Bridge looks up ingredients in the free US food database FoodData Central and calculates nutrients per serving. For security the field never shows a saved key: leave it empty to keep it. Without a key only the nutrition lookup is off. Get a free key with your name and email at [fdc.nal.usda.gov/api-key-signup]({usda_signup_url}).",
           "clear_fdc_key": "Enable this and save to remove the key.",
@@ -123,9 +123,6 @@
     },
     "timer_not_permitted": {
       "message": "You may not cancel another user's kitchen timer."
-    },
-    "timer_dispatched": {
-      "message": "The kitchen timer has already been dispatched."
     },
     "use_structured_editor": {
       "message": "Edit ingredients with the structured ingredient editor. Plain-text replacement is no longer available."
@@ -198,6 +195,9 @@
     },
     "conflict": {
       "message": "Someone else changed this in the meantime. Reload and try again."
+    },
+    "ai_not_configured": {
+      "message": "AI is not configured. Add an API key in the Mealie Atelier Bridge options."
     },
     "usda_key_invalid": {
       "message": "The USDA FoodData Central key was refused. Check the key in the Mealie Atelier Bridge options."

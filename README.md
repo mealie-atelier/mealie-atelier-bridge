@@ -31,7 +31,7 @@ The [Atelier Cards](https://github.com/mealie-atelier/mealie-atelier-cards) can 
 | --- | --- | --- |
 | Recipes, search and cooking mode | ✓ | ✓ |
 | Recipe and step photos | | ✓ |
-| Shopping list and meal plan writes | | ✓ |
+| Shopping list and meal plan writes | basic | ✓ with per-user grants and offline replay |
 | Recipe editor with backups and restore | | ✓ |
 | Per-user write grants and read-only mode | | ✓ |
 | Offline shopping that replays safely when you are back online | | ✓ |
@@ -88,10 +88,10 @@ Step-by-step guides in German: [setup](https://alles-automatisch.de/lernen/meali
 | Option | Meaning |
 | --- | --- |
 | Read-only mode | Blocks all changes to recipes, meal plans and shopping lists. It wins over every write grant. |
-| Users allowed to change data | Limits shopping list and meal plan changes to the chosen Home Assistant users. Empty means every user. Administrators can always write, and recipe editing stays admin only. |
+| Users allowed to change data | Limits shopping list and meal plan changes to the chosen Home Assistant users. Empty means every user. Administrators can always write, and selecting only administrators limits writing to them. Recipe editing stays admin only. |
 | Structured ingredient editing | Lets administrators edit ingredients with linked foods and units. A backup is saved before every change. |
-| USDA FoodData Central API key | Optional. Free key for nutrition lookup. |
-| AI API key (OpenAI or Anthropic) | Optional. Turns on the AI helpers: food search suggestions, ingredient substitutes and the recipe check. A key starting with `sk-ant-` uses Anthropic Claude, any other key uses OpenAI. |
+| USDA FoodData Central API key | Optional. Free key for nutrition lookup. Leave the field empty to keep a saved key, or enable "Remove the saved USDA key" to delete it. |
+| AI API key (OpenAI or Anthropic) | Optional. Turns on the AI helpers: food search suggestions, ingredient substitutes and the recipe check. A key starting with `sk-ant-` uses Anthropic Claude, any other key uses OpenAI. Leave the field empty to keep a saved key, or enable "Remove the saved AI key" to turn the helpers off. |
 | Timer notification service | Optional. A notify service such as `notify.mobile_app_your_phone` that gets a push message when a kitchen timer ends. |
 
 Re-authentication and **Reconfigure** are available from the integration page. Details and troubleshooting are in the [installation guide](docs/INSTALLATION.md).
@@ -105,14 +105,14 @@ Send what you need from a Mealie shopping list to the list your household actual
 <p align="center"><img width="400" alt="Shopping sync rule with its state and actions" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/sync-status.webp"> <img width="400" alt="Sync rule editor with source list, destination list and copy or move mode" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/sync-setup.webp"></p>
 
 1. Set up the destination through its own integration first, so it appears as a to-do list. The Bridge never asks for Bring! credentials.
-2. As an administrator, open the Atelier shopping view and add a sync rule: Mealie source list, To-do destination, **Copy** or **Move**, when to sync and how to handle duplicates.
+2. As an administrator, open the Atelier shopping view and add a sync rule: Mealie source list, to-do destination, **Copy** or **Move**, when to sync and how to handle duplicates.
 3. Check the preview and send the first batch. Nothing syncs on its own before this confirmation.
 
 **Move** checks an item off in Mealie only after the destination accepted it. An uncertain delivery is checked against the destination before anything is resent, and conflicts wait for your decision. Details are in [`docs/SMART_SHOPPING_SYNC.md`](docs/SMART_SHOPPING_SYNC.md).
 
 ## Uninstall
 
-Remove the Mealie Atelier cards from your dashboards first, because a leftover card shows **Configuration error**. Then delete the integration entry under **Settings → Devices & services** (this also deletes the recipe backups and the offline outbox), uninstall the Bridge in the Marketplace or HACS (or delete `custom_components/mealie_atelier`) and restart Home Assistant.
+Remove the Mealie Atelier cards from your dashboards first, because a leftover card shows **Configuration error**. Then delete the integration entry under **Settings → Devices & services** (this also deletes the recipe backups and the offline outbox), uninstall the Bridge and the cards in the Marketplace or HACS (for a manual install, remove the cards resource and delete `custom_components/mealie_atelier` and the cards files) and restart Home Assistant.
 
 ## Security
 

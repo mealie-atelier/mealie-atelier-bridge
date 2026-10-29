@@ -1,8 +1,8 @@
-"""Step-by-step screenshots of Smart Shopping Sync into a Bring list (fictional items only).
+"""Step-by-step screenshots of Smart Shopping Sync into a Bring! list (fictional items only).
 
 Usage: SYNC_TODO=todo.<list> uv run --with aiohttp --with playwright python capture_sync.py [out-dir]
 
-Needs a Bring entry in the rig (its owner signs in through the config flow) and a dedicated
+Needs a Bring! entry in the rig (its owner signs in through the config flow) and a dedicated
 test list; household lists are never a target. Creates a Mealie list with three fictional items,
 walks through the sync setup in the shopping card, shows the result in Home Assistant's To-do
 panel and removes the rule, the To-do items and the Mealie list again. Every account address is
@@ -27,7 +27,7 @@ HERE = Path(__file__).parent
 OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "state" / "guide-sync"
 TODO = os.environ.get("SYNC_TODO", "")
 SOURCE = "Wochenmarkt"
-RULE = "Wochenmarkt nach Bring"
+RULE = "Wochenmarkt nach Bring!"
 ITEMS = ["Tomaten", "Basilikum", "Mozzarella"]
 PLACEHOLDER = "kueche@example.com"
 # The only list this script may write to; household lists are refused by name.
@@ -161,7 +161,7 @@ async def cleanup(list_id: str | None) -> None:
 
 def main() -> None:
     if not TODO.startswith("todo."):
-        raise SystemExit("Set SYNC_TODO to the dedicated Bring test list")
+        raise SystemExit("Set SYNC_TODO to the dedicated Bring! test list")
     asyncio.run(guard())
     asyncio.run(prepare())
     OUT.mkdir(parents=True, exist_ok=True)

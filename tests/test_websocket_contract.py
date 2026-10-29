@@ -386,7 +386,7 @@ def test_ai_failures_use_their_own_error_code():
     for exc, code in (
         (AiError("AI provider unavailable"), "ai_error"),
         (MealieError("Mealie down"), "mealie_error"),
-        (ValueError("AI is not configured"), "invalid_request"),
+        (ValueError("Bad value"), "invalid_request"),
     ):
         connection = MagicMock()
         _fail(connection, {"id": 7}, exc)
