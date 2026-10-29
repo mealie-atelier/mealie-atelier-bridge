@@ -20,7 +20,6 @@ from .const import (
     CONF_API_TOKEN,
     CONF_TIMER_NOTIFY_SERVICE,
     CONF_VERIFY_SSL,
-    CONF_WRITE_USERS,
     DOMAIN,
 )
 from .http import MealieAtelierImageView, MealieAtelierRecipeAssetView
@@ -59,6 +58,9 @@ def _failure_detail(exc: MealieError) -> str:
     return type(exc.__cause__ or exc).__name__
 
 
+_RETITLE_PENDING = "retitle_legacy_title"
+
+
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Version 2 keys the unique id on the Mealie account alone, not on "<url>:<account>"."""
     if entry.version < 2:
@@ -72,44 +74,33 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # Two entries already point at the same account (the old URL-scoped ids allowed
             # that). Keep the legacy id on the second one instead of colliding.
             _LOGGER.warning("Another entry already uses this Mealie account: %s", entry.title)
-            hass.config_entries.async_update_entry(entry, version=2)
+            hass.config_entries.async_update_entry(
+                entry, data={**entry.data, _RETITLE_PENDING: True}, version=2
+            )
         else:
-            hass.config_entries.async_update_entry(entry, unique_id=account_id, version=2)
-        await _drop_admin_write_grants(hass, entry)
+            hass.config_entries.async_update_entry(
+                entry,
+                unique_id=account_id,
+                data={**entry.data, _RETITLE_PENDING: True},
+                version=2,
+            )
     return True
 
 
-def _retitle_legacy_entry(hass: HomeAssistant, entry: ConfigEntry, username: str) -> None:
-    """Rename the exact title the legacy config flow generated for this account.
+def _retitle_legacy_entry(hass: HomeAssistant, entry: ConfigEntry, username: str | None) -> None:
+    """Rename the title the legacy config flow generated, once, for an entry migrated from v1.
 
-    Only "Mealie Atelier · <username>" (or its "Kitchen" fallback) is replaced. Any other title,
-    including a custom one of the same shape, stays.
+    Only "Mealie Atelier · <username>" is replaced, or "Mealie Atelier · Kitchen" when Mealie
+    returned no username (the legacy fallback). Any other title, including a custom one of the
+    same shape, stays. The marker is removed afterwards, so later renames are never reverted.
     """
-    legacy = {f"Mealie Atelier · {username}", "Mealie Atelier · Kitchen"}
-    if entry.title in legacy:
-        hass.config_entries.async_update_entry(
-            entry, title=entry_title(entry.data[CONF_URL], username)
-        )
-
-
-async def _drop_admin_write_grants(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Administrators always may write, so a stored admin id only narrows the list for others.
-
-    A list that held only administrators meant "administrators only". Emptying it would let
-    everyone write, so such a list stays as it is.
-    """
-    grants = entry.options.get(CONF_WRITE_USERS)
-    if not grants:
+    if not entry.data.get(_RETITLE_PENDING):
         return
-    kept = []
-    for user_id in grants:
-        user = await hass.auth.async_get_user(user_id)
-        if user is None or not user.is_admin:
-            kept.append(user_id)
-    if kept and kept != list(grants):
-        hass.config_entries.async_update_entry(
-            entry, options={**entry.options, CONF_WRITE_USERS: kept}
-        )
+    username = username or "Kitchen"
+    legacy = f"Mealie Atelier · {username}"
+    data = {key: value for key, value in entry.data.items() if key != _RETITLE_PENDING}
+    title = entry_title(entry.data[CONF_URL], username) if entry.title == legacy else entry.title
+    hass.config_entries.async_update_entry(entry, title=title, data=data)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry) -> bool:
@@ -132,7 +123,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry
             translation_key="cannot_connect",
             translation_placeholders={"error": _failure_detail(exc)},
         ) from exc
-    _retitle_legacy_entry(hass, entry, account.get("username", "Kitchen"))
+    _retitle_legacy_entry(hass, entry, account.get("username"))
     # Load everything that can fail before starting background work, so a failed setup
     # leaves no timer or sync task running.
     backups = await RecipeBackupStore.async_load(hass, entry.entry_id)

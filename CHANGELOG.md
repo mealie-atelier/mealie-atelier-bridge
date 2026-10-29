@@ -23,11 +23,11 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 - The photo size limit reads 10 MB in all Bridge messages, like the cards.
 - The security policy, the sponsor links and the Show and tell link match the organization defaults. The brand README no longer promises a license in CREDITS.md. The social preview mark is complete. The changelog links its version headings.
 - A Mealie account can only be set up once, even when it is reachable under two addresses. Existing entries are migrated to an account based id.
-- Existing entries with the old generated title are renamed during the upgrade, and reconfiguring the address renames a generated title too. Administrators stored in the write list are dropped during the upgrade. A list that held only administrators is kept, so it still limits writing to administrators.
+- Existing entries with the old generated title are renamed during the upgrade, and reconfiguring the address renames a generated title too. The rename happens once, only for entries migrated from the old version, and only for the exact generated title, so a title you choose yourself stays. Stored write lists are left as they are.
 - Entries are titled `Mealie Atelier Bridge · user@host`, so several servers stay distinguishable. The setup dialogs use the same product name.
 - A pasted browser address such as `/login`, `/api` or `/g/home` is cut back to the server address. A port above 65535 is reported as an invalid address.
 - Reconfigure and the options no longer send the saved Mealie token, USDA key or AI key to the browser. Leave a key field empty to keep it, or use the new remove switch.
-- Administrators are no longer listed under the users allowed to change data, and the help text explains that a selection restricts everyone else.
+- Administrators are listed under the users allowed to change data. The help text explains that a selection restricts everyone else, and that selecting only administrators limits writing to administrators.
 - The reconfigure step shows the port 9090 hint for the Mealie Home Assistant app, and the example address uses port 9925.
 - The setup retry message names only the HTTP status or error type, instead of mixing English text into the German message.
 - The Mealie token, the USDA key and the AI key are entered in masked password fields.

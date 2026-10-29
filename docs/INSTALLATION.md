@@ -50,7 +50,7 @@ Open the integration and choose **Configure**. The options page is called **Secu
 | Option | Meaning |
 | --- | --- |
 | **Read-only mode** | Blocks all changes to recipes, meal plans and shopping lists. Useful for shared tablets, and a good start while you evaluate the Bridge. It wins over every write grant. |
-| **Users allowed to change data** | Limits shopping list and meal plan changes to the chosen Home Assistant users. Empty means every user. Administrators can always write. Recipe editing stays admin only. |
+| **Users allowed to change data** | Limits shopping list and meal plan changes to the chosen Home Assistant users. Empty means every user. Administrators can always write, and selecting only administrators limits writing to them. Recipe editing stays admin only. |
 | **Structured ingredient editing** | Lets administrators edit ingredients with linked foods and units. A backup is saved before every change. |
 | **USDA FoodData Central API key** | Optional. Free key used for nutrition lookup. The field never shows a saved key: leave it empty to keep it. Enable **Remove the saved USDA key** and save to delete it. |
 | **AI API key (OpenAI or Anthropic)** | Optional. Powers the AI helpers: food search terms, ingredient substitutes and the recipe check. The provider follows the key: keys starting with `sk-ant-` go to Anthropic, any other key to OpenAI. The field never shows a saved key: leave it empty to keep it. Enable **Remove the saved AI key** and save to turn the AI helpers off. |

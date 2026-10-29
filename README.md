@@ -88,7 +88,7 @@ Step-by-step guides in German: [setup](https://alles-automatisch.de/lernen/meali
 | Option | Meaning |
 | --- | --- |
 | Read-only mode | Blocks all changes to recipes, meal plans and shopping lists. It wins over every write grant. |
-| Users allowed to change data | Limits shopping list and meal plan changes to the chosen Home Assistant users. Empty means every user. Administrators can always write, and recipe editing stays admin only. |
+| Users allowed to change data | Limits shopping list and meal plan changes to the chosen Home Assistant users. Empty means every user. Administrators can always write, and selecting only administrators limits writing to them. Recipe editing stays admin only. |
 | Structured ingredient editing | Lets administrators edit ingredients with linked foods and units. A backup is saved before every change. |
 | USDA FoodData Central API key | Optional. Free key for nutrition lookup. Leave the field empty to keep a saved key, or enable "Remove the saved USDA key" to delete it. |
 | AI API key (OpenAI or Anthropic) | Optional. Turns on the AI helpers: food search suggestions, ingredient substitutes and the recipe check. A key starting with `sk-ant-` uses Anthropic Claude, any other key uses OpenAI. Leave the field empty to keep a saved key, or enable "Remove the saved AI key" to turn the helpers off. |
