@@ -50,3 +50,22 @@ def test_brand_readme_names_artwork_source_and_font_license() -> None:
     assert "SIL Open Font License" in text
     assert "brand/source/" in text
     assert "photograph of" not in text
+
+
+def test_bridge_capture_pins_the_card_language_and_uses_a_throwaway_list() -> None:
+    """Mixed-language or stale-bundle screenshots came from an unpinned capture."""
+    text = (ROOT / "tests" / "live" / "capture_bridge.py").read_text(encoding="utf-8")
+    assert "mealie-atelier:design" in text
+    assert "CARDS_BUNDLE" in text
+    assert "/api/households/shopping/lists" in text
+    assert 'f"/api/households/shopping/lists/{list_id}"' in text
+
+
+def test_sync_screenshots_keep_their_size() -> None:
+    for name in ("sync-setup.webp", "sync-status.webp"):
+        data = (ROOT / "assets" / "screens" / name).read_bytes()
+        assert data[:4] == b"RIFF" and data[8:12] == b"WEBP"
+        assert data[12:16] == b"VP8 "
+        width = int.from_bytes(data[26:28], "little") & 0x3FFF
+        height = int.from_bytes(data[28:30], "little") & 0x3FFF
+        assert (width, height) == (1440, 960), name

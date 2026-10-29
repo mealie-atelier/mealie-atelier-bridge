@@ -4,13 +4,19 @@ Usage: uv run --with playwright python tests/live/capture_bridge.py [out-dir] [l
 Run capture_screens.py first (it builds the screenshot dashboards). Saves the setup form, the
 integration page and the Smart Shopping Sync dialogs in light theme. A sync rule is created for the
 dialog shots and deleted again; it is never activated, so nothing is sent.
+
+Set CARDS_BUNDLE to a built mealie-atelier-cards.js to capture a cards build other than the one the
+rig mounts, for example a worktree's dist, without touching the mounted files.
 """
 
 from __future__ import annotations
 
 import asyncio
+import os
+import json
 import re
 import sys
+import urllib.request
 from pathlib import Path
 
 from capture_screens import BASE, DASHBOARD, settle, sign_in
@@ -21,6 +27,25 @@ HERE = Path(__file__).parent
 OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "state" / "shots"
 LANGUAGE = sys.argv[2] if len(sys.argv) > 2 else "de"
 TOKEN = str(HERE / "state" / "ha-token")
+CARDS_BUNDLE = os.environ.get("CARDS_BUNDLE")
+
+
+MEALIE = "http://localhost:19925"
+
+
+def mealie(method: str, path: str, body: object = None) -> object:
+    request = urllib.request.Request(
+        MEALIE + path,
+        method=method,
+        data=None if body is None else json.dumps(body).encode(),
+        headers={
+            "Authorization": f"Bearer {read_token(str(HERE / 'state' / 'mealie-token'))}",
+            "Content-Type": "application/json",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        raw = response.read()
+    return json.loads(raw) if raw else None
 
 
 async def ws(command: dict) -> object:
@@ -31,11 +56,14 @@ async def ws(command: dict) -> object:
         return value
 
 
-async def create_rule() -> str:
-    shopping = await ws({"type": "mealie_atelier/shopping"})
+def list_name() -> str:
+    return "Wochenmarkt" if LANGUAGE == "de" else "Weekly shop"
+
+
+async def create_rule(source_list_id: str) -> str:
     rule = {
         "name": "Bring!" if LANGUAGE == "de" else "Groceries",
-        "source_list_id": shopping["lists"][0]["id"],
+        "source_list_id": source_list_id,
         "destination_entity_id": "todo.shopping_list",
         "mode": "copy",
     }
@@ -56,8 +84,11 @@ def shoot(page: Page, name: str) -> None:
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    rule_id = asyncio.run(create_rule())
+    # A throwaway source list named in the capture language keeps the shots in one language.
+    list_id = mealie("POST", "/api/households/shopping/lists", {"name": list_name()})["id"]
+    rule_id = ""
     try:
+        rule_id = asyncio.run(create_rule(list_id))
         with sync_playwright() as play:
             browser = play.chromium.launch(
                 headless=True, args=["--lang=de-DE" if LANGUAGE == "de" else "--lang=en-US"]
@@ -69,6 +100,21 @@ def main() -> None:
                     locale="de-DE" if LANGUAGE == "de" else "en-US",
                     device_scale_factor=2,
                     service_workers="block",
+                )
+                if CARDS_BUNDLE:
+                    bundle = Path(CARDS_BUNDLE).read_bytes()
+                    context.route(
+                        "**/mealie-atelier-cards.js*",
+                        lambda route: route.fulfill(
+                            body=bundle, content_type="text/javascript; charset=utf-8"
+                        ),
+                    )
+                # The dashboards are saved in German; the card's own language setting and Home
+                # Assistant's profile language both come from the browser.
+                context.add_init_script(
+                    f"localStorage.setItem('selectedLanguage', JSON.stringify('{LANGUAGE}'));"
+                    f"localStorage.setItem('mealie-atelier:design', "
+                    f"JSON.stringify({{language: '{LANGUAGE}'}}));"
                 )
                 page = context.new_page()
                 sign_in(page)
@@ -97,9 +143,13 @@ def main() -> None:
                 browser.close()
     finally:
         try:
-            asyncio.run(ws({"type": "mealie_atelier/sync_rule_delete", "rule_id": rule_id}))
+            if rule_id:
+                asyncio.run(ws({"type": "mealie_atelier/sync_rule_delete", "rule_id": rule_id}))
         finally:
-            asyncio.run(abort_flows())
+            try:
+                mealie("DELETE", f"/api/households/shopping/lists/{list_id}")
+            finally:
+                asyncio.run(abort_flows())
     print(f"screenshots in {OUT}")
 
 
