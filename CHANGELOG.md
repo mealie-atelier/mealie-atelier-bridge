@@ -21,6 +21,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ### Changed
 
+- New Home Assistant brand icons and logos (the Week Dial bridge mark), in light and dark variants, at normal and 2x size. They replace the photo icon.
 - Live tests: `sync_live.py` can target a dedicated Bring list (`SYNC_TODO`), and `capture_sync.py` records the sync setup for the guide. It writes only to the list named `SYNC_TEST_LIST` (default "Mealie Atelier") and fails if an account address would be visible.
 - The options explain what the USDA FoodData Central and OpenAI keys are for, what is lost without them and where to get them, with links.
 
