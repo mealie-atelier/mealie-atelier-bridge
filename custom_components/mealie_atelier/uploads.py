@@ -74,7 +74,7 @@ class UploadSessions:
         if purpose not in PURPOSES or mime not in MIME_EXTENSIONS:
             raise _invalid("Photo must be a JPEG, PNG or WebP for a cover or a step")
         if isinstance(size, bool) or not _MIN_BYTES <= size <= UPLOAD_MAX_BYTES:
-            raise _invalid("Photo must be between 100 bytes and 10 MiB")
+            raise _invalid("Photo must be between 100 bytes and 10 MB")
         if not isinstance(sha256, str) or not _SHA256.fullmatch(sha256):
             raise _invalid("The checksum must be 64 hexadecimal characters")
         if len(self._sessions) >= UPLOAD_MAX_SESSIONS:

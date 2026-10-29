@@ -13,6 +13,7 @@ from aiohttp import ClientSession, web
 
 from custom_components.mealie_atelier import ai_client
 from custom_components.mealie_atelier import nutrition as n
+from custom_components.mealie_atelier.api import MealieError
 from custom_components.mealie_atelier.errors import AtelierError
 
 RECIPE = {
@@ -60,6 +61,8 @@ class NutritionTests(unittest.IsolatedAsyncioTestCase):
                 {"method": request.method, "path": request.path, "query": dict(request.query)}
             )
             if request.path.startswith("/fdc/"):
+                if request.query.get("api_key") == "BAD_REQUEST_KEY":
+                    return web.json_response({"error": "Bad request"}, status=400)
                 if request.query.get("api_key") == "LIMITED_KEY":
                     return web.json_response({"error": "Slow down"}, status=429)
                 if request.query.get("api_key") != "TEST_USDA_KEY":
@@ -205,6 +208,11 @@ class NutritionTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(AtelierError) as caught:
             await n.search(self.session, "WRONG_KEY", "oats")
         self.assertEqual(caught.exception.code, "usda_key_invalid")
+
+    async def test_malformed_request_is_not_blamed_on_the_key(self):
+        with self.assertRaises(MealieError) as caught:
+            await n.search(self.session, "BAD_REQUEST_KEY", "oats")
+        self.assertNotIsInstance(caught.exception, AtelierError)
 
     async def test_exhausted_usda_limit_has_its_own_error_code(self):
         with self.assertRaises(AtelierError) as caught:

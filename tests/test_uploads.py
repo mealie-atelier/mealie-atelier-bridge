@@ -103,6 +103,14 @@ def test_begin_validates_parameters(changes):
     assert code_of(lambda: begin(sessions, JPEG, mime, **changes)) == "upload_invalid"
 
 
+def test_size_message_uses_megabytes():
+    sessions = UploadSessions()
+    with pytest.raises(AtelierError) as caught:
+        begin(sessions, JPEG, "image/jpeg", size=UPLOAD_MAX_BYTES + 1)
+    assert "10 MB" in str(caught.value)
+    assert "MiB" not in str(caught.value)
+
+
 def test_wrong_magic_bytes_and_wrong_checksum_drop_the_session():
     sessions = UploadSessions()
     fake = b"%PDF-1.7" + b"\x00" * 200

@@ -68,7 +68,7 @@ def safe_text(value: Any, limit: int = 500) -> str:
 def check_image(data: bytes, ext: str) -> str:
     """Validate size and magic bytes against the claimed extension; return the content type."""
     if ext not in _IMAGE_TYPES or not 100 <= len(data) <= UPLOAD_MAX_BYTES:
-        raise ValueError("Photo must be JPEG, PNG or WebP and 10 MiB or smaller")
+        raise ValueError("Photo must be JPEG, PNG or WebP and 10 MB or smaller")
     magic = {
         "jpg": data[:3] == b"\xff\xd8\xff",
         "png": data[:8] == bytes([137, 80, 78, 71, 13, 10, 26, 10]),

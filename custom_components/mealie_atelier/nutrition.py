@@ -145,7 +145,7 @@ async def _fdc_fetch(
             timeout=aiohttp.ClientTimeout(total=18),
             allow_redirects=False,
         ) as response:
-            if response.status in (400, 401, 403):
+            if response.status in (401, 403):
                 raise AtelierError("usda_key_invalid", "The USDA FoodData Central key was refused")
             if response.status == 429:
                 raise AtelierError(

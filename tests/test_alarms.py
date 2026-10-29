@@ -212,10 +212,12 @@ async def test_cancel_rules(manager: TimerManager, hass_storage: dict[str, Any])
     assert cancelled["status"] == "cancelled"
     assert hass_storage[STORAGE_KEY]["data"]["alarms"][0]["status"] == "cancelled"
 
+
+async def test_cancelling_a_timer_that_is_being_delivered_succeeds(manager: TimerManager):
     manager.alarms.append(stored_alarm(status="sending"))
-    with pytest.raises(ServiceValidationError) as caught:
-        await manager.async_cancel("user-1", manager.alarms[-1]["id"])
-    assert caught.value.translation_key == "timer_dispatched"
+    result = await manager.async_cancel("user-1", manager.alarms[-1]["id"])
+    assert result["status"] == "cancelled"
+    assert manager.alarms[-1]["status"] == "cancelled"
 
 
 async def test_cancelling_a_finished_timer_succeeds_without_changing_it(manager: TimerManager):
