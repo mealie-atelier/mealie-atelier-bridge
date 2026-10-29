@@ -869,17 +869,45 @@ async def test_a_free_text_name_with_a_number_still_matches_itself(ledger, clien
     assert (await ledger.process(update(name="Soja", expected_name="2 Milch")))["ok"]
 
 
-async def test_a_bare_note_alone_does_not_match_an_item_with_a_food_and_no_display(ledger, client):
-    # The card sends display, note or food name. With an empty display and a food, the note alone is
-    # not what the user saw, and another device may have changed the food.
+async def test_the_label_the_card_shows_for_an_empty_display_matches_the_unchanged_item(
+    ledger, client
+):
+    # The card shows display, else note, else food name, and sends exactly that text.
     client.shopping_item.return_value = {
         "id": "item-1",
         "note": "fettarm",
         "display": "",
         "isFood": True,
-        "food": {"name": "Hafer"},
+        "food": {"name": "Milch"},
         "quantity": 0,
     }
-    op = update(name="Soja", expected_name="fettarm")
+    assert (await ledger.process(update(name="Soja", expected_name="fettarm")))["ok"]
+
+
+async def test_a_number_the_user_saw_as_free_text_is_kept_when_another_device_sets_a_quantity(
+    ledger, client
+):
+    # The user saw the free text item "10 Eier" (quantity 0). Another device renamed it to "Eier"
+    # and set the quantity to 2, so the display is "2 Eier".
+    client.shopping_item.return_value = {
+        "id": "item-1",
+        "note": "Eier",
+        "display": "2 Eier",
+        "isFood": False,
+        "quantity": 2,
+    }
+    op = update(name="Soja", expected_name="10 Eier", expected_quantity=0)
     assert await code_of(ledger.process(op)) == "offline_conflict"
     client.update_shopping_item.assert_not_awaited()
+
+
+async def test_the_quantity_the_user_saw_still_strips_the_amount_of_a_rename(ledger, client):
+    client.shopping_item.return_value = {
+        "id": "item-1",
+        "note": "Milch",
+        "display": "3 Milch",
+        "isFood": False,
+        "quantity": 3,
+    }
+    op = update(name="Soja", expected_name="2 Milch", expected_quantity=2)
+    assert (await ledger.process(op))["ok"]

@@ -32,7 +32,15 @@ CARDS_DE = CARDS / "src" / "i18n" / "de.json"
 #    word before is a noun unless it opens a question or a clause ("Ist der Token gültig?").
 _WORD = r"[^\W\d_]+"
 _TOKEN = rf"(?:{_WORD}-)*Token\b"
-_BRAND = rf"(?: [a-zäöüß]+en| [A-ZÄÖÜ]{_WORD}| [A-ZÄÖÜ]{_WORD}-{_WORD})*"
+_ADVERB = "neu|sehr|bereits|schon|noch|frisch|zuletzt|gerade|ganz|vollständig|erst|nun|nur|auch"
+_BRAND = rf"(?: (?:{_ADVERB})| [a-zäöüß]+en| [A-ZÄÖÜ]{_WORD}| [A-ZÄÖÜ]{_WORD}-{_WORD})*"
+_PHRASE = rf" (?:in|aus|von|bei|für|per|über|auf|an)(?: [a-zäöüß]+)? [A-ZÄÖÜ]{_WORD}"
+# A capitalised adjective in -er that opens a sentence, a label or a list item can only be the
+# masculine nominative ("Ungültiger Token", "Fehler: Neuer API-Token"), never a genitive plural.
+_NOUNS_IN_ER = {"server", "fehler", "nutzer", "benutzer", "zähler", "zeiger", "player"}
+_OPENING = re.compile(
+    rf"(?:^|[.!?:;\"\u201c\u201e(\-]\s*)(?P<word>[A-ZÄÖÜ]{_WORD}er)(?:{_BRAND})? {_TOKEN}"
+)
 _ACCUSATIVE = re.compile(
     r"\b(?i:den|einen|keinen|deinen|meinen|seinen|ihren|unseren|diesen|jeden|welchen)"
     rf"{_BRAND} {_TOKEN}"
@@ -44,7 +52,7 @@ _ACCUSATIVE = re.compile(
     + _TOKEN
 )
 _NOMINATIVE = re.compile(
-    rf"(?P<before>{_WORD})?(?P<gap>[^\w]*?)\b(?i:der|dieser|welcher)(?: [a-zäöüß]+e| [A-ZÄÖÜ]{_WORD})* "
+    rf"(?P<before>{_WORD})?(?P<gap>[^\w]*?)\b(?i:der|dieser|welcher)(?: [a-zäöüß]+e| [A-ZÄÖÜ]{_WORD}|{_PHRASE})* "
     + _TOKEN
 )
 _OPENERS = {
@@ -52,7 +60,7 @@ _OPENERS = {
     for word in (
         "ist sind war waren hat hatte wird wurde kann muss darf soll sei gilt gibt fehlt bleibt "
         "sobald seit wenn weil falls ob dass solange bevor nachdem da wo wie warum wann was "
-        "und oder aber denn als bis sofern prüfe prüfen dann"
+        "und oder aber denn als bis sofern prüfe prüfen dann hier dort jetzt nun bitte danach zuerst"
     ).split()
 }
 _GENITIVE_LOWER = {
@@ -66,6 +74,9 @@ def masculine_token(text: str) -> bool:
     """True when the text uses "Token" with a masculine article or adjective."""
     if _ACCUSATIVE.search(text):
         return True
+    for found in _OPENING.finditer(text):
+        if found.group("word").lower() not in _NOUNS_IN_ER:
+            return True
     for found in _NOMINATIVE.finditer(text):
         before = found.group("before")
         if before and not found.group("gap").strip():
@@ -160,6 +171,13 @@ def test_shopping_error_codes_use_the_same_wording_in_both_repositories(
         "Prüfe deinen Mealie API-Token",
         "Der Mealie-Token fehlt",
         "Den Mealie-Token prüfen",
+        "Ungültiger Token.",
+        "Ungültiger API-Token",
+        "Fehler: Ungültiger Token",
+        "Neuer Token gespeichert",
+        "Speichere den neu erzeugten Token",
+        "Der in Mealie erzeugte Token fehlt",
+        "Hier der Token für Mealie",
     ],
 )
 def test_masculine_token_pattern_catches_the_masculine_forms(text: str) -> None:
@@ -183,5 +201,10 @@ def test_neuter_token_is_not_flagged() -> None:
         "Wir erstellen Token für alle Benutzer.",
         "Prüfe das Mealie-Token. Ohne gültiges Token geht es nicht.",
         "Mit deinem Mealie API-Token geht es.",
+        "Server Token ungültig",
+        "Fehler: Token ungültig",
+        "Prüfe die Liste der gespeicherten Token. Neue Token werden ergänzt.",
+        "Die Liste der in Mealie erzeugten Token ist leer.",
+        "Gültiges Token gespeichert",
     ):
         assert not masculine_token(text), text

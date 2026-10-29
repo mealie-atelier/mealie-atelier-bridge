@@ -82,6 +82,12 @@ def _clean_update(payload: dict[str, Any]) -> dict[str, Any]:
         clean["name"] = name.strip()
         if "expected_name" in payload:
             clean["expected_name"] = expected
+        # The quantity the user saw tells a leading number of the name from a free text number.
+        shown = payload.get("expected_quantity")
+        if "quantity" not in payload and "expected_quantity" in payload:
+            if not _is_number(shown):
+                raise _invalid("A quantity change needs a number from 0 to 100000")
+            clean["expected_quantity"] = shown
     if "note" in payload:
         note = payload["note"]
         expected = payload.get("expected_note")
@@ -313,7 +319,14 @@ class OfflineLedger:
             for key in changes:
                 # The cards may omit the value they saw. Then the edit simply wins.
                 if f"expected_{key}" in payload and not _same(
-                    key, _seen(key, current, payload[f"expected_{key}"]), payload[f"expected_{key}"]
+                    key,
+                    _seen(
+                        key,
+                        current,
+                        payload[f"expected_{key}"],
+                        payload.get("expected_quantity"),
+                    ),
+                    payload[f"expected_{key}"],
                 ):
                     message = "This item was changed on another device. Review both values"
                     await set_state("conflict", message=message)
@@ -407,18 +420,22 @@ def _bare_label(item: dict[str, Any]) -> str:
     return " ".join(part for part in (name, note) if part)
 
 
-def _without_amount(text: str, item: dict[str, Any]) -> str:
+def _without_amount(text: str, item: dict[str, Any], shown: Any = None) -> str:
     """Drop the leading quantity and unit of the item from a label the user saw.
 
     Only an item with a quantity above zero shows an amount. A number in a free text item with
-    quantity 0 ("2 Milch" stored as the note) belongs to the name and stays.
+    quantity 0 ("2 Milch" stored as the note) belongs to the name and stays. When the quantity the
+    user saw is known, only that number counts as an amount, so "10 Eier" stays whole after another
+    device renamed the item to "Eier" and set the quantity to 2.
     """
-    quantity = item.get("quantity")
+    quantity = item.get("quantity") if shown is None else shown
     has_amount = isinstance(quantity, (int, float)) and not isinstance(quantity, bool)
     if not has_amount or quantity <= 0:
         return text
-    found = re.match(r"^\s*\d+(?:[.,]\d+)?\s+", text)
+    found = re.match(r"^\s*(\d+(?:[.,]\d+)?)\s+", text)
     if not found:
+        return text
+    if shown is not None and float(found.group(1).replace(",", ".")) != float(shown):
         return text
     stripped = text[found.end() :]
     unit = item.get("unit") if isinstance(item.get("unit"), dict) else {}
@@ -429,22 +446,28 @@ def _without_amount(text: str, item: dict[str, Any]) -> str:
     return stripped.strip()
 
 
-def _seen(key: str, item: dict[str, Any], wanted: Any = None) -> Any:
+def _seen(key: str, item: dict[str, Any], wanted: Any = None, shown: Any = None) -> Any:
     """The value of an item as the user saw it for one changed field.
 
-    The cards derive the label of an edited item themselves, so a name matches when it equals the
-    display text, the label Mealie rebuilds, or the name and note without a quantity and unit.
-    Another device that changed the note or the name never matches, only a quantity edit does.
+    The cards derive the label of an edited item themselves (display, else note, else food name),
+    so a name matches when it equals that label, the display text, the label Mealie rebuilds, or
+    the name and note without a quantity and unit. Another device that changed the note or the name
+    never matches, only a quantity edit does.
     """
     if key != "name":
         return item.get(key)
     bare = _bare_label(item)
+    food = item.get("food") if isinstance(item.get("food"), dict) else {}
+    card = item.get("display") or item.get("note") or food.get("name") or ""
     candidates = [
+        card,
         item.get("display") or "",
         bare,
         *_rebuilt_labels(item),
     ]
-    if isinstance(wanted, str) and _same("name", _without_amount(wanted.strip(), item), bare):
+    if isinstance(wanted, str) and _same(
+        "name", _without_amount(wanted.strip(), item, shown), bare
+    ):
         return wanted
     for value in candidates:
         if isinstance(value, str) and _same("name", value, wanted):
