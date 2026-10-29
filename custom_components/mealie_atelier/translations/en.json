@@ -86,7 +86,7 @@
   },
   "exceptions": {
     "read_only": {
-      "message": "Mealie Atelier is in read-only mode."
+      "message": "Mealie Atelier Bridge is in read-only mode."
     },
     "unauthorized": {
       "message": "Only Home Assistant administrators can do this."

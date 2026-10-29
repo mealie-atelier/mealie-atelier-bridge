@@ -19,7 +19,7 @@ The Mealie Atelier Bridge exposes an allowlist of Home Assistant WebSocket comma
 
 ## Error codes
 
-A failed command returns an error whose `code` is stable and whose message is English. Cards choose their message by code, never by message text. Codes raised as Home Assistant exceptions (the timer, USDA, upload and similar codes) also carry a `translation_key` equal to the code, with a text in `strings.json`. The fallback codes `ai_error`, `invalid_request`, `mealie_auth`, `mealie_error` and `not_configured` carry no `translation_key`: a card must map them by code.
+A failed command returns an error whose `code` is stable and whose message is English. Cards choose their message by code, never by message text. Codes raised as Home Assistant exceptions (the timer, USDA, upload and similar codes) also carry a `translation_key` equal to the code, with a text in `strings.json`. The fallback codes `ai_error`, `conflict`, `invalid_request`, `mealie_auth`, `mealie_error`, `not_configured` and `unauthorized` carry no `translation_key`: a card must map them by code.
 
 | Code | When |
 | --- | --- |

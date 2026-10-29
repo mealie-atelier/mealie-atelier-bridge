@@ -275,3 +275,7 @@ def test_ui_texts_name_the_integration_in_full():
     for name in ("strings.json", "translations/en.json", "translations/de.json", "permissions.py"):
         assert "Mealie Atelier options" not in (root / name).read_text(encoding="utf-8")
         assert "Optionen von Mealie Atelier." not in (root / name).read_text(encoding="utf-8")
+        assert "Mealie-Atelier-Optionen" not in (root / name).read_text(encoding="utf-8")
+        assert "Optionen von Mealie Atelier Bridge" not in (root / name).read_text(encoding="utf-8")
+        assert "Mealie Atelier is in" not in (root / name).read_text(encoding="utf-8")
+        assert "Mealie Atelier ist im" not in (root / name).read_text(encoding="utf-8")
