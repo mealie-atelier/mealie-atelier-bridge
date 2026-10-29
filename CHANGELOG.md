@@ -12,7 +12,6 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ### Fixed
 
-- The `status` command accepts the `entry_id` that cards send, so cards and Bridge work together after a fresh install (v0.10.0 rejected it).
 - Install docs match Home Assistant 2026.11 (Marketplace "Add from link" with GitHub login, manual resource under Dashboards, "By card" tab, editor wording), name Mealie 3.x as recommended and gain an uninstall section. The Smart Shopping Sync doc uses the UI policy names. The comparison table no longer claims the built-in integration cannot write. README screenshot pairs fit GitHub's column width.
 - Consistent German and English copy: "das Token", "Sicherung", "Benachrichtigungsdienst", the Mealie page name "API-Token" and "die Mealie Atelier Bridge".
 - Cancelling a kitchen timer that already finished or is being delivered succeeds instead of failing, so the card can remove it.
