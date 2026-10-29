@@ -34,3 +34,12 @@ def test_live_scripts_write_bring_with_exclamation_mark() -> None:
     for path in LIVE:
         for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             assert not re.search(r"\bBring\b(?!!)", line), f"{path.name}:{number}"
+
+
+def test_sync_docs_record_the_bring_live_result() -> None:
+    """The destinations table and the changelog must agree on the Bring! live test."""
+    table = (ROOT / "docs" / "SMART_SHOPPING_SYNC.md").read_text(encoding="utf-8")
+    assert "not yet tested" not in table
+    row = next(line for line in table.splitlines() if line.startswith("| Bring!"))
+    assert "Passed" in row
+    assert "Mealie v" in row

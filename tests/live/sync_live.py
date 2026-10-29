@@ -228,7 +228,7 @@ async def move_rule(check: SyncCheck, tag: str) -> None:
 
 async def cleanup(check: SyncCheck) -> None:
     leftovers = [
-        # Bring! puts the quantity in front ("1 Live sync basil"), so match anywhere in the title.
+        # Match anywhere in the title, because a destination may decorate the text it stores.
         item["uid"]
         for item in await check.todo_items()
         if PREFIX in item["summary"]

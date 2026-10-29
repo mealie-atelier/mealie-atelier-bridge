@@ -22,7 +22,8 @@ Fictional demo recipes only; never point these scripts at a real household insta
 - Smart Shopping Sync end to end: `python3 tests/live/sync_live.py`. Syncs throwaway Mealie lists
   into Home Assistant's built-in shopping list (`todo.shopping_list`, no account needed): preview,
   first-batch gate, exactly-once delivery, duplicate skip, the after-add trigger and move mode.
-  Everything it creates is removed again.
+  Everything it creates is removed again. `SYNC_TODO=todo.<list> python3 tests/live/sync_live.py`
+  targets another to-do list, for example a dedicated Bring! test list.
 - Browser acceptance of the cards inside Home Assistant (headless Chromium, light and dark):
   `uv run --with playwright python tests/live/ui_smoke.py`. It registers the module resource at the
   Marketplace path, adds an `atelier-live` dashboard, checks that every recipe photo arrives whole and

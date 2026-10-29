@@ -47,12 +47,11 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 - `mealie_atelier/status` accepts the `entry_id` that a card bound to one entry sends, instead of rejecting the request.
 - The sign-up links in the options are passed as description placeholders, because hassfest rejects URLs inside translations.
 - At most six requests per entry reach Mealie at the same time. Mealie stops answering for good once about 30 arrive at once, which a tablet with several cards could trigger.
-- The live sync test also removes test items whose title Bring! prefixes with a quantity.
 
 ### Changed
 
 - New Home Assistant brand icons and logos (the Week Dial bridge mark), in light and dark variants, at normal and 2x size. They replace the photo icon.
-- Live tests: `sync_live.py` can target a dedicated Bring! list (`SYNC_TODO`), and `capture_sync.py` records the sync setup for the guide. It writes only to the list named `SYNC_TEST_LIST` (default "Mealie Atelier") and fails if an account address would be visible.
+- Live tests: `sync_live.py` can target a dedicated Bring! list (`SYNC_TODO`) and passed all 30 checks against one (Mealie v3.29.0, Home Assistant 2026.11.0b0). `capture_sync.py` records the sync setup for the guide. It writes only to the list named `SYNC_TEST_LIST` (default "Mealie Atelier") and fails if an account address would be visible.
 - The options explain what the USDA FoodData Central key and the OpenAI or Anthropic key are for, what is lost without them and where to get them, with links.
 
 ## [0.10.0] - 2026-10-29
