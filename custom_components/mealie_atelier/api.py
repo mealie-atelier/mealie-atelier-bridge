@@ -75,12 +75,65 @@ def safe_quantity(value: Any) -> int | float:
     return value
 
 
+def shopping_item_name(item: dict) -> str:
+    """The name a list shows for an item: its display text, its note or its food name."""
+    for value in (item.get("display"), item.get("note")):
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    food = item.get("food")
+    if isinstance(food, dict) and isinstance(food.get("name"), str):
+        return food["name"].strip()
+    return ""
+
+
+def shopping_rename_applied(item: dict, name: str) -> bool:
+    """True when an item is already a free text item that carries exactly this name."""
+    return (
+        not item.get("food")
+        and not item.get("isFood")
+        and (item.get("note") or "").strip() == name.strip()
+    )
+
+
+def apply_shopping_changes(current: dict, changes: dict) -> dict:
+    """Return the item with the changes applied, preserving everything else.
+
+    A rename turns the item into a free text item: the link to its food is dropped, because the
+    food name would otherwise keep being shown instead of the new name.
+    """
+    updated = {**current}
+    if "name" in changes:
+        updated.update(
+            note=changes["name"],
+            display=changes["name"],
+            isFood=False,
+            food=None,
+            foodId=None,
+        )
+    for key in ("note", "quantity"):
+        if key in changes:
+            updated[key] = changes[key]
+    if not updated.get("food") and not (updated.get("note") or "").strip():
+        raise ValueError("An item without a food needs a name")
+    return updated
+
+
 def shopping_update_changes(payload: dict) -> tuple[str, dict]:
-    """Validate a shopping_update payload: the item ID and the fields to change (note, quantity)."""
+    """Validate a shopping_update payload: the item ID and the fields to change.
+
+    `name` renames the item, `note` sets or (when empty) removes its note, `quantity` sets the amount.
+    """
     item_id = safe_id(payload.get("item_id"))
     changes: dict[str, Any] = {}
+    if "name" in payload:
+        if "note" in payload:
+            raise ValueError("Rename and note cannot be combined")
+        changes["name"] = safe_text(payload["name"], 250)
     if "note" in payload:
-        changes["note"] = safe_text(payload["note"], 250)
+        note = payload["note"]
+        if not isinstance(note, str) or len(note.strip()) > 250:
+            raise ValueError("Text length outside allowed range")
+        changes["note"] = note.strip()
     if "quantity" in payload:
         changes["quantity"] = safe_quantity(payload["quantity"])
     if not changes:
@@ -509,7 +562,9 @@ class MealieClient:
                 "DELETE", f"/api/households/shopping/items/{safe_id(payload.get('item_id'))}"
             )
         if action == "shopping_clear_checked":
-            return await self.clear_checked_shopping(safe_id(payload.get("list_id")))
+            return await self.clear_checked_shopping(
+                safe_id(payload.get("list_id")), clear_expected_ids(payload)
+            )
         if action == "shopping_list_create":
             return await self.request(
                 "POST",
@@ -639,23 +694,31 @@ class MealieClient:
     async def update_shopping_item(
         self, item_id: str, changes: dict, current: dict | None = None
     ) -> dict:
-        """Change the note or quantity of one item, preserving its food, unit and checked state.
+        """Rename an item or change its note or quantity, preserving unit and checked state.
 
         Pass the item that was just read as `current` to write exactly the state that was compared.
         """
         if current is None:
             current = await self.shopping_item(item_id)
-        updated = {**current, **changes}
+        updated = apply_shopping_changes(current, changes)
         result = await self.request(
             "PUT", f"/api/households/shopping/items/{safe_id(item_id)}", data=updated
         )
         return result if isinstance(result, dict) else updated
 
-    async def clear_checked_shopping(self, list_id: str) -> dict:
-        """Delete every ticked item of one list. Items that vanished meanwhile count as done."""
+    async def clear_checked_shopping(
+        self, list_id: str, expected_ids: list[str] | None = None
+    ) -> dict:
+        """Delete the ticked items of one list. Items that vanished meanwhile count as done.
+
+        With `expected_ids` only those items are deleted, and only while they are still ticked,
+        so an item ticked elsewhere after the user looked is never removed.
+        """
         deleted = 0
         for item in await self.shopping_items(list_id):
             if item.get("checked") is not True or not isinstance(item.get("id"), str):
+                continue
+            if expected_ids is not None and item["id"] not in expected_ids:
                 continue
             try:
                 await self.request(
@@ -666,6 +729,16 @@ class MealieClient:
                     raise
             deleted += 1
         return {"deleted": deleted}
+
+
+def clear_expected_ids(payload: dict) -> list[str] | None:
+    """The optional list of ticked item IDs the user saw when asking to clear them."""
+    if "expected_ids" not in payload:
+        return None
+    ids = payload["expected_ids"]
+    if not isinstance(ids, list) or not 0 < len(ids) <= 1000:
+        raise ValueError("expected_ids must be a list of 1 to 1000 item IDs")
+    return [safe_id(item) for item in ids]
 
 
 def recipe_update_changes(payload: dict) -> tuple[str, dict]:
