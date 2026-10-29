@@ -2,7 +2,7 @@
 
 All notable changes to the Mealie Atelier Bridge are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [semantic versioning](https://semver.org/).
 
-## [0.10.0] - Unreleased
+## [0.10.0] - 2026-10-29
 
 ### Added
 
