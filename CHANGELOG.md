@@ -4,6 +4,11 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
+### Changed
+
+- AI calls without an API key (alternatives, recipe review, nutrition estimate) fail with the error code `ai_not_configured` instead of `invalid_request`, so cards can show their own translated message. Cards that list the codes must add it.
+- The error code `timer_dispatched` is retired: cancelling a timer that was already delivered succeeds, so the Bridge never raises it. Cards must not expect it.
+
 ## [0.10.1] - 2026-10-29
 
 ### Added
@@ -17,7 +22,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 - Cancelling a kitchen timer that already finished or is being delivered succeeds instead of failing, so the card can remove it.
 - Kitchen timer notifications follow the Home Assistant language (German or English).
 - `notify.persistent_notification` is no longer offered as the timer notification service and no longer creates a second notification. `notify.send_message` is rejected, because it can never deliver.
-- Translated validation errors (too many timers, foreign timer, recipe changed, protected nutrition values) reach the card with their own error code instead of `invalid_request`.
+- Translated validation errors (too many timers, foreign timer, recipe changed, protected nutrition values, AI not configured) reach the card with their own error code instead of `invalid_request`.
 - A refused USDA FoodData Central key is reported as `usda_key_invalid` (and an exhausted rate limit as `usda_rate_limited`) instead of a Mealie error.
 - AI alternatives and the AI recipe review answer in the requested language (optional `language` field, else the Home Assistant language) with a matching disclaimer. The status lists `features.ai` so cards can hide the AI review without a key.
 - The photo size limit reads 10 MB in all Bridge messages, like the cards.
