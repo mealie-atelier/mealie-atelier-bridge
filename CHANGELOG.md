@@ -2,6 +2,16 @@
 
 All notable changes to the Mealie Atelier Bridge are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- `mealie_atelier/status` accepts the `entry_id` that a card bound to one entry sends, instead of rejecting the request.
+
+### Changed
+
+- The options explain what the USDA FoodData Central and OpenAI keys are for, what is lost without them and where to get them, with links.
+
 ## [0.10.0] - 2026-10-29
 
 ### Added

@@ -361,3 +361,14 @@ async def test_removing_the_entry_deletes_sync_and_backup_stores(
     await hass.async_block_till_done()
     for key in keys:
         assert key not in hass_storage
+
+
+async def test_status_accepts_the_entry_id_a_configured_card_sends(
+    hass: HomeAssistant,
+    setup_integration: MockConfigEntry,
+    hass_ws_client: WebSocketGenerator,
+):
+    client = await hass_ws_client()
+    response = await send(client, {"type": "mealie_atelier/status", "entry_id": ENTRY_ID})
+    assert response["success"], response
+    assert response["result"]["entries"][0]["entry_id"] == ENTRY_ID

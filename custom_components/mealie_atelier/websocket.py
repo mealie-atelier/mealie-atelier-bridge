@@ -119,7 +119,13 @@ async def _respond(hass, connection, msg, func) -> None:
         _fail(connection, msg, exc)
 
 
-@websocket_api.websocket_command({probatio.Required("type"): "mealie_atelier/status"})
+# Status lists every entry; a card bound to one entry still sends its entry_id, which is ignored.
+@websocket_api.websocket_command(
+    {
+        probatio.Required("type"): "mealie_atelier/status",
+        probatio.Optional("entry_id"): str,
+    }
+)
 @websocket_api.async_response
 async def ws_status(hass, connection, msg):
     entries = []

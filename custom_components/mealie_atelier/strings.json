@@ -70,8 +70,8 @@
           "read_only": "Blocks all changes to recipes, meal plans and shopping lists. Useful for shared tablets.",
           "write_users": "Leave empty to let every Home Assistant user change shopping lists and meal plans. Administrators can always write. Recipe editing stays admin only.",
           "experimental_ingredient_edits": "Lets administrators edit ingredients with linked foods and units. A backup is saved before every change.",
-          "usda_fdc_api_key": "Optional. Free key from USDA FoodData Central, used for nutrition lookup.",
-          "openai_api_key": "Optional. Only used for food search suggestions. Leave empty to disable.",
+          "usda_fdc_api_key": "Optional. Only for the nutrition lab: the Bridge looks up ingredients in the free US food database FoodData Central and calculates nutrients per serving. Without a key only the nutrition lookup is off. Get a free key with your name and email at [fdc.nal.usda.gov/api-key-signup](https://fdc.nal.usda.gov/api-key-signup).",
+          "openai_api_key": "Optional, billed per request. Suggests English search terms for your ingredients in the nutrition lab. Only ingredient text is sent; nutrients always come from FoodData Central. Leave empty to type search terms yourself. Get a key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys).",
           "timer_notify_service": "Optional. A notify service such as notify.mobile_app_your_phone that receives a push message when a kitchen timer ends. Leave empty for in-app notifications only."
         }
       }

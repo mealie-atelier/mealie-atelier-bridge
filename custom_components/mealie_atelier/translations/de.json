@@ -70,8 +70,8 @@
           "read_only": "Verhindert alle Änderungen an Rezepten, Wochenplan und Einkaufslisten. Praktisch für gemeinsam genutzte Tablets.",
           "write_users": "Leer lassen, damit alle Home-Assistant-Nutzer Einkaufslisten und Wochenpläne ändern dürfen. Administratoren dürfen immer schreiben. Rezepte bearbeiten bleibt Administratoren vorbehalten.",
           "experimental_ingredient_edits": "Erlaubt Administratoren, Zutaten mit verknüpften Lebensmitteln und Einheiten zu bearbeiten. Vor jeder Änderung wird ein Backup gespeichert.",
-          "usda_fdc_api_key": "Optional. Kostenloser Key von USDA FoodData Central für den Nährwertabgleich.",
-          "openai_api_key": "Optional. Wird nur für Vorschläge bei der Lebensmittelsuche genutzt. Leer lassen, um es zu deaktivieren.",
+          "usda_fdc_api_key": "Optional. Nur für das Nährwertlabor: Die Bridge sucht damit Zutaten in der freien US-Lebensmitteldatenbank FoodData Central und rechnet Nährwerte pro Portion aus. Ohne Key bleibt nur die Nährwertsuche aus. Den Key gibt es kostenlos mit Name und E-Mail unter [fdc.nal.usda.gov/api-key-signup](https://fdc.nal.usda.gov/api-key-signup).",
+          "openai_api_key": "Optional und pro Anfrage kostenpflichtig. Schlägt im Nährwertlabor passende englische Suchbegriffe für deine Zutaten vor. Gesendet werden nur die Zutatentexte, Nährwerte kommen immer aus FoodData Central. Leer lassen, dann tippst du die Suchbegriffe selbst. Key unter [platform.openai.com/api-keys](https://platform.openai.com/api-keys).",
           "timer_notify_service": "Optional. Ein Notify-Dienst wie notify.mobile_app_dein_handy, der eine Push-Nachricht erhält, wenn ein Küchentimer abläuft. Leer lassen, um nur Hinweise in der App zu bekommen."
         }
       }

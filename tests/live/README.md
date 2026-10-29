@@ -16,6 +16,9 @@ Fictional demo recipes only; never point these scripts at a real household insta
   edit with backup and restore, the structured-editor guard, shopping sync reads, offline replay).
 - Bridge screenshots (setup form, integration page, sync dialogs): `uv run --with playwright python
   tests/live/capture_bridge.py [out-dir] [de|en]`, after `capture_screens.py`.
+- Guide screenshots (Mealie API token page, integration search, Bridge options, card picker, visual
+  editor and one dashboard per card type): `uv run --with playwright python
+  tests/live/capture_guide.py [out-dir] [de|en]`, after `capture_screens.py`.
 - Smart Shopping Sync end to end: `python3 tests/live/sync_live.py`. Syncs throwaway Mealie lists
   into Home Assistant's built-in shopping list (`todo.shopping_list`, no account needed): preview,
   first-batch gate, exactly-once delivery, duplicate skip, the after-add trigger and move mode.
