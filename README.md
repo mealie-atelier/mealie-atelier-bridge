@@ -152,7 +152,7 @@ Mealie Atelier is free, open source and independent. If it makes your kitchen a 
 
 - [Buy me a coffee on Ko-fi](https://ko-fi.com/allesautomatisch)
 - [Become a member of the Alles Automatisch YouTube channel](https://www.youtube.com/@alles-automatisch/join)
-- Star the repository and share your setup in [Show and tell](https://github.com/orgs/mealie-atelier/discussions)
+- Star the repository and share your setup in [Show and tell](https://github.com/orgs/mealie-atelier/discussions/categories/show-and-tell)
 
 ## License
 

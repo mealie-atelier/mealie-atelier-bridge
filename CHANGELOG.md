@@ -19,6 +19,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 - A refused USDA FoodData Central key is reported as `usda_key_invalid` (and an exhausted rate limit as `usda_rate_limited`) instead of a Mealie error.
 - AI alternatives and the AI recipe review answer in the requested language (optional `language` field, else the Home Assistant language) with a matching disclaimer. The status lists `features.ai` so cards can hide the AI review without a key.
 - The photo size limit reads 10 MB in all Bridge messages, like the cards.
+- The security policy, sponsor links, Show and tell link and brand credits wording match the organization defaults. The social preview mark is complete. The changelog links its version headings.
 - A Mealie account can only be set up once, even when it is reachable under two addresses. Existing entries are migrated to an account based id.
 - Existing entries with the old generated title are renamed during the upgrade, and reconfiguring the address renames a generated title too. Administrators stored in the write list are dropped during the upgrade. A list that held only administrators becomes empty, so every user may change data again.
 - Entries are titled `Mealie Atelier Bridge · user@host`, so several servers stay distinguishable. The setup dialogs use the same product name.
@@ -77,3 +78,6 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 ## Earlier history
 
 Before 0.10.0 the repository was an unreleased developer preview with no tagged versions. It contained the initial import of the Bridge source (secure server-side Mealie access, WebSocket commands for recipes, meal plans, shopping lists, nutrition, cooking sessions and timers, optional read-only mode, German and English setup translations), the pasta and tomatoes brand artwork, security and support links, and the first FAQ.
+
+[Unreleased]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/mealie-atelier/mealie-atelier-bridge/releases/tag/v0.10.0
