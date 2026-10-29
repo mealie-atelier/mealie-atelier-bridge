@@ -590,7 +590,8 @@ class MealieClient:
             item = {
                 "shoppingListId": safe_id(payload.get("list_id")),
                 "note": safe_text(payload.get("note"), 250),
-                "quantity": 1,
+                # Free text has no amount. A 1 would show up as "1 <text>" in Mealie.
+                "quantity": 0,
                 "checked": False,
             }
             return await self.request("POST", "/api/households/shopping/items", data=item)

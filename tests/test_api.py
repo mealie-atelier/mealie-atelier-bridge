@@ -111,6 +111,8 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
                 )
             if path == "/api/households/shopping/items/item-1" and request.method == "PUT":
                 return web.json_response(data)
+            if path == "/api/households/shopping/items" and request.method == "POST":
+                return web.json_response(data)
             if path == "/api/households/shopping/items" and request.method == "GET":
                 return web.json_response(
                     {
@@ -197,6 +199,14 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
             await self.client.mutate(
                 "shopping_from_recipe", {"list_id": "../secret", "recipe_id": "recipe-1"}
             )
+
+    async def test_free_text_shopping_item_has_no_forced_quantity_of_one(self):
+        await self.client.mutate("shopping_add", {"list_id": "list-1", "note": "Oat milk"})
+        body = self.calls[-1]["body"]
+        self.assertEqual(self.calls[-1]["method"], "POST")
+        self.assertEqual(body["note"], "Oat milk")
+        self.assertNotEqual(body["quantity"], 1)
+        self.assertEqual(body["quantity"], 0)
 
     async def test_shopping_update_keeps_the_other_fields(self):
         item = await self.client.mutate(

@@ -69,3 +69,11 @@ def test_sync_screenshots_keep_their_size() -> None:
         width = int.from_bytes(data[26:28], "little") & 0x3FFF
         height = int.from_bytes(data[28:30], "little") & 0x3FFF
         assert (width, height) == (1440, 960), name
+
+
+def test_websocket_doc_does_not_claim_fallback_codes_never_carry_a_translation_key() -> None:
+    doc = (ROOT / "docs" / "WEBSOCKET_API.md").read_text(encoding="utf-8")
+    assert "carry no `translation_key`" not in doc
+    assert "never by `translation_key`" in doc
+    for action in ("shopping_update", "shopping_delete", "shopping_clear_checked", "expected_ids"):
+        assert action in doc

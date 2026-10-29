@@ -44,3 +44,29 @@ def test_german_terms_agree_between_bridge_and_cards(pattern: str, term: str) ->
 def test_both_repositories_use_the_backup_term() -> None:
     for path in (BRIDGE_DE, CARDS_DE):
         assert any("Backup" in text for text in _texts(json.loads(path.read_text())))
+
+
+BRIDGE_DIR = ROOT / "custom_components" / "mealie_atelier" / "translations"
+CARDS_DIR = CARDS / "src" / "i18n"
+# Shopping codes the Bridge sends and the cards show: both repositories tell the same first sentence.
+SHARED_CODES = [
+    ("offline_conflict", "errOfflineConflict"),
+    ("shopping_item_not_found", "errShoppingItemNotFound"),
+]
+
+
+def _first_sentence(text: str) -> str:
+    return re.split(r"(?<=[.!?])\s", text.strip(), maxsplit=1)[0]
+
+
+@pytest.mark.skipif(not CARDS_DE.is_file(), reason="cards repository not found next to the Bridge")
+@pytest.mark.parametrize("language", ["de", "en"])
+@pytest.mark.parametrize(("code", "key"), SHARED_CODES)
+def test_shopping_error_codes_use_the_same_wording_in_both_repositories(
+    language: str, code: str, key: str
+) -> None:
+    bridge = json.loads((BRIDGE_DIR / f"{language}.json").read_text())["exceptions"][code][
+        "message"
+    ]
+    cards = json.loads((CARDS_DIR / f"{language}.json").read_text())[key]
+    assert _first_sentence(bridge) == _first_sentence(cards)
