@@ -2,7 +2,7 @@
 
 <h1 align="center">Mealie Atelier Bridge</h1>
 
-<p align="center"><strong>The Home Assistant integration behind Mealie Atelier.</strong><br>It keeps your Mealie token on the server and gives the Atelier cards recipe editing with backups, per-user write grants, offline shopping and Smart Shopping Sync to any To-do list, such as Bring!.</p>
+<p align="center"><strong>The Home Assistant integration behind Mealie Atelier.</strong><br>It keeps your Mealie token on the server and gives the Atelier cards recipe editing with backups, per-user write grants, offline shopping and Smart Shopping Sync to any to-do list, such as Bring!.</p>
 
 <p align="center">
 <a href="https://github.com/mealie-atelier/mealie-atelier-bridge/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/mealie-atelier/mealie-atelier-bridge?style=flat-square&color=75465d"></a>
@@ -35,7 +35,7 @@ The [Atelier Cards](https://github.com/mealie-atelier/mealie-atelier-cards) can 
 | Recipe editor with backups and restore | | ✓ |
 | Per-user write grants and read-only mode | | ✓ |
 | Offline shopping, replayed exactly once | | ✓ |
-| Smart Shopping Sync to a To-do list | | ✓ |
+| Smart Shopping Sync to a to-do list | | ✓ |
 | Cooking timers that notify after the browser closes | | ✓ |
 
 ## Install
@@ -104,7 +104,7 @@ Send what you need from a Mealie shopping list to the list your household actual
 
 <p align="center"><img width="440" alt="Shopping sync rule with its state and actions" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/sync-status.webp"> <img width="440" alt="Sync rule editor with source list, destination list and copy or move mode" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/sync-setup.webp"></p>
 
-1. Set up the destination through its own integration first, so it appears as a To-do list. The Bridge never asks for Bring credentials.
+1. Set up the destination through its own integration first, so it appears as a to-do list. The Bridge never asks for Bring credentials.
 2. As an administrator, open the Atelier shopping view and add a sync rule: Mealie source list, To-do destination, **Copy** or **Move**, when to sync and how to handle duplicates.
 3. Check the preview and send the first batch. Nothing syncs on its own before this confirmation.
 
