@@ -75,20 +75,18 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.config_entries.async_update_entry(entry, version=2)
         else:
             hass.config_entries.async_update_entry(entry, unique_id=account_id, version=2)
-        await _retitle_legacy_entry(hass, entry)
         await _drop_admin_write_grants(hass, entry)
     return True
 
 
-async def _retitle_legacy_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Rename a generated "Mealie Atelier · user" title.
+def _retitle_legacy_entry(hass: HomeAssistant, entry: ConfigEntry, username: str) -> None:
+    """Rename the exact title the legacy config flow generated for this account.
 
-    The legacy generator stored no marker, so a custom title of exactly that shape cannot be
-    told apart from a generated one. Every other title the user chose stays.
+    Only "Mealie Atelier · <username>" (or its "Kitchen" fallback) is replaced. Any other title,
+    including a custom one of the same shape, stays.
     """
-    prefix = "Mealie Atelier · "
-    username = entry.title.removeprefix(prefix)
-    if entry.title.startswith(prefix) and username and "@" not in username:
+    legacy = {f"Mealie Atelier · {username}", "Mealie Atelier · Kitchen"}
+    if entry.title in legacy:
         hass.config_entries.async_update_entry(
             entry, title=entry_title(entry.data[CONF_URL], username)
         )
@@ -123,7 +121,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry
         entry.data.get(CONF_VERIFY_SSL, True),
     )
     try:
-        await client.check_connection()
+        account = await client.check_connection()
     except MealieAuthError as exc:
         raise ConfigEntryAuthFailed(
             translation_domain=DOMAIN, translation_key="auth_failed"
@@ -134,6 +132,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry
             translation_key="cannot_connect",
             translation_placeholders={"error": _failure_detail(exc)},
         ) from exc
+    _retitle_legacy_entry(hass, entry, account.get("username", "Kitchen"))
     # Load everything that can fail before starting background work, so a failed setup
     # leaves no timer or sync task running.
     backups = await RecipeBackupStore.async_load(hass, entry.entry_id)

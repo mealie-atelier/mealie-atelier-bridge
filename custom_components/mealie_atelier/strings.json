@@ -70,7 +70,7 @@
         },
         "data_description": {
           "read_only": "Blocks all changes to recipes, meal plans and shopping lists. Useful for shared tablets.",
-          "write_users": "Leave empty to let every Home Assistant user change shopping lists and meal plans. If you select at least one user, only the selected users and administrators can write. Administrators can always write, so they are not listed. Recipe editing stays admin only.",
+          "write_users": "Leave empty to let every Home Assistant user change shopping lists and meal plans. If you select at least one user, only the selected users and administrators can write. Administrators can always write. Select only administrators to allow administrators alone. Recipe editing stays admin only.",
           "experimental_ingredient_edits": "Lets administrators edit ingredients with linked foods and units. A backup is saved before every change.",
           "usda_fdc_api_key": "Optional. Only for the nutrition lab: the Bridge looks up ingredients in the free US food database FoodData Central and calculates nutrients per serving. For security the field never shows a saved key: leave it empty to keep it. Without a key only the nutrition lookup is off. Get a free key with your name and email at [fdc.nal.usda.gov/api-key-signup]({usda_signup_url}).",
           "clear_fdc_key": "Enable this and save to remove the key.",

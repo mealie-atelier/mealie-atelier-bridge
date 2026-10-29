@@ -26,8 +26,8 @@ MAX_ACTIVE_TIMERS_PER_USER = 20
 
 # Delivery text per Home Assistant language: (title, message template). Anything but German is English.
 _TEXTS = {
-    "de": ("Mealie Atelier · Küchentimer", "{label} ist fertig!"),
-    "en": ("Mealie Atelier · Kitchen timer", "{label} is ready!"),
+    "de": ("Mealie Atelier Bridge · Küchentimer", "{label} ist fertig!"),
+    "en": ("Mealie Atelier Bridge · Kitchen timer", "{label} is ready!"),
 }
 
 

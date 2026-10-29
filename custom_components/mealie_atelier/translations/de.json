@@ -70,7 +70,7 @@
         },
         "data_description": {
           "read_only": "Verhindert alle Änderungen an Rezepten, Wochenplan und Einkaufslisten. Praktisch für gemeinsam genutzte Tablets.",
-          "write_users": "Leer lassen, damit alle Home-Assistant-Nutzer Einkaufslisten und Wochenpläne ändern dürfen. Wählst du mindestens einen Nutzer aus, dürfen nur die Ausgewählten und Administratoren schreiben. Administratoren dürfen immer schreiben und stehen deshalb nicht in der Liste. Rezepte bearbeiten bleibt Administratoren vorbehalten.",
+          "write_users": "Leer lassen, damit alle Home-Assistant-Nutzer Einkaufslisten und Wochenpläne ändern dürfen. Wählst du mindestens einen Nutzer aus, dürfen nur die Ausgewählten und Administratoren schreiben. Administratoren dürfen immer schreiben. Wähle nur Administratoren aus, damit ausschließlich Administratoren schreiben dürfen. Rezepte bearbeiten bleibt Administratoren vorbehalten.",
           "experimental_ingredient_edits": "Erlaubt Administratoren, Zutaten mit verknüpften Lebensmitteln und Einheiten zu bearbeiten. Vor jeder Änderung wird eine Sicherung gespeichert.",
           "usda_fdc_api_key": "Optional. Nur für das Nährwertlabor: Die Bridge sucht damit Zutaten in der freien US-Lebensmitteldatenbank FoodData Central und rechnet Nährwerte pro Portion aus. Aus Sicherheitsgründen zeigt das Feld einen gespeicherten Key nicht an: Leer lassen behält ihn. Ohne Key bleibt nur die Nährwertsuche aus. Den Key gibt es kostenlos mit Name und E-Mail unter [fdc.nal.usda.gov/api-key-signup]({usda_signup_url}).",
           "clear_fdc_key": "Aktiviere das und speichere, um den Key zu löschen.",
