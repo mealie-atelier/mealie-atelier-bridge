@@ -34,7 +34,8 @@ _WORD = r"[^\W\d_]+"
 _TOKEN = rf"(?:{_WORD}-)*Token\b"
 _ADVERB = "neu|sehr|bereits|schon|noch|frisch|zuletzt|gerade|ganz|vollständig|erst|nun|nur|auch"
 _BRAND = rf"(?: (?:{_ADVERB})| [a-zäöüß]+en| [A-ZÄÖÜ]{_WORD}| [A-ZÄÖÜ]{_WORD}-{_WORD})*"
-_PHRASE = rf" (?:in|aus|von|bei|für|per|über|auf|an)(?: [a-zäöüß]+)? [A-ZÄÖÜ]{_WORD}"
+_PHRASE = rf" (?:in|im|aus|von|vom|bei|für|per|über|auf|an|unter|mit|nach)(?: [a-zäöüß]+)? [A-ZÄÖÜ]{_WORD}"
+_LEAD = rf"(?:{_PHRASE}| (?:{_ADVERB})| [a-zäöüß]+en| [A-ZÄÖÜ]{_WORD}| [A-ZÄÖÜ]{_WORD}-{_WORD})*"
 # A capitalised adjective in -er that opens a sentence, a label or a list item can only be the
 # masculine nominative ("Ungültiger Token", "Fehler: Neuer API-Token"), never a genitive plural.
 _NOUNS_IN_ER = {"server", "fehler", "nutzer", "benutzer", "zähler", "zeiger", "player"}
@@ -43,10 +44,12 @@ _OPENING = re.compile(
 )
 _ACCUSATIVE = re.compile(
     r"\b(?i:den|einen|keinen|deinen|meinen|seinen|ihren|unseren|diesen|jeden|welchen)"
-    rf"{_BRAND} {_TOKEN}"
-    r"|\b(?i:ohne|für|gegen|durch|um|bis|pro|wider)(?: [a-zäöüß]+en)+ "
+    rf"{_LEAD} {_TOKEN}"
+    r"|\b(?i:ohne|für|gegen|durch|um|bis|pro|wider)"
+    + rf"(?:{_PHRASE})?(?: [a-zäöüß]+en)+ "
     + _TOKEN
-    + r"|\b(?i:ein|kein|dein|mein|sein|ihr|unser)(?: [a-zäöüß]+er)+ "
+    + r"|\b(?i:ein|kein|dein|mein|sein|ihr|unser)"
+    + rf"(?:{_PHRASE})?(?: [a-zäöüß]+er)+ "
     + _TOKEN
     + r"|\b(?i:jeder)(?: [a-zäöüß]+e)* "
     + _TOKEN
@@ -178,6 +181,12 @@ def test_shopping_error_codes_use_the_same_wording_in_both_repositories(
         "Speichere den neu erzeugten Token",
         "Der in Mealie erzeugte Token fehlt",
         "Hier der Token für Mealie",
+        "Prüfe den in Mealie erstellten Token.",
+        "Kopiere den von Mealie erzeugten Token",
+        "Erstelle einen in Mealie gültigen Token",
+        "Ohne in Mealie erzeugten Token",
+        "Ein in Mealie erzeugter Token fehlt",
+        "Den unter Profil erstellten API-Token einfügen",
     ],
 )
 def test_masculine_token_pattern_catches_the_masculine_forms(text: str) -> None:
