@@ -21,6 +21,8 @@
 
 <p align="center"><img width="900" alt="Mealie Atelier kitchen overview in a Home Assistant dashboard, light theme" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-cards/main/assets/screens/dashboard-light.webp"></p>
 
+<p align="center"><sub><a href="#why-a-bridge">Why a Bridge</a> · <a href="#install">Install</a> · <a href="#configuration-reference">Configuration</a> · <a href="#smart-shopping-sync">Smart Shopping Sync</a> · <a href="#security">Security</a> · <a href="#documentation">Docs</a> · <a href="#development">Development</a> · <a href="#support-the-project">Support</a></sub></p>
+
 ## Why a Bridge
 
 The [Atelier Cards](https://github.com/mealie-atelier/mealie-atelier-cards) can already browse recipes through Home Assistant's built-in [Mealie integration](https://www.home-assistant.io/integrations/mealie/). The Bridge adds everything that needs a trusted server side. It complements the built-in integration and does not replace it.
@@ -38,21 +40,63 @@ The [Atelier Cards](https://github.com/mealie-atelier/mealie-atelier-cards) can 
 
 ## Install
 
-**1. Download.** The Bridge is submitted to the default catalog used by the Home Assistant Marketplace (Home Assistant 2026.11 and newer) and HACS. Until it is listed, add it to HACS as a custom repository of type **Integration**:
+Requirements: Home Assistant 2026.10 or newer and a Mealie server that Home Assistant can reach.
+
+### 1. Download the integration
+
+The Bridge is submitted to the default catalog (`hacs/default`) that the Home Assistant Marketplace and HACS both read. Pick one route:
+
+| Route | Steps |
+| --- | --- |
+| **Home Assistant Marketplace** (Home Assistant 2026.11 and newer) | Open the Marketplace, search for **Mealie Atelier Bridge** and download it. Available as soon as the catalog listing is merged. |
+| **HACS custom repository** (available now) | Add the repository as a custom repository of type **Integration**, then download it. The button below does this in one click. |
+| **Manual** | Download the source of the [latest release](https://github.com/mealie-atelier/mealie-atelier-bridge/releases/latest) and copy `custom_components/mealie_atelier` into the `custom_components` folder of your configuration. |
 
 [![Open the repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=mealie-atelier&repository=mealie-atelier-bridge&category=integration)
 
-Download **Mealie Atelier Bridge** and restart Home Assistant. Manual install works too: copy `custom_components/mealie_atelier` into your configuration's `custom_components` folder.
+Restart Home Assistant after the download.
 
-**2. Connect Mealie.** Add the integration and enter the Mealie address Home Assistant can reach and a Mealie API token (Mealie: **User profile → API Tokens**).
+### 2. Connect Mealie
+
+Add the integration and enter the Mealie address Home Assistant can reach and a Mealie API token (Mealie: **User profile → API Tokens**).
 
 [![Add the integration to Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=mealie_atelier)
 
 <p align="center"><img width="440" alt="Setup form asking for the Mealie server URL and API token" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/setup.webp"> <img width="440" alt="Mealie Atelier Bridge on the Home Assistant integration page" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/integration.webp"></p>
 
-**3. Add the cards.** Install [Mealie Atelier Cards](https://github.com/mealie-atelier/mealie-atelier-cards) and add a **Mealie Atelier** card to a dashboard. The card finds the Bridge on its own.
+### 3. Add the cards
 
-The integration options (**Settings → Devices & services → Mealie Atelier Bridge → Configure**) set read-only mode, which Home Assistant users may change data, structured ingredient editing, the timer notification service and the optional nutrition lookup keys (USDA, OpenAI). Every option is explained in the [installation guide](docs/INSTALLATION.md). Step-by-step guides in German: [setup](https://alles-automatisch.de/lernen/mealie-atelier-einrichten) and [troubleshooting](https://alles-automatisch.de/lernen/mealie-atelier-fehlerbehebung).
+Install [Mealie Atelier Cards](https://github.com/mealie-atelier/mealie-atelier-cards) and add a **Mealie Atelier** card to a dashboard. The card finds the Bridge on its own.
+
+Step-by-step guides in German: [setup](https://alles-automatisch.de/lernen/mealie-atelier-einrichten) and [troubleshooting](https://alles-automatisch.de/lernen/mealie-atelier-fehlerbehebung). The full English walkthrough is the [installation guide](docs/INSTALLATION.md).
+
+## Configuration reference
+
+<details>
+<summary>Setup form and integration options</summary>
+
+**Setup form**
+
+| Field | Meaning |
+| --- | --- |
+| Mealie server URL | The direct address Home Assistant can reach, with `http://` or `https://` and the port. No `/login` or `/api` path, no ingress URL, no credentials in the URL. |
+| Mealie API token | Created in Mealie under **User profile → API Tokens**. Stored in the Home Assistant config entry and never sent to the browser. |
+| Verify TLS certificate | On by default. Turn it off only on a trusted private network with a self-signed certificate. |
+
+**Options** (**Settings → Devices & services → Mealie Atelier Bridge → Configure**)
+
+| Option | Meaning |
+| --- | --- |
+| Read-only mode | Blocks all changes to recipes, meal plans and shopping lists. It wins over every write grant. |
+| Users allowed to change data | Limits shopping list and meal plan changes to the chosen Home Assistant users. Empty means every user. Administrators can always write, and recipe editing stays admin only. |
+| Structured ingredient editing | Lets administrators edit ingredients with linked foods and units. A backup is saved before every change. |
+| USDA FoodData Central API key | Optional. Free key for nutrition lookup. |
+| OpenAI API key | Optional. Only used for food search suggestions. |
+| Timer notification service | Optional. A notify service such as `notify.mobile_app_your_phone` that gets a push message when a kitchen timer ends. |
+
+Re-authentication and **Reconfigure** are available from the integration page. Details and troubleshooting are in the [installation guide](docs/INSTALLATION.md).
+
+</details>
 
 ## Smart Shopping Sync
 
@@ -75,6 +119,18 @@ Send what you need from a Mealie shopping list to the list your household actual
 
 Found a vulnerability? Please report it privately, see the [security policy](.github/SECURITY.md).
 
+## Documentation
+
+| Topic | Where |
+| --- | --- |
+| Installation and options | [docs/INSTALLATION.md](docs/INSTALLATION.md) |
+| Shopping sync behavior and guarantees | [docs/SMART_SHOPPING_SYNC.md](docs/SMART_SHOPPING_SYNC.md) |
+| Questions and answers | [docs/FAQ.md](docs/FAQ.md) |
+| Changes per version | [CHANGELOG.md](CHANGELOG.md) |
+| Dashboard cards and standalone app | [Mealie Atelier Cards](https://github.com/mealie-atelier/mealie-atelier-cards#readme) |
+| Live demo | [mealie.alles-automatisch.de](https://mealie.alles-automatisch.de) |
+| Guides (German) | [alles-automatisch.de/lernen/mealie-atelier](https://alles-automatisch.de/lernen/mealie-atelier) |
+
 ## Development
 
 ```sh
@@ -84,7 +140,7 @@ uv run ruff check && uv run ruff format --check
 git config core.hooksPath .githooks
 ```
 
-Live acceptance tests run against disposable Mealie and Home Assistant containers with fictional data: smoke tests, browser checks of the cards, the shopping sync end to end and the screenshots in this README. See [`tests/live/README.md`](tests/live/README.md). Changes are listed in the [changelog](CHANGELOG.md), contribution rules in [CONTRIBUTING.md](CONTRIBUTING.md), common questions in the [FAQ](docs/FAQ.md).
+Live acceptance tests run against disposable Mealie and Home Assistant containers with fictional data: smoke tests, browser checks of the cards, the shopping sync end to end and the screenshots in this README. See [`tests/live/README.md`](tests/live/README.md). Contribution rules are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Support the project
 
