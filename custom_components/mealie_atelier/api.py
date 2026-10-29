@@ -9,7 +9,7 @@ from urllib.parse import quote, urlsplit
 
 import aiohttp
 
-from .const import MAX_PAGE_SIZE, UPLOAD_MAX_BYTES
+from .const import MAX_PAGE_SIZE, MAX_PARALLEL_REQUESTS, UPLOAD_MAX_BYTES
 from .errors import structured_editor_required
 
 _RECIPE_SLUG = re.compile(r"^[\w\-]{1,150}$", re.ASCII)
@@ -108,6 +108,9 @@ class MealieClient:
             raise ValueError("Enter an http(s) URL without credentials, query or fragment")
         self.url = url.rstrip("/")
         self._session = session
+        # Mealie stops answering for good once its database pool runs dry (about 30 parallel
+        # requests on 3.x), and a tablet with several cards easily sends that many at once.
+        self._slots = asyncio.Semaphore(MAX_PARALLEL_REQUESTS)
         self._token = token
         self._verify_ssl = verify_ssl
 
@@ -122,16 +125,22 @@ class MealieClient:
             raise ValueError("Unsupported request")
         timeout = aiohttp.ClientTimeout(total=25)
         try:
-            async with self._session.request(
-                method,
-                f"{self.url}{path}",
-                headers={"Authorization": f"Bearer {self._token}", "Accept": "application/json"},
-                params=params,
-                json=data,
-                ssl=self._verify_ssl,
-                allow_redirects=False,
-                timeout=timeout,
-            ) as response:
+            async with (
+                self._slots,
+                self._session.request(
+                    method,
+                    f"{self.url}{path}",
+                    headers={
+                        "Authorization": f"Bearer {self._token}",
+                        "Accept": "application/json",
+                    },
+                    params=params,
+                    json=data,
+                    ssl=self._verify_ssl,
+                    allow_redirects=False,
+                    timeout=timeout,
+                ) as response,
+            ):
                 if response.status in (401, 403):
                     raise MealieAuthError(
                         "Mealie refused access: verify API token and permissions",
@@ -154,13 +163,16 @@ class MealieClient:
         """Small images only; no redirect and no media path injection."""
         path = f"/api/media/recipes/{safe_id(recipe_id)}/images/min-original.webp"
         try:
-            async with self._session.get(
-                f"{self.url}{path}",
-                headers={"Authorization": f"Bearer {self._token}"},
-                ssl=self._verify_ssl,
-                allow_redirects=False,
-                timeout=aiohttp.ClientTimeout(total=15),
-            ) as response:
+            async with (
+                self._slots,
+                self._session.get(
+                    f"{self.url}{path}",
+                    headers={"Authorization": f"Bearer {self._token}"},
+                    ssl=self._verify_ssl,
+                    allow_redirects=False,
+                    timeout=aiohttp.ClientTimeout(total=15),
+                ) as response,
+            ):
                 if response.status == 404:
                     return None
                 if response.status != 200 or response.content_type != "image/webp":
@@ -185,13 +197,16 @@ class MealieClient:
             raise ValueError("Invalid recipe asset")
         path = f"/api/media/recipes/{recipe}/assets/{quote(filename, safe='.-_')}"
         try:
-            async with self._session.get(
-                f"{self.url}{path}",
-                headers={"Authorization": f"Bearer {self._token}"},
-                ssl=self._verify_ssl,
-                allow_redirects=False,
-                timeout=aiohttp.ClientTimeout(total=15),
-            ) as response:
+            async with (
+                self._slots,
+                self._session.get(
+                    f"{self.url}{path}",
+                    headers={"Authorization": f"Bearer {self._token}"},
+                    ssl=self._verify_ssl,
+                    allow_redirects=False,
+                    timeout=aiohttp.ClientTimeout(total=15),
+                ) as response,
+            ):
                 if response.status == 404:
                     return None
                 if response.status != 200:
@@ -218,14 +233,20 @@ class MealieClient:
         form.add_field("image", image, filename=f"photo.{ext}", content_type=content_type)
         form.add_field("extension", ext)
         try:
-            async with self._session.put(
-                f"{self.url}/api/recipes/{safe_slug(slug)}/image",
-                headers={"Authorization": f"Bearer {self._token}", "Accept": "application/json"},
-                data=form,
-                ssl=self._verify_ssl,
-                allow_redirects=False,
-                timeout=aiohttp.ClientTimeout(total=35),
-            ) as response:
+            async with (
+                self._slots,
+                self._session.put(
+                    f"{self.url}/api/recipes/{safe_slug(slug)}/image",
+                    headers={
+                        "Authorization": f"Bearer {self._token}",
+                        "Accept": "application/json",
+                    },
+                    data=form,
+                    ssl=self._verify_ssl,
+                    allow_redirects=False,
+                    timeout=aiohttp.ClientTimeout(total=35),
+                ) as response,
+            ):
                 if response.status != 200:
                     raise MealieError(f"Mealie rejected photo (HTTP {response.status})")
                 return await response.json()
@@ -241,14 +262,20 @@ class MealieClient:
         form.add_field("extension", ext)
         form.add_field("file", data, filename=f"{name}.{ext}", content_type=content_type)
         try:
-            async with self._session.post(
-                f"{self.url}/api/recipes/{safe_slug(slug)}/assets",
-                headers={"Authorization": f"Bearer {self._token}", "Accept": "application/json"},
-                data=form,
-                ssl=self._verify_ssl,
-                allow_redirects=False,
-                timeout=aiohttp.ClientTimeout(total=35),
-            ) as response:
+            async with (
+                self._slots,
+                self._session.post(
+                    f"{self.url}/api/recipes/{safe_slug(slug)}/assets",
+                    headers={
+                        "Authorization": f"Bearer {self._token}",
+                        "Accept": "application/json",
+                    },
+                    data=form,
+                    ssl=self._verify_ssl,
+                    allow_redirects=False,
+                    timeout=aiohttp.ClientTimeout(total=35),
+                ) as response,
+            ):
                 if response.status >= 300:
                     raise MealieError(f"Mealie rejected photo (HTTP {response.status})")
                 asset = await response.json()
@@ -267,13 +294,16 @@ class MealieClient:
         """Backup original photo before replacing it. Fail closed on missing original."""
         url = f"{self.url}/api/media/recipes/{safe_id(recipe_id)}/images/original.webp"
         try:
-            async with self._session.get(
-                url,
-                headers={"Authorization": f"Bearer {self._token}"},
-                ssl=self._verify_ssl,
-                allow_redirects=False,
-                timeout=aiohttp.ClientTimeout(total=20),
-            ) as response:
+            async with (
+                self._slots,
+                self._session.get(
+                    url,
+                    headers={"Authorization": f"Bearer {self._token}"},
+                    ssl=self._verify_ssl,
+                    allow_redirects=False,
+                    timeout=aiohttp.ClientTimeout(total=20),
+                ) as response,
+            ):
                 if response.status != 200 or response.content_type != "image/webp":
                     raise MealieError("Could not back up original photo")
                 payload = await read_capped(response.content, UPLOAD_MAX_BYTES)

@@ -1,8 +1,8 @@
 """Live acceptance test of Smart Shopping Sync against the disposable rig (fictional data only).
 
 Usage: python3 tests/live/sync_live.py [ha-url] [mealie-url]
-Syncs a throwaway Mealie list into Home Assistant's built-in shopping list (`todo.shopping_list`)
-and checks the preview, the first-batch gate, exact-once delivery, duplicate skipping, the
+Syncs a throwaway Mealie list into Home Assistant's built-in shopping list (`todo.shopping_list`,
+or the To-do entity named in `SYNC_TODO`, for example a dedicated Bring test list) and checks the preview, the first-batch gate, exact-once delivery, duplicate skipping, the
 after-add trigger and move mode. Every list, rule and To-do item it creates is removed again.
 """
 
@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import sys
 import time
 import urllib.request
@@ -22,7 +23,7 @@ from smoke import Smoke
 HERE = Path(__file__).parent
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:18123"
 MEALIE = sys.argv[2] if len(sys.argv) > 2 else "http://localhost:19925"
-TODO = "todo.shopping_list"
+TODO = os.environ.get("SYNC_TODO", "todo.shopping_list")
 PREFIX = "Live sync"
 
 
@@ -227,13 +228,16 @@ async def move_rule(check: SyncCheck, tag: str) -> None:
 
 async def cleanup(check: SyncCheck) -> None:
     leftovers = [
-        item["uid"] for item in await check.todo_items() if item["summary"].startswith(PREFIX)
+        # Bring puts the quantity in front ("1 Live sync basil"), so match anywhere in the title.
+        item["uid"]
+        for item in await check.todo_items()
+        if PREFIX in item["summary"]
     ]
     if leftovers:
         await check.todo("remove_item", {"item": leftovers})
     check.check(
         "To-do list is clean again",
-        not any(t.startswith(PREFIX) for t in await check.todo_titles()),
+        not any(PREFIX in t for t in await check.todo_titles()),
     )
 
 

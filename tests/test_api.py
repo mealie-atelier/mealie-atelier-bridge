@@ -12,6 +12,7 @@ import unittest
 import pytest
 from aiohttp import ClientSession, web
 
+from custom_components.mealie_atelier.const import MAX_PARALLEL_REQUESTS
 from custom_components.mealie_atelier.errors import AtelierError
 from custom_components.mealie_atelier.api import (
     MealieClient,
@@ -231,3 +232,42 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@pytest.mark.usefixtures("socket_enabled")
+class ParallelLimitTests(unittest.IsolatedAsyncioTestCase):
+    """Mealie hangs for good once too many requests arrive at once, so the client queues them."""
+
+    async def asyncSetUp(self):
+        self.in_flight = 0
+        self.peak = 0
+
+        async def handler(request):
+            self.in_flight += 1
+            self.peak = max(self.peak, self.in_flight)
+            await asyncio.sleep(0.02)
+            self.in_flight -= 1
+            if request.path.startswith("/api/media/"):
+                return web.Response(body=b"RIFF0000WEBP", content_type="image/webp")
+            return web.json_response({"items": []})
+
+        app = web.Application()
+        app.router.add_route("*", "/{tail:.*}", handler)
+        self.runner = web.AppRunner(app)
+        await self.runner.setup()
+        site = web.TCPSite(self.runner, "127.0.0.1", 0)
+        await site.start()
+        port = site._server.sockets[0].getsockname()[1]
+        self.session = ClientSession()
+        self.client = MealieClient(self.session, f"http://127.0.0.1:{port}", "MOCK_TOKEN")
+
+    async def asyncTearDown(self):
+        await self.session.close()
+        await self.runner.cleanup()
+
+    async def test_parallel_requests_are_capped(self):
+        calls = [self.client.request("GET", "/api/recipes") for _ in range(30)]
+        calls += [self.client.image("recipe-1") for _ in range(30)]
+        results = await asyncio.gather(*calls)
+        self.assertEqual(len(results), 60)
+        self.assertEqual(self.peak, MAX_PARALLEL_REQUESTS)

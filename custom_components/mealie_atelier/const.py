@@ -15,6 +15,8 @@ OPENAI_KEYS_URL = "https://platform.openai.com/api-keys"
 USDA_SIGNUP_URL = "https://fdc.nal.usda.gov/api-key-signup"
 DEFAULT_TIMEOUT = 20
 MAX_PAGE_SIZE = 60
+# Requests one entry sends to Mealie at the same time; the rest wait their turn.
+MAX_PARALLEL_REQUESTS = 6
 MAX_BODY_LENGTH = 10000
 
 # Recipe photos and the backups taken before every recipe write.
