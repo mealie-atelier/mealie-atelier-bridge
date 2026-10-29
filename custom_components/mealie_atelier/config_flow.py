@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 import aiohttp
 import voluptuous as vol
@@ -43,8 +44,26 @@ async def _validate(
     hass: HomeAssistant, url: str, token: str, verify_ssl: bool
 ) -> tuple[MealieClient, dict[str, Any]]:
     """Connect to Mealie and return the normalized client plus the account it belongs to."""
-    client = MealieClient(async_get_clientsession(hass), url.strip(), token.strip(), verify_ssl)
+    client = MealieClient(async_get_clientsession(hass), _clean_url(url), token.strip(), verify_ssl)
     return client, await client.check_connection()
+
+
+# Path segments a browser address carries but the API base address must not.
+_NON_BASE_SEGMENTS = frozenset({"login", "api", "g"})
+
+
+def _clean_url(url: str) -> str:
+    """Cut a pasted browser address (/login, /g/home, /api/docs) back to the server base."""
+    url = url.strip()
+    parts = urlsplit(url)
+    segments = parts.path.split("/")
+    for index, segment in enumerate(segments):
+        if segment.casefold() in _NON_BASE_SEGMENTS:
+            segments = segments[:index]
+            break
+    else:
+        return url
+    return urlunsplit((parts.scheme, parts.netloc, "/".join(segments), parts.query, parts.fragment))
 
 
 def _error_key(error: Exception) -> str:
@@ -58,19 +77,34 @@ def _error_key(error: Exception) -> str:
     return "unknown"
 
 
-def _unique_id(client: MealieClient, account: Mapping[str, Any]) -> str:
-    return f"{client.url.casefold()}:{account['id']}"
+def _unique_id(account: Mapping[str, Any]) -> str:
+    """One entry per Mealie account, however many addresses reach the server."""
+    return str(account["id"])
+
+
+def account_id_of(unique_id: str | None) -> str:
+    """Account id of a unique id, also of the legacy "<url>:<account id>" form."""
+    return str(unique_id).rsplit(":", 1)[-1]
+
+
+def _entry_title(client: MealieClient, account: Mapping[str, Any]) -> str:
+    """Name the user and the server, since every default Mealie user is called admin."""
+    host = urlsplit(client.url).netloc
+    return f"Mealie Atelier Bridge · {account.get('username', 'Kitchen')}@{host}"
 
 
 # Explicit password selector so masking does not depend on frontend name heuristics.
 SECRET_SELECTOR = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
+CONF_CLEAR_FDC_KEY = "clear_fdc_key"
+CONF_CLEAR_AI_KEY = "clear_ai_key"
+_CLEARABLE_KEYS = ((CONF_FDC_KEY, CONF_CLEAR_FDC_KEY), (CONF_AI_KEY, CONF_CLEAR_AI_KEY))
 NOTIFY_SERVICE_RE = re.compile(r"notify\.[a-z0-9_]+")
 
 
 class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Set up a secure, server-side connection to Mealie."""
 
-    VERSION = 1
+    VERSION = 2
 
     @staticmethod
     @callback
@@ -91,10 +125,10 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except Exception as error:  # noqa: BLE001
                 errors["base"] = _error_key(error)
             else:
-                await self.async_set_unique_id(_unique_id(client, account))
+                await self.async_set_unique_id(_unique_id(account))
                 self._abort_if_unique_id_configured()
                 return self.async_create_entry(
-                    title=f"Mealie Atelier · {account.get('username', 'Kitchen')}",
+                    title=_entry_title(client, account),
                     data={
                         CONF_URL: client.url,
                         CONF_API_TOKEN: user_input[CONF_API_TOKEN].strip(),
@@ -126,7 +160,7 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             try:
-                client, account = await _validate(
+                _client, account = await _validate(
                     self.hass,
                     entry.data[CONF_URL],
                     user_input[CONF_API_TOKEN],
@@ -135,7 +169,7 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except Exception as error:  # noqa: BLE001
                 errors["base"] = _error_key(error)
             else:
-                if _unique_id(client, account) != entry.unique_id:
+                if _unique_id(account) != account_id_of(entry.unique_id):
                     return self.async_abort(reason="wrong_account")
                 return self.async_update_reload_and_abort(
                     entry,
@@ -155,30 +189,26 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             try:
+                # An empty token keeps the saved one, so the form never has to carry it.
+                token = user_input.get(CONF_API_TOKEN, "").strip() or entry.data[CONF_API_TOKEN]
                 client, account = await _validate(
                     self.hass,
                     user_input[CONF_URL],
-                    user_input[CONF_API_TOKEN],
+                    token,
                     user_input[CONF_VERIFY_SSL],
                 )
             except Exception as error:  # noqa: BLE001
                 errors["base"] = _error_key(error)
             else:
-                # The unique_id is "<url>:<account id>". A new URL is fine, a different Mealie
-                # account is not: studio data and timers are stored per entry and would leak.
-                if str(account["id"]) != str(entry.unique_id).rsplit(":", 1)[-1]:
+                # A new URL is fine, a different Mealie account is not: studio data and timers
+                # are stored per entry and would leak.
+                if _unique_id(account) != account_id_of(entry.unique_id):
                     return self.async_abort(reason="wrong_account")
-                unique_id = _unique_id(client, account)
-                if unique_id != entry.unique_id and any(
-                    other.unique_id == unique_id for other in self._async_current_entries()
-                ):
-                    return self.async_abort(reason="already_configured")
                 return self.async_update_reload_and_abort(
                     entry,
-                    unique_id=unique_id,
                     data_updates={
                         CONF_URL: client.url,
-                        CONF_API_TOKEN: user_input[CONF_API_TOKEN].strip(),
+                        CONF_API_TOKEN: token,
                         CONF_VERIFY_SSL: user_input[CONF_VERIFY_SSL],
                     },
                     reason="reconfigure_successful",
@@ -189,11 +219,15 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Schema(
                     {
                         vol.Required(CONF_URL): str,
-                        vol.Required(CONF_API_TOKEN): SECRET_SELECTOR,
+                        vol.Optional(CONF_API_TOKEN, default=""): SECRET_SELECTOR,
                         vol.Optional(CONF_VERIFY_SSL, default=True): bool,
                     }
                 ),
-                user_input or entry.data,
+                # Never suggest the saved token: suggested values travel to the browser.
+                {
+                    CONF_URL: (user_input or entry.data)[CONF_URL],
+                    CONF_VERIFY_SSL: (user_input or entry.data).get(CONF_VERIFY_SSL, True),
+                },
             ),
             errors=errors,
         )
@@ -204,13 +238,13 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
 
     async def async_step_init(self, user_input=None):
         errors = {}
-        # Home Assistant has no user selector. Offer active, non-system users and forget stored
+        # Home Assistant has no user selector. Offer active, non-system, non-admin users and forget stored
         # ids of users that were deleted or deactivated, so the form never submits a stale one.
         users = sorted(
             (
                 user
                 for user in await self.hass.auth.async_get_users()
-                if not user.system_generated and user.is_active
+                if not user.system_generated and user.is_active and not user.is_admin
             ),
             key=lambda user: (user.name or user.id).casefold(),
         )
@@ -220,14 +254,19 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
             if service and not NOTIFY_SERVICE_RE.fullmatch(service):
                 errors[CONF_TIMER_NOTIFY_SERVICE] = "invalid_notify_service"
             else:
-                return self.async_create_entry(
+                data = {
+                    **user_input,
+                    CONF_TIMER_NOTIFY_SERVICE: service,
                     # The selector only accepts ids from its options, so no stale id reaches here.
-                    data={
-                        **user_input,
-                        CONF_TIMER_NOTIFY_SERVICE: service,
-                        CONF_WRITE_USERS: user_input.get(CONF_WRITE_USERS, []),
-                    }
-                )
+                    CONF_WRITE_USERS: user_input.get(CONF_WRITE_USERS, []),
+                }
+                # The form never shows a saved key, so an empty field means "keep it".
+                for key, clear_key in _CLEARABLE_KEYS:
+                    clear = data.pop(clear_key, False)
+                    new = str(data.get(key) or "").strip()
+                    saved = self.config_entry.options.get(key, "")
+                    data[key] = "" if clear else new or saved
+                return self.async_create_entry(data=data)
         # Offer the notify services that exist right now, but still allow typing one that
         # is not registered yet (for example a phone that is currently offline).
         services = self.hass.services.async_services_for_domain("notify")
@@ -247,7 +286,9 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
                 ),
                 vol.Required(CONF_EXPERIMENTAL_INGREDIENTS, default=False): bool,
                 vol.Optional(CONF_FDC_KEY, default=""): SECRET_SELECTOR,
+                vol.Optional(CONF_CLEAR_FDC_KEY, default=False): bool,
                 vol.Optional(CONF_AI_KEY, default=""): SECRET_SELECTOR,
+                vol.Optional(CONF_CLEAR_AI_KEY, default=False): bool,
                 vol.Optional(CONF_TIMER_NOTIFY_SERVICE, default=""): SelectSelector(
                     SelectSelectorConfig(
                         options=notify_options,
@@ -258,6 +299,9 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
             }
         )
         suggested = dict(user_input or self.config_entry.options)
+        # Suggested values travel to the browser, so secrets are never among them.
+        for key, _clear_key in _CLEARABLE_KEYS:
+            suggested.pop(key, None)
         suggested[CONF_WRITE_USERS] = [
             user_id for user_id in suggested.get(CONF_WRITE_USERS) or [] if user_id in known
         ]

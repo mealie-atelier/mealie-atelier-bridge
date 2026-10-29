@@ -18,7 +18,9 @@ def test_connection_fields_have_german_and_english_help() -> None:
         step = strings["config"]["step"]["user"]
 
         assert set(step["data_description"]) == set(step["data"])
-        assert "9000" in step["data_description"]["url"]
+        assert "9925" in step["data_description"]["url"]
+        reconfigure = strings["config"]["step"]["reconfigure"]["data_description"]["url"]
+        assert "9090" in reconfigure
         assert "9090" in step["data_description"]["url"]
         assert "yaml" in step["data_description"]["api_token"].lower()
         assert (

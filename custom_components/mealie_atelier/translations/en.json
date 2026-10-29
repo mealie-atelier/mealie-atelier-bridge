@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Connect Mealie Atelier",
+        "title": "Connect Mealie Atelier Bridge",
         "description": "Your API token stays in Home Assistant. This complements, not replaces, the built-in Mealie integration.",
         "data": {
           "url": "Mealie server URL",
@@ -10,13 +10,13 @@
           "verify_ssl": "Verify TLS certificate"
         },
         "data_description": {
-          "url": "The full address Home Assistant can reach, including http:// or https:// and the port, for example `http://192.168.1.20:9000`. For the Mealie Home Assistant app, use port 9090. Do not use an ingress or login URL.",
+          "url": "The full address Home Assistant can reach, including http:// or https:// and the port, for example `http://192.168.1.20:9925`. For the Mealie Home Assistant app, use port 9090. Do not use an ingress or login URL.",
           "api_token": "Create a token in Mealie under User profile > API Tokens, then paste it here. Home Assistant stores it securely. It must never go in card YAML.",
           "verify_ssl": "Leave this enabled. Disable it only for a self-signed certificate on a trusted local network."
         }
       },
       "reauth_confirm": {
-        "title": "Re-authenticate Mealie Atelier",
+        "title": "Re-authenticate Mealie Atelier Bridge",
         "description": "Mealie rejected the saved API token for {url}. Create a new token in Mealie under User profile > API Tokens and enter it here.",
         "data": {
           "api_token": "New Mealie API token"
@@ -26,7 +26,7 @@
         }
       },
       "reconfigure": {
-        "title": "Reconfigure Mealie Atelier",
+        "title": "Reconfigure Mealie Atelier Bridge",
         "description": "Change the Mealie address or token. Home Assistant checks the connection before saving.",
         "data": {
           "url": "Mealie server URL",
@@ -34,15 +34,15 @@
           "verify_ssl": "Verify TLS certificate"
         },
         "data_description": {
-          "url": "The full address Home Assistant can reach, including http:// or https:// and the port, for example `http://192.168.1.20:9000`. Do not use an ingress or login URL.",
-          "api_token": "Create a token in Mealie under User profile > API Tokens, then paste it here. Home Assistant stores it securely.",
+          "url": "The full address Home Assistant can reach, including http:// or https:// and the port, for example `http://192.168.1.20:9925`. For the Mealie Home Assistant app, use port 9090. Do not use an ingress or login URL.",
+          "api_token": "Optional. Leave empty to keep the saved token. Create a new token in Mealie under User profile > API Tokens. Home Assistant stores it securely.",
           "verify_ssl": "Leave this enabled. Disable it only for a self-signed certificate on a trusted local network."
         }
       }
     },
     "error": {
       "invalid_auth": "Authentication failed. Check the Mealie token.",
-      "invalid_url": "Enter a valid http(s) Mealie URL, for example http://192.168.1.20:9000.",
+      "invalid_url": "Enter a valid http(s) Mealie URL, for example http://192.168.1.20:9925.",
       "cannot_connect": "Mealie is unreachable or returned an error.",
       "unknown": "An unexpected error occurred."
     },
@@ -63,15 +63,19 @@
           "write_users": "Users allowed to change data",
           "experimental_ingredient_edits": "Structured ingredient editing",
           "usda_fdc_api_key": "USDA FoodData Central API key",
+          "clear_fdc_key": "Remove the saved USDA key",
           "openai_api_key": "AI API key (OpenAI or Anthropic)",
+          "clear_ai_key": "Remove the saved AI key",
           "timer_notify_service": "Timer notification service"
         },
         "data_description": {
           "read_only": "Blocks all changes to recipes, meal plans and shopping lists. Useful for shared tablets.",
-          "write_users": "Leave empty to let every Home Assistant user change shopping lists and meal plans. Administrators can always write. Recipe editing stays admin only.",
+          "write_users": "Leave empty to let every Home Assistant user change shopping lists and meal plans. If you select at least one user, only the selected users and administrators can write. Administrators can always write, so they are not listed. Recipe editing stays admin only.",
           "experimental_ingredient_edits": "Lets administrators edit ingredients with linked foods and units. A backup is saved before every change.",
-          "usda_fdc_api_key": "Optional. Only for the nutrition lab: the Bridge looks up ingredients in the free US food database FoodData Central and calculates nutrients per serving. Without a key only the nutrition lookup is off. Get a free key with your name and email at [fdc.nal.usda.gov/api-key-signup]({usda_signup_url}).",
-          "openai_api_key": "Optional, billed per request. Unlocks three AI helpers you start yourself: English search terms in the nutrition lab, ingredient substitutions and the recipe check. They send ingredients and, depending on the helper, the recipe name, amounts and steps to OpenAI or Anthropic, depending on your key. Nutrients always come from FoodData Central and the AI never changes a recipe on its own. Leave empty to turn AI off. Get an OpenAI key at [platform.openai.com/api-keys]({openai_keys_url}) or an Anthropic key at [platform.claude.com/settings/keys]({anthropic_keys_url}). Anthropic keys start with sk-ant-.",
+          "usda_fdc_api_key": "Optional. Only for the nutrition lab: the Bridge looks up ingredients in the free US food database FoodData Central and calculates nutrients per serving. For security the field never shows a saved key: leave it empty to keep it. Without a key only the nutrition lookup is off. Get a free key with your name and email at [fdc.nal.usda.gov/api-key-signup]({usda_signup_url}).",
+          "clear_fdc_key": "Enable this and save to remove the key.",
+          "openai_api_key": "Optional, billed per request. Unlocks three AI helpers you start yourself: English search terms in the nutrition lab, ingredient substitutions and the recipe check. They send ingredients and, depending on the helper, the recipe name, amounts and steps to OpenAI or Anthropic, depending on your key. Nutrients always come from FoodData Central and the AI never changes a recipe on its own. For security the field never shows a saved key: leave it empty to keep it, or use the option below to remove it. Get an OpenAI key at [platform.openai.com/api-keys]({openai_keys_url}) or an Anthropic key at [platform.claude.com/settings/keys]({anthropic_keys_url}). Anthropic keys start with sk-ant-.",
+          "clear_ai_key": "Enable this and save to remove the key. AI is off afterwards.",
           "timer_notify_service": "Optional. A notify service such as notify.mobile_app_your_phone that receives a push message when a kitchen timer ends. Leave empty for in-app notifications only."
         }
       }

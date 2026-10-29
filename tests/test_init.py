@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import aiohttp
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -66,3 +67,27 @@ async def test_setup_retries_when_mealie_is_unreachable(
     assert not await hass.config_entries.async_setup(mock_config_entry.entry_id)
 
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
+    # The reason carries only a language-neutral detail, never an English sentence.
+    assert mock_config_entry.reason == "Unable to connect to Mealie: HTTP 500"
+
+
+async def test_setup_retry_reason_names_the_exception_for_network_errors(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry, aioclient_mock: AiohttpClientMocker
+):
+    aioclient_mock.get(f"{MEALIE_URL}/api/users/self", exc=aiohttp.ClientConnectionError())
+    mock_config_entry.add_to_hass(hass)
+
+    assert not await hass.config_entries.async_setup(mock_config_entry.entry_id)
+
+    assert mock_config_entry.reason == "Unable to connect to Mealie: ClientConnectionError"
+
+
+async def test_migration_rekeys_unique_id_on_the_account(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_mealie: AiohttpClientMocker
+):
+    mock_config_entry.add_to_hass(hass)
+
+    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
+
+    assert mock_config_entry.version == 2
+    assert mock_config_entry.unique_id == "abc"

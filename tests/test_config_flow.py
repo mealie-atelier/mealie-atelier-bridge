@@ -50,7 +50,7 @@ def _no_setup():
 def _entry(**data) -> MockConfigEntry:
     return MockConfigEntry(
         domain=DOMAIN,
-        unique_id=f"{URL}:user-1",
+        unique_id="user-1",
         data={CONF_API_TOKEN: "old", CONF_VERIFY_SSL: True, "url": URL, **data},
     )
 
@@ -75,7 +75,8 @@ async def test_user_step_success_strips_trailing_slash(hass):
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"]["url"] == URL
     assert result["data"][CONF_API_TOKEN] == "secret"
-    assert result["result"].unique_id == f"{URL}:user-1"
+    assert result["result"].unique_id == "user-1"
+    assert result["title"] == "Mealie Atelier Bridge · chef@mealie.test:9000"
 
 
 @pytest.mark.parametrize(
@@ -153,7 +154,7 @@ async def test_reconfigure_success(hass):
     assert result["reason"] == "reconfigure_successful"
     assert entry.data["url"] == new_url
     assert entry.data[CONF_API_TOKEN] == "newer"
-    assert entry.unique_id == f"{new_url}:user-1"
+    assert entry.unique_id == "user-1"
 
 
 async def test_reauth_rejects_other_account(hass):
@@ -180,7 +181,7 @@ async def test_reconfigure_rejects_other_account(hass):
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "wrong_account"
     assert entry.data[CONF_API_TOKEN] == "old"
-    assert entry.unique_id == f"{URL}:user-1"
+    assert entry.unique_id == "user-1"
 
 
 async def test_options_flow_save(hass):
@@ -229,6 +230,8 @@ async def _options_form(hass, entry):
 
 
 async def test_options_flow_lists_only_active_non_system_users(hass):
+    # The first user is the owner and therefore an admin: never offered, always allowed.
+    await hass.auth.async_create_user("Owner")
     anna = await hass.auth.async_create_user("Anna")
     ben = await hass.auth.async_create_user("Ben")
     gone = await hass.auth.async_create_user("Inactive")
@@ -245,6 +248,7 @@ async def test_options_flow_lists_only_active_non_system_users(hass):
 
 
 async def test_options_flow_saves_write_users_and_suggests_only_known_ids(hass):
+    await hass.auth.async_create_user("Owner")
     anna = await hass.auth.async_create_user("Anna")
     entry = _entry()
     entry.add_to_hass(hass)
@@ -322,3 +326,153 @@ async def test_options_flow_accepts_lowercase_notify(hass):
         result["flow_id"], {CONF_TIMER_NOTIFY_SERVICE: "notify.mobile_app_pixel"}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
+
+
+async def test_same_account_under_another_url_is_a_duplicate(hass):
+    _entry().add_to_hass(hass)
+    result = await _start_user(hass)
+    with patch(CHECK, return_value=ACCOUNT):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], _input(url="http://other-host.test:19926")
+        )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+
+
+async def test_entry_title_names_the_server(hass):
+    titles = []
+    for host in ("http://one.test:9925", "http://two.test:9925"):
+        result = await _start_user(hass)
+        account = {"id": f"id-{host}", "username": "admin"}
+        with patch(CHECK, return_value=account):
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"], _input(url=host)
+            )
+        titles.append(result["title"])
+    assert len(set(titles)) == 2
+    assert titles[0] == "Mealie Atelier Bridge · admin@one.test:9925"
+
+
+@pytest.mark.parametrize(
+    "pasted",
+    [
+        f"{URL}/login",
+        f"{URL}/api",
+        f"{URL}/api/docs",
+        f"{URL}/g/home/",
+        f"{URL}/g/home/recipes",
+        f"{URL}/LOGIN/",
+    ],
+)
+async def test_user_step_strips_browser_paths(hass, pasted):
+    result = await _start_user(hass)
+    with patch(CHECK, return_value=ACCOUNT):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], _input(url=pasted)
+        )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"]["url"] == URL
+
+
+async def test_user_step_keeps_a_proxy_subpath(hass):
+    result = await _start_user(hass)
+    with patch(CHECK, return_value=ACCOUNT):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], _input(url=f"{URL}/mealie/login")
+        )
+    assert result["data"]["url"] == f"{URL}/mealie"
+
+
+@pytest.mark.parametrize("url", ["http://mealie:99999", "http://mealie:99999/login"])
+async def test_user_step_port_out_of_range_is_invalid_url(hass, url):
+    result = await _start_user(hass)
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], _input(url=url))
+    assert result["errors"] == {"base": "invalid_url"}
+
+
+async def test_legacy_url_scoped_unique_id_still_matches_account(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(entry, unique_id=f"{URL}:user-1")
+    result = await entry.start_reauth_flow(hass)
+    with patch(CHECK, return_value=ACCOUNT):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_API_TOKEN: "fresh"}
+        )
+    assert result["reason"] == "reauth_successful"
+
+
+def _serialized(schema) -> str:
+    """Everything the frontend receives per field: its name, suggested value and default."""
+    return json.dumps(
+        [
+            [str(key), key.description, None if callable(key.default) is False else key.default()]
+            for key in schema.schema
+        ],
+        default=str,
+    )
+
+
+async def test_reconfigure_form_does_not_send_the_saved_token(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        entry, data={**entry.data, CONF_API_TOKEN: "super-secret-token"}
+    )
+    result = await entry.start_reconfigure_flow(hass)
+    assert "super-secret-token" not in _serialized(result["data_schema"])
+
+
+async def test_reconfigure_with_empty_token_keeps_the_saved_one(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    result = await entry.start_reconfigure_flow(hass)
+    with patch(CHECK, return_value=ACCOUNT):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"url": URL, CONF_VERIFY_SSL: True}
+        )
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data[CONF_API_TOKEN] == "old"
+
+
+async def test_options_form_does_not_send_saved_keys(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        entry, options={CONF_FDC_KEY: "fdc-secret", CONF_AI_KEY: "ai-secret"}
+    )
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    text = _serialized(result["data_schema"])
+    assert "fdc-secret" not in text
+    assert "ai-secret" not in text
+
+
+async def test_options_empty_key_keeps_saved_and_clear_removes(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        entry, options={CONF_FDC_KEY: "fdc-secret", CONF_AI_KEY: "ai-secret"}
+    )
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {})
+    assert entry.options[CONF_FDC_KEY] == "fdc-secret"
+    assert entry.options[CONF_AI_KEY] == "ai-secret"
+    assert "clear_ai_key" not in entry.options
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"clear_ai_key": True, CONF_FDC_KEY: " new-fdc "}
+    )
+    assert entry.options[CONF_AI_KEY] == ""
+    assert entry.options[CONF_FDC_KEY] == "new-fdc"
+
+
+async def test_options_flow_does_not_offer_admins(hass):
+    owner = await hass.auth.async_create_user("Owner")
+    anna = await hass.auth.async_create_user("Anna")
+    entry = _entry()
+    entry.add_to_hass(hass)
+    _, selector, _ = await _options_form(hass, entry)
+    values = [o["value"] for o in selector.config["options"]]
+    assert owner.id not in values
+    assert values == [anna.id]

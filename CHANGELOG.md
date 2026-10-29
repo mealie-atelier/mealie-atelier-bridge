@@ -10,6 +10,13 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ### Fixed
 
+- A Mealie account can only be set up once, even when it is reachable under two addresses. Existing entries are migrated to an account based id.
+- Entries are titled `Mealie Atelier Bridge · user@host`, so several servers stay distinguishable. The setup dialogs use the same product name.
+- A pasted browser address such as `/login`, `/api` or `/g/home` is cut back to the server address. A port above 65535 is reported as an invalid address.
+- Reconfigure and the options no longer send the saved Mealie token, USDA key or AI key to the browser. Leave a key field empty to keep it, or use the new remove switch.
+- Administrators are no longer listed under the users allowed to change data, and the help text explains that a selection restricts everyone else.
+- The reconfigure step shows the port 9090 hint for the Mealie Home Assistant app, and the example address uses port 9925.
+- The setup retry message names only the HTTP status or error type, instead of mixing English text into the German message.
 - The Mealie token, the USDA key and the AI key are entered in masked password fields.
 - The timer notify service only accepts lowercase ASCII names such as `notify.mobile_app_pixel`.
 - The example address in the URL help text is shown as code, so Home Assistant no longer turns it into a link.

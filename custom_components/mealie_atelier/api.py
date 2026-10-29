@@ -106,6 +106,8 @@ class MealieClient:
             or parsed.fragment
         ):
             raise ValueError("Enter an http(s) URL without credentials, query or fragment")
+        # urlsplit only checks the port when it is read: a port above 65535 must fail here.
+        parsed.port  # noqa: B018
         self.url = url.rstrip("/")
         self._session = session
         # Mealie stops answering for good once its database pool runs dry (about 30 parallel

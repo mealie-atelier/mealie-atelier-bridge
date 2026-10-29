@@ -38,7 +38,7 @@ Restart Home Assistant so it loads the new integration.
 1. Open **Settings → Devices & services**.
 2. Choose **Add integration** and search for **Mealie Atelier Bridge**.
 3. Fill in the form:
-   - **Mealie server URL:** the direct address Home Assistant can reach, including `http://` or `https://` and the port, for example `http://mealie.example:9000`. For the Mealie Home Assistant app use port 9090. Do not use a `/login` or `/api` path, an ingress URL or credentials in the URL.
+   - **Mealie server URL:** the direct address Home Assistant can reach, including `http://` or `https://` and the port, for example `http://mealie.example:9925`. For the Mealie Home Assistant app use port 9090. Do not use a `/login` or `/api` path, an ingress URL or credentials in the URL.
    - **Mealie API token:** create it in Mealie under **User profile → API Tokens** and paste it here. The token needs the permissions of the account for the features you plan to use. It is stored in the Home Assistant config entry and never goes into card YAML or browser code.
    - **Verify TLS certificate:** leave it enabled for normal HTTPS certificates. Disable it only on a trusted private network with a self-signed certificate.
 

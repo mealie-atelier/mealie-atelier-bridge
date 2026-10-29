@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_URL
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
@@ -44,6 +45,32 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     return True
 
 
+def _failure_detail(exc: MealieError) -> str:
+    """Language-neutral reason for the translated setup-retry message."""
+    if exc.status:
+        return f"HTTP {exc.status}"
+    return type(exc.__cause__ or exc).__name__
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Version 2 keys the unique id on the Mealie account alone, not on "<url>:<account>"."""
+    if entry.version < 2:
+        account_id = str(entry.unique_id).rsplit(":", 1)[-1]
+        taken = any(
+            other.unique_id == account_id
+            for other in hass.config_entries.async_entries(DOMAIN)
+            if other.entry_id != entry.entry_id
+        )
+        if taken:
+            # Two entries already point at the same account (the old URL-scoped ids allowed
+            # that). Keep the legacy id on the second one instead of colliding.
+            _LOGGER.warning("Another entry already uses this Mealie account: %s", entry.title)
+            hass.config_entries.async_update_entry(entry, version=2)
+        else:
+            hass.config_entries.async_update_entry(entry, unique_id=account_id, version=2)
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry) -> bool:
     """Attach an authenticated client for this Mealie account."""
     client = MealieClient(
@@ -62,7 +89,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry
         raise ConfigEntryNotReady(
             translation_domain=DOMAIN,
             translation_key="cannot_connect",
-            translation_placeholders={"error": str(exc)},
+            translation_placeholders={"error": _failure_detail(exc)},
         ) from exc
     # Load everything that can fail before starting background work, so a failed setup
     # leaves no timer or sync task running.
