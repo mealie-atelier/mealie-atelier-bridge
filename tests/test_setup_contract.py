@@ -105,6 +105,7 @@ CONTRACT_ERROR_CODES = {
     "offline_op_reused",
     "offline_conflict",
     "offline_add_uncertain",
+    "shopping_item_not_found",
 }
 
 

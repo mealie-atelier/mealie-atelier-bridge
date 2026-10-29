@@ -109,6 +109,28 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
                 )
             if path == "/api/households/shopping/items/item-1" and request.method == "PUT":
                 return web.json_response(data)
+            if path == "/api/households/shopping/items" and request.method == "GET":
+                return web.json_response(
+                    {
+                        "items": [
+                            {"id": "item-1", "shoppingListId": "list-1", "checked": True},
+                            {"id": "item-2", "shoppingListId": "list-1", "checked": False},
+                            {"id": "item-3", "shoppingListId": "list-1", "checked": True},
+                            {"id": "item-4", "shoppingListId": "other", "checked": True},
+                        ]
+                    }
+                )
+            if (
+                path
+                in (
+                    "/api/households/shopping/items/item-1",
+                    "/api/households/shopping/items/item-3",
+                )
+                and request.method == "DELETE"
+            ):
+                if path.endswith("item-3"):
+                    return web.json_response({"error": "Not found"}, status=404)
+                return web.json_response({"message": "deleted"})
             return web.json_response({"error": "Not found"}, status=404)
 
         self.app = web.Application()
@@ -173,6 +195,43 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
             await self.client.mutate(
                 "shopping_from_recipe", {"list_id": "../secret", "recipe_id": "recipe-1"}
             )
+
+    async def test_shopping_update_keeps_the_other_fields(self):
+        item = await self.client.mutate(
+            "shopping_update", {"item_id": "item-1", "note": " Oat milk ", "quantity": 2.5}
+        )
+        self.assertEqual(self.calls[-1]["method"], "PUT")
+        self.assertEqual(item["note"], "Oat milk")
+        self.assertEqual(item["quantity"], 2.5)
+        self.assertEqual(item["shoppingListId"], "list-1")
+        for bad in (
+            {"item_id": "item-1"},
+            {"item_id": "item-1", "quantity": True},
+            {"item_id": "item-1", "quantity": -1},
+            {"item_id": "item-1", "quantity": float("nan")},
+            {"item_id": "item-1", "note": " "},
+            {"item_id": "../x", "note": "a"},
+        ):
+            with self.assertRaises(ValueError):
+                await self.client.mutate("shopping_update", bad)
+
+    async def test_shopping_delete_and_clear_checked(self):
+        await self.client.mutate("shopping_delete", {"item_id": "item-1"})
+        self.assertEqual(self.calls[-1]["method"], "DELETE")
+        with self.assertRaises(ValueError):
+            await self.client.mutate("shopping_delete", {"item_id": "a/b"})
+        self.calls.clear()
+        result = await self.client.mutate("shopping_clear_checked", {"list_id": "list-1"})
+        # item-3 vanished meanwhile (404) and still counts; the other list and item-2 are untouched.
+        self.assertEqual(result, {"deleted": 2})
+        deletes = [c["path"] for c in self.calls if c["method"] == "DELETE"]
+        self.assertEqual(
+            deletes,
+            [
+                "/api/households/shopping/items/item-1",
+                "/api/households/shopping/items/item-3",
+            ],
+        )
 
     async def test_metadata_includes_household_cookbooks(self):
         result = await self.client.metadata()

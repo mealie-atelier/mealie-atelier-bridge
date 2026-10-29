@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import math
 import re
 from typing import Any
 from urllib.parse import quote, urlsplit
@@ -63,6 +64,28 @@ def safe_text(value: Any, limit: int = 500) -> str:
     if not cleaned or len(cleaned) > limit:
         raise ValueError("Text length outside allowed range")
     return cleaned
+
+
+def safe_quantity(value: Any) -> int | float:
+    """A shopping quantity: a finite, non-negative number of at most 100000."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError("Quantity must be a number")  # noqa: TRY004
+    if not math.isfinite(value) or not 0 <= value <= 100000:
+        raise ValueError("Quantity outside allowed range")
+    return value
+
+
+def shopping_update_changes(payload: dict) -> tuple[str, dict]:
+    """Validate a shopping_update payload: the item ID and the fields to change (note, quantity)."""
+    item_id = safe_id(payload.get("item_id"))
+    changes: dict[str, Any] = {}
+    if "note" in payload:
+        changes["note"] = safe_text(payload["note"], 250)
+    if "quantity" in payload:
+        changes["quantity"] = safe_quantity(payload["quantity"])
+    if not changes:
+        raise ValueError("Nothing to change")
+    return item_id, changes
 
 
 def check_image(data: bytes, ext: str) -> str:
@@ -478,6 +501,15 @@ class MealieClient:
             return await self.request(
                 "PUT", f"/api/households/shopping/items/{item_id}", data=updated
             )
+        if action == "shopping_update":
+            item_id, changes = shopping_update_changes(payload)
+            return await self.update_shopping_item(item_id, changes)
+        if action == "shopping_delete":
+            return await self.request(
+                "DELETE", f"/api/households/shopping/items/{safe_id(payload.get('item_id'))}"
+            )
+        if action == "shopping_clear_checked":
+            return await self.clear_checked_shopping(safe_id(payload.get("list_id")))
         if action == "shopping_list_create":
             return await self.request(
                 "POST",
@@ -603,6 +635,37 @@ class MealieClient:
             data={**current, "checked": checked},
         )
         return result if isinstance(result, dict) else {**current, "checked": checked}
+
+    async def update_shopping_item(
+        self, item_id: str, changes: dict, current: dict | None = None
+    ) -> dict:
+        """Change the note or quantity of one item, preserving its food, unit and checked state.
+
+        Pass the item that was just read as `current` to write exactly the state that was compared.
+        """
+        if current is None:
+            current = await self.shopping_item(item_id)
+        updated = {**current, **changes}
+        result = await self.request(
+            "PUT", f"/api/households/shopping/items/{safe_id(item_id)}", data=updated
+        )
+        return result if isinstance(result, dict) else updated
+
+    async def clear_checked_shopping(self, list_id: str) -> dict:
+        """Delete every ticked item of one list. Items that vanished meanwhile count as done."""
+        deleted = 0
+        for item in await self.shopping_items(list_id):
+            if item.get("checked") is not True or not isinstance(item.get("id"), str):
+                continue
+            try:
+                await self.request(
+                    "DELETE", f"/api/households/shopping/items/{safe_id(item['id'])}"
+                )
+            except MealieError as err:
+                if err.status != 404:
+                    raise
+            deleted += 1
+        return {"deleted": deleted}
 
 
 def recipe_update_changes(payload: dict) -> tuple[str, dict]:

@@ -175,6 +175,9 @@
     "offline_add_uncertain": {
       "message": "Ein früheres Hinzufügen ist möglicherweise schon bei Mealie angekommen. Prüfe die Liste, um ein Duplikat zu vermeiden."
     },
+    "shopping_item_not_found": {
+      "message": "Dieser Artikel existiert in Mealie nicht mehr. Lade die Liste neu."
+    },
     "sync_not_supported": {
       "message": "Der Einkaufs-Sync braucht Home Assistant mit der Mealie Atelier Bridge."
     },

@@ -166,6 +166,7 @@ async def ws_status(hass, connection, msg):
                     "uploads": True,
                     "recipe_filters": True,
                     "offline_queue": True,
+                    "shopping_edit": True,
                     "ai": bool(entry.options.get(CONF_AI_KEY)),
                 },
                 "limits": {
