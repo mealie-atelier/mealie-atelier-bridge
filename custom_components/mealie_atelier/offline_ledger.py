@@ -23,7 +23,6 @@ from .api import (
     MealieClient,
     MealieError,
     apply_shopping_changes,
-    shopping_item_name,
     shopping_rename_applied,
 )
 from .const import OFFLINE_PRUNE_DAYS, OFFLINE_RECORD_LIMIT, OFFLINE_STORE_VERSION
@@ -409,10 +408,19 @@ def _bare_label(item: dict[str, Any]) -> str:
 
 
 def _without_amount(text: str, item: dict[str, Any]) -> str:
-    """Drop a leading quantity and the unit of the item from a label the user saw."""
-    stripped = re.sub(r"^\s*\d+(?:[.,]\d+)?\s+", "", text)
-    if stripped == text:
+    """Drop the leading quantity and unit of the item from a label the user saw.
+
+    Only an item with a quantity above zero shows an amount. A number in a free text item with
+    quantity 0 ("2 Milch" stored as the note) belongs to the name and stays.
+    """
+    quantity = item.get("quantity")
+    has_amount = isinstance(quantity, (int, float)) and not isinstance(quantity, bool)
+    if not has_amount or quantity <= 0:
         return text
+    found = re.match(r"^\s*\d+(?:[.,]\d+)?\s+", text)
+    if not found:
+        return text
+    stripped = text[found.end() :]
     unit = item.get("unit") if isinstance(item.get("unit"), dict) else {}
     for unit_name in (unit.get("name"), unit.get("abbreviation")):
         prefix = str(unit_name or "").strip()
@@ -432,8 +440,7 @@ def _seen(key: str, item: dict[str, Any], wanted: Any = None) -> Any:
         return item.get(key)
     bare = _bare_label(item)
     candidates = [
-        shopping_item_name(item),
-        item.get("display"),
+        item.get("display") or "",
         bare,
         *_rebuilt_labels(item),
     ]

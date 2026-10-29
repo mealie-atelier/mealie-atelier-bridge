@@ -841,3 +841,45 @@ async def test_a_unit_prefix_of_the_seen_label_is_ignored(ledger, client):
         "unit": {"name": "g"},
     }
     assert (await ledger.process(update(name="Rohrzucker", expected_name="2 g Zucker")))["ok"]
+
+
+async def test_a_number_in_a_free_text_name_is_not_taken_for_an_amount(ledger, client):
+    # The user saw the free text item "2 Milch" (quantity 0); another device renamed it to "Milch".
+    for number, (seen, note) in enumerate((("2 Milch", "Milch"), ("10 Eier", "Eier")), start=1):
+        client.shopping_item.return_value = {
+            "id": "item-1",
+            "note": note,
+            "display": note,
+            "isFood": False,
+            "quantity": 0,
+        }
+        op = update(number, name="Soja", expected_name=seen)
+        assert await code_of(ledger.process(op)) == "offline_conflict"
+    client.update_shopping_item.assert_not_awaited()
+
+
+async def test_a_free_text_name_with_a_number_still_matches_itself(ledger, client):
+    client.shopping_item.return_value = {
+        "id": "item-1",
+        "note": "2 Milch",
+        "display": "2 Milch",
+        "isFood": False,
+        "quantity": 0,
+    }
+    assert (await ledger.process(update(name="Soja", expected_name="2 Milch")))["ok"]
+
+
+async def test_a_bare_note_alone_does_not_match_an_item_with_a_food_and_no_display(ledger, client):
+    # The card sends display, note or food name. With an empty display and a food, the note alone is
+    # not what the user saw, and another device may have changed the food.
+    client.shopping_item.return_value = {
+        "id": "item-1",
+        "note": "fettarm",
+        "display": "",
+        "isFood": True,
+        "food": {"name": "Hafer"},
+        "quantity": 0,
+    }
+    op = update(name="Soja", expected_name="fettarm")
+    assert await code_of(ledger.process(op)) == "offline_conflict"
+    client.update_shopping_item.assert_not_awaited()
