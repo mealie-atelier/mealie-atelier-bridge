@@ -87,10 +87,13 @@ def account_id_of(unique_id: str | None) -> str:
     return str(unique_id).rsplit(":", 1)[-1]
 
 
-def _entry_title(client: MealieClient, account: Mapping[str, Any]) -> str:
+def entry_title(url: str, username: str) -> str:
     """Name the user and the server, since every default Mealie user is called admin."""
-    host = urlsplit(client.url).netloc
-    return f"Mealie Atelier Bridge · {account.get('username', 'Kitchen')}@{host}"
+    return f"Mealie Atelier Bridge · {username}@{urlsplit(url).netloc}"
+
+
+def _entry_title(client: MealieClient, account: Mapping[str, Any]) -> str:
+    return entry_title(client.url, account.get("username", "Kitchen"))
 
 
 # Explicit password selector so masking does not depend on frontend name heuristics.
@@ -204,8 +207,12 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 # are stored per entry and would leak.
                 if _unique_id(account) != account_id_of(entry.unique_id):
                     return self.async_abort(reason="wrong_account")
+                # Follow the new host in the title, unless the user renamed the entry.
+                username = account.get("username", "Kitchen")
+                generated = entry.title == entry_title(entry.data[CONF_URL], username)
                 return self.async_update_reload_and_abort(
                     entry,
+                    title=entry_title(client.url, username) if generated else entry.title,
                     data_updates={
                         CONF_URL: client.url,
                         CONF_API_TOKEN: token,

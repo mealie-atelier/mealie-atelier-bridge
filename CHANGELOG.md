@@ -11,6 +11,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 ### Fixed
 
 - A Mealie account can only be set up once, even when it is reachable under two addresses. Existing entries are migrated to an account based id.
+- Existing entries with the old generated title are renamed during the upgrade, and reconfiguring the address renames a generated title too. Administrators stored in the write list are dropped during the upgrade.
 - Entries are titled `Mealie Atelier Bridge · user@host`, so several servers stay distinguishable. The setup dialogs use the same product name.
 - A pasted browser address such as `/login`, `/api` or `/g/home` is cut back to the server address. A port above 65535 is reported as an invalid address.
 - Reconfigure and the options no longer send the saved Mealie token, USDA key or AI key to the browser. Leave a key field empty to keep it, or use the new remove switch.

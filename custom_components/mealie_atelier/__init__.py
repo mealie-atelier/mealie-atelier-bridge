@@ -15,7 +15,14 @@ from homeassistant.helpers.storage import Store
 
 from .alarms import TimerManager
 from .api import MealieAuthError, MealieClient, MealieError
-from .const import CONF_API_TOKEN, CONF_TIMER_NOTIFY_SERVICE, CONF_VERIFY_SSL, DOMAIN
+from .config_flow import entry_title
+from .const import (
+    CONF_API_TOKEN,
+    CONF_TIMER_NOTIFY_SERVICE,
+    CONF_VERIFY_SSL,
+    CONF_WRITE_USERS,
+    DOMAIN,
+)
 from .http import MealieAtelierImageView, MealieAtelierRecipeAssetView
 from .offline_ledger import OfflineLedger
 from .offline_ledger import async_register_commands as async_register_offline_commands
@@ -68,7 +75,35 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.config_entries.async_update_entry(entry, version=2)
         else:
             hass.config_entries.async_update_entry(entry, unique_id=account_id, version=2)
+        await _retitle_legacy_entry(hass, entry)
+        await _drop_admin_write_grants(hass, entry)
     return True
+
+
+async def _retitle_legacy_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Rename a generated "Mealie Atelier · user" title; a title the user chose stays."""
+    prefix = "Mealie Atelier · "
+    username = entry.title.removeprefix(prefix)
+    if entry.title.startswith(prefix) and username and "@" not in username:
+        hass.config_entries.async_update_entry(
+            entry, title=entry_title(entry.data[CONF_URL], username)
+        )
+
+
+async def _drop_admin_write_grants(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Administrators always may write, so a stored admin id only narrows the list for others."""
+    grants = entry.options.get(CONF_WRITE_USERS)
+    if not grants:
+        return
+    kept = []
+    for user_id in grants:
+        user = await hass.auth.async_get_user(user_id)
+        if user is None or not user.is_admin:
+            kept.append(user_id)
+    if kept != list(grants):
+        hass.config_entries.async_update_entry(
+            entry, options={**entry.options, CONF_WRITE_USERS: kept}
+        )
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry) -> bool:

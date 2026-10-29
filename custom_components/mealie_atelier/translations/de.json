@@ -73,9 +73,9 @@
           "write_users": "Leer lassen, damit alle Home-Assistant-Nutzer Einkaufslisten und Wochenpläne ändern dürfen. Wählst du mindestens einen Nutzer aus, dürfen nur die Ausgewählten und Administratoren schreiben. Administratoren dürfen immer schreiben und stehen deshalb nicht in der Liste. Rezepte bearbeiten bleibt Administratoren vorbehalten.",
           "experimental_ingredient_edits": "Erlaubt Administratoren, Zutaten mit verknüpften Lebensmitteln und Einheiten zu bearbeiten. Vor jeder Änderung wird ein Backup gespeichert.",
           "usda_fdc_api_key": "Optional. Nur für das Nährwertlabor: Die Bridge sucht damit Zutaten in der freien US-Lebensmitteldatenbank FoodData Central und rechnet Nährwerte pro Portion aus. Aus Sicherheitsgründen zeigt das Feld einen gespeicherten Key nicht an: Leer lassen behält ihn. Ohne Key bleibt nur die Nährwertsuche aus. Den Key gibt es kostenlos mit Name und E-Mail unter [fdc.nal.usda.gov/api-key-signup]({usda_signup_url}).",
-          "clear_fdc_key": "Aktiviere das und speichere, um den Key zu entfernen.",
+          "clear_fdc_key": "Aktiviere das und speichere, um den Key zu löschen.",
           "openai_api_key": "Optional und pro Anfrage kostenpflichtig. Schaltet drei KI-Hilfen frei, die du jeweils selbst startest: englische Suchbegriffe im Nährwertlabor, Ersatzvorschläge für eine Zutat und die Rezeptprüfung. Dafür gehen Zutaten und je nach Hilfe auch Rezeptname, Mengen und Kochschritte an OpenAI oder Anthropic, je nach Key. Nährwerte kommen immer aus FoodData Central, Rezepte ändert die KI nie selbst. Aus Sicherheitsgründen zeigt das Feld einen gespeicherten Key nicht an: Leer lassen behält ihn, zum Entfernen nutze die Option darunter. Key für OpenAI unter [platform.openai.com/api-keys]({openai_keys_url}), für Anthropic unter [platform.claude.com/settings/keys]({anthropic_keys_url}). Keys von Anthropic beginnen mit sk-ant-.",
-          "clear_ai_key": "Aktiviere das und speichere, um den Key zu entfernen. Die KI ist danach ausgeschaltet.",
+          "clear_ai_key": "Aktiviere das und speichere, um den Key zu löschen. Die KI ist danach ausgeschaltet.",
           "timer_notify_service": "Optional. Ein Notify-Dienst wie notify.mobile_app_dein_handy, der eine Push-Nachricht erhält, wenn ein Küchentimer abläuft. Leer lassen, um nur Hinweise in der App zu bekommen."
         }
       }

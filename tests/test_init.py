@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import aiohttp
 from homeassistant.config_entries import ConfigEntryState
+from homeassistant.auth.const import GROUP_ID_ADMIN, GROUP_ID_USER
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
 from custom_components.mealie_atelier.alarms import TimerManager
 from custom_components.mealie_atelier.api import MealieClient
-from custom_components.mealie_atelier.const import DOMAIN
+from custom_components.mealie_atelier import async_migrate_entry
+from custom_components.mealie_atelier.const import CONF_WRITE_USERS, DOMAIN
 
 from .conftest import MEALIE_URL
 
@@ -91,3 +93,57 @@ async def test_migration_rekeys_unique_id_on_the_account(
 
     assert mock_config_entry.version == 2
     assert mock_config_entry.unique_id == "abc"
+
+
+def _legacy_entry(**kwargs) -> MockConfigEntry:
+    return MockConfigEntry(
+        domain=DOMAIN,
+        version=1,
+        data={"url": MEALIE_URL, "api_token": "t", "verify_ssl": True},
+        **kwargs,
+    )
+
+
+async def test_migration_keeps_the_legacy_id_when_the_account_is_taken(hass: HomeAssistant):
+    first = _legacy_entry(unique_id="a.test:abc", title="first")
+    second = _legacy_entry(unique_id="b.test:abc", title="second")
+    first.add_to_hass(hass)
+    second.add_to_hass(hass)
+
+    assert await async_migrate_entry(hass, first)
+    assert await async_migrate_entry(hass, second)
+
+    assert first.unique_id == "abc"
+    assert second.unique_id == "b.test:abc"
+    assert first.version == second.version == 2
+
+
+async def test_migration_retitles_only_generated_titles(hass: HomeAssistant):
+    generated = _legacy_entry(unique_id="x:1", title="Mealie Atelier · admin")
+    custom = _legacy_entry(unique_id="x:2", title="Family kitchen")
+    generated.add_to_hass(hass)
+    custom.add_to_hass(hass)
+
+    await async_migrate_entry(hass, generated)
+    await async_migrate_entry(hass, custom)
+
+    host = MEALIE_URL.split("://", 1)[1]
+    assert generated.title == f"Mealie Atelier Bridge · admin@{host}"
+    assert custom.title == "Family kitchen"
+
+
+async def test_migration_drops_stored_admin_ids_from_the_write_list(hass: HomeAssistant):
+    admin = await hass.auth.async_create_user("Boss", group_ids=[GROUP_ID_ADMIN])
+    member = await hass.auth.async_create_user("Guest", group_ids=[GROUP_ID_USER])
+    entry = _legacy_entry(
+        unique_id="x:1", options={CONF_WRITE_USERS: [admin.id, member.id, "deleted-user"]}
+    )
+    admin_only = _legacy_entry(unique_id="x:2", options={CONF_WRITE_USERS: [admin.id]})
+    entry.add_to_hass(hass)
+    admin_only.add_to_hass(hass)
+
+    await async_migrate_entry(hass, entry)
+    await async_migrate_entry(hass, admin_only)
+
+    assert entry.options[CONF_WRITE_USERS] == [member.id, "deleted-user"]
+    assert admin_only.options[CONF_WRITE_USERS] == []

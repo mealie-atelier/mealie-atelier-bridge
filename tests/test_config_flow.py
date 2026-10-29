@@ -157,6 +157,28 @@ async def test_reconfigure_success(hass):
     assert entry.unique_id == "user-1"
 
 
+async def test_reconfigure_retitles_a_generated_title_only(hass):
+    generated = _entry()
+    generated.add_to_hass(hass)
+    renamed = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="user-2",
+        title="My kitchen",
+        data={CONF_API_TOKEN: "old", CONF_VERIFY_SSL: True, "url": URL},
+    )
+    renamed.add_to_hass(hass)
+    generated_title = f"Mealie Atelier Bridge · {ACCOUNT['username']}@{'mealie.test:9000'}"
+    hass.config_entries.async_update_entry(generated, title=generated_title)
+    for entry, account in ((generated, ACCOUNT), (renamed, {**ACCOUNT, "id": "user-2"})):
+        result = await entry.start_reconfigure_flow(hass)
+        with patch(CHECK, return_value=account):
+            await hass.config_entries.flow.async_configure(
+                result["flow_id"], _input(url="https://moved.example.test", token="t")
+            )
+    assert generated.title == f"Mealie Atelier Bridge · {ACCOUNT['username']}@moved.example.test"
+    assert renamed.title == "My kitchen"
+
+
 async def test_reauth_rejects_other_account(hass):
     entry = _entry()
     entry.add_to_hass(hass)
