@@ -2,7 +2,7 @@
 
 Smart Shopping Sync copies items from one Mealie shopping list to one Home Assistant to-do list, for example the list of your Bring! integration. It runs inside the Mealie Atelier Bridge, so it keeps working when no dashboard is open. The standalone web app does not sync.
 
-It uses Home Assistant's generic to-do entity, so any integration whose to-do list can add items works as a destination. The Bridge never asks for Bring credentials and never calls a provider directly.
+It uses Home Assistant's generic to-do entity, so any integration whose to-do list can add items works as a destination. The Bridge never asks for Bring! credentials and never calls a provider directly.
 
 ## How it works
 

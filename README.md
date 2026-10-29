@@ -31,7 +31,7 @@ The [Atelier Cards](https://github.com/mealie-atelier/mealie-atelier-cards) can 
 | --- | --- | --- |
 | Recipes, search and cooking mode | ✓ | ✓ |
 | Recipe and step photos | | ✓ |
-| Shopping list and meal plan writes | | ✓ |
+| Shopping list and meal plan writes | basic | ✓ with per-user grants and offline replay |
 | Recipe editor with backups and restore | | ✓ |
 | Per-user write grants and read-only mode | | ✓ |
 | Offline shopping that replays safely when you are back online | | ✓ |
@@ -112,7 +112,7 @@ Send what you need from a Mealie shopping list to the list your household actual
 
 ## Uninstall
 
-Remove the Mealie Atelier cards from your dashboards first, because a leftover card shows **Configuration error**. Then delete the integration entry under **Settings → Devices & services** (this also deletes the recipe backups and the offline outbox), uninstall the Bridge in the Marketplace or HACS (or delete `custom_components/mealie_atelier`) and restart Home Assistant.
+Remove the Mealie Atelier cards from your dashboards first, because a leftover card shows **Configuration error**. Then delete the integration entry under **Settings → Devices & services** (this also deletes the recipe backups and the offline outbox), uninstall the Bridge and the cards in the Marketplace or HACS (for a manual install, remove the cards resource and delete `custom_components/mealie_atelier` and the cards files) and restart Home Assistant.
 
 ## Security
 

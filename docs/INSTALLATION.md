@@ -62,7 +62,7 @@ Make a Mealie backup before you test recipe edits.
 
 1. Make sure the Mealie Atelier Cards are installed and registered as a resource. The Marketplace and HACS do this for you on dashboards you manage in the UI. No YAML is needed for that. For a manual install, turn on **Advanced mode** in your user profile, open **Settings → Dashboards → ⋮ → Resources** and add `/local/community/mealie-atelier-cards/mealie-atelier-cards.js` as a **JavaScript module**, then reload the browser page. Only if you manage Lovelace resources in YAML, add the same URL with `type: module` under `lovelace: resources:`. See the [cards README](https://github.com/mealie-atelier/mealie-atelier-cards#yaml-resource).
 2. Edit a dashboard, choose **Add card**, switch to the **By card** tab (the cards create no entities, so **By entity** finds nothing) and search for **Mealie Atelier**.
-3. In the editor step **Connect kitchen**, pick your connection under **Your Mealie connection** if several are listed. The default (**Automatic · Atelier first**) already prefers the Bridge.
+3. In the editor step **Connect kitchen**, pick your connection under **Your Mealie connection** if several are listed. The cards prefer the Bridge by default. You can check or change this later in the card settings under **Data connection** (**Automatic · Atelier first**).
 4. Confirm recipe search, recipe detail and cooking steps. With read-only mode off, try a small change such as ticking a shopping item.
 
 If a card shows an error, the message names the cause (for example a rejected token or an unreachable Mealie). Download the integration's diagnostics from **Settings → Devices & services** when you ask for help. They hide credentials and contain counts instead of content.
