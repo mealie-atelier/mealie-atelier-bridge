@@ -115,7 +115,9 @@ def main() -> None:
     asyncio.run(prepare())
     OUT.mkdir(parents=True, exist_ok=True)
     with sync_playwright() as play:
-        browser = play.chromium.launch(headless=True)
+        browser = play.chromium.launch(
+            headless=True, args=["--lang=de-DE" if LANGUAGE == "de" else "--lang=en-US"]
+        )
         try:
             for device, viewport in DEVICES.items():
                 for theme in ("light", "dark"):

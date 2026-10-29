@@ -176,7 +176,7 @@ def main() -> None:
                 {"shoppingListId": list_id, "note": note, "quantity": 0, "checked": False},
             )
         with sync_playwright() as play:
-            browser = play.chromium.launch(headless=True)
+            browser = play.chromium.launch(headless=True, args=["--lang=de-DE"])
             try:
                 context = browser.new_context(
                     viewport={"width": 1440, "height": 960},

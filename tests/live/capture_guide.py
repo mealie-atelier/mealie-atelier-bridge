@@ -219,7 +219,9 @@ def main() -> None:
     ]
     failed = []
     with sync_playwright() as play:
-        browser = play.chromium.launch(headless=True)
+        browser = play.chromium.launch(
+            headless=True, args=["--lang=de-DE" if LANGUAGE == "de" else "--lang=en-US"]
+        )
         try:
             context = browser.new_context(
                 viewport={"width": 1440, "height": 960},
