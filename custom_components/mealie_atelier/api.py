@@ -509,15 +509,6 @@ class MealieClient:
                 "checked": False,
             }
             return await self.request("POST", "/api/households/shopping/items", data=item)
-        if action == "shopping_update":
-            item_id = safe_id(payload.get("item_id"))
-            changes = shopping_item_changes(payload)
-            return await self.update_shopping_item(item_id, changes)
-        if action == "shopping_delete":
-            deleted = await self.delete_shopping_item(payload.get("item_id"))
-            return {"deleted": 1 if deleted else 0}
-        if action == "shopping_clear_checked":
-            return await self.clear_checked_shopping_items(payload.get("list_id"))
         if action == "mealplan_add":
             day = safe_date(payload.get("date"))
             meal = payload.get("meal_type", "dinner")
@@ -612,59 +603,6 @@ class MealieClient:
             data={**current, "checked": checked},
         )
         return result if isinstance(result, dict) else {**current, "checked": checked}
-
-    async def update_shopping_item(
-        self, item_id: str, changes: dict, current: dict | None = None
-    ) -> dict:
-        """Change the note and or quantity of one item, preserving food, unit and checked state.
-
-        Pass the item that was just read as `current` to write exactly the state that was compared.
-        """
-        if current is None:
-            current = await self.shopping_item(item_id)
-        updated = {**current, **changes}
-        result = await self.request(
-            "PUT", f"/api/households/shopping/items/{safe_id(item_id)}", data=updated
-        )
-        return result if isinstance(result, dict) else updated
-
-    async def delete_shopping_item(self, item_id: Any) -> bool:
-        """Delete one item. An item that is already gone counts as done and returns False."""
-        try:
-            await self.request("DELETE", f"/api/households/shopping/items/{safe_id(item_id)}")
-        except MealieError as err:
-            if err.status == 404 and not isinstance(err, MealieAuthError):
-                return False
-            raise
-        return True
-
-    async def clear_checked_shopping_items(self, list_id: Any) -> dict:
-        """Delete every ticked item of one list; unticked items are never touched."""
-        items = await self.shopping_items(safe_id(list_id))
-        deleted = 0
-        for item in items:
-            if item.get("checked") is True and isinstance(item.get("id"), str):
-                deleted += 1 if await self.delete_shopping_item(item["id"]) else 0
-        return {"deleted": deleted}
-
-
-def shopping_item_changes(payload: dict) -> dict:
-    """Validate the editable fields of a shopping item: a note and or a quantity."""
-    changes: dict = {}
-    if "note" in payload:
-        changes["note"] = safe_text(payload["note"], 250)
-    if "quantity" in payload:
-        quantity = payload["quantity"]
-        if (
-            isinstance(quantity, bool)
-            or not isinstance(quantity, (int, float))
-            or not 0 <= quantity <= 9999
-        ):
-            raise ValueError("Quantity must be a number from 0 to 9999")
-        changes["quantity"] = quantity
-    if not changes:
-        raise ValueError("Nothing to update")
-    return changes
 
 
 def recipe_update_changes(payload: dict) -> tuple[str, dict]:

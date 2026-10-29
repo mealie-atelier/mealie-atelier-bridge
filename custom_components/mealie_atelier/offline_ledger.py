@@ -18,7 +18,7 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
-from .api import MealieClient, MealieError
+from .api import MealieClient
 from .const import OFFLINE_PRUNE_DAYS, OFFLINE_RECORD_LIMIT, OFFLINE_STORE_VERSION
 from .errors import AtelierError
 from .recipe_editing import _run
@@ -31,28 +31,6 @@ _UUID = re.compile(
 _ID = re.compile(r"^[a-zA-Z0-9_-]{1,150}$")
 _STATES = frozenset({"checking", "sending", "completed", "conflict", "uncertain"})
 _MAX_AGE_SECONDS = OFFLINE_PRUNE_DAYS * 86400
-# Everything except an add can be re-checked against Mealie and safely repeated after a crash.
-_ACTIONS = frozenset(
-    {
-        "shopping_toggle",
-        "shopping_add",
-        "shopping_update",
-        "shopping_delete",
-        "shopping_clear_checked",
-    }
-)
-
-
-def _is_quantity(value: Any) -> bool:
-    return not isinstance(value, bool) and isinstance(value, (int, float)) and 0 <= value <= 9999
-
-
-def _same_text(a: Any, b: Any) -> bool:
-    return (a or "").strip() == (b or "").strip()
-
-
-def _same_quantity(a: Any, b: Any) -> bool:
-    return (a or 0) == (b or 0)
 
 
 def _invalid(message: str) -> AtelierError:
@@ -72,7 +50,7 @@ def validate_operation(operation: Any) -> dict[str, Any]:
     ):
         raise _invalid("Invalid offline operation ID")
     action = operation.get("action")
-    if action not in _ACTIONS:
+    if action not in ("shopping_toggle", "shopping_add"):
         raise _invalid("Unsupported offline operation")
     payload = operation.get("payload")
     if not isinstance(payload, dict):
@@ -85,37 +63,6 @@ def validate_operation(operation: Any) -> dict[str, Any]:
         ):
             raise _invalid("Toggle needs item ID, desired and original state")
         clean = {key: payload[key] for key in ("item_id", "checked", "expected_checked")}
-    elif action == "shopping_update":
-        # A missing or blank note means "leave the note alone": items Mealie adds from a recipe
-        # have a linked food and usually no note, and their quantity must stay editable.
-        note = payload.get("note")
-        if isinstance(note, str) and not note.strip():
-            note = None
-        expected_note = payload.get("expected_note")
-        expected_quantity = payload.get("expected_quantity")
-        if (
-            not _is_id(payload.get("item_id"))
-            or not (note is None or (isinstance(note, str) and len(note.strip()) <= 250))
-            or not _is_quantity(payload.get("quantity"))
-            or not (expected_note is None or isinstance(expected_note, str))
-            or not (expected_quantity is None or _is_quantity(expected_quantity))
-        ):
-            raise _invalid("Update needs item ID, new note, quantity and the original values")
-        clean = {
-            "item_id": payload["item_id"],
-            "note": note,
-            "quantity": payload["quantity"],
-            "expected_note": expected_note,
-            "expected_quantity": expected_quantity,
-        }
-    elif action == "shopping_delete":
-        if not _is_id(payload.get("item_id")):
-            raise _invalid("Delete needs an item ID")
-        clean = {"item_id": payload["item_id"]}
-    elif action == "shopping_clear_checked":
-        if not _is_id(payload.get("list_id")):
-            raise _invalid("Clearing needs a list ID")
-        clean = {"list_id": payload["list_id"]}
     else:
         note = payload.get("note")
         if (
@@ -246,35 +193,7 @@ class OfflineLedger:
             await self._save()
 
         payload = op["payload"]
-        action = op["action"]
-        current: dict[str, Any] = {}
-        if action == "shopping_update":
-            try:
-                current = await self._client.shopping_item(payload["item_id"])
-            except MealieError as err:
-                if err.status != 404:
-                    await set_state("checking")
-                    raise
-                message = "This item was removed on another device"
-                await set_state("conflict", message=message)
-                raise AtelierError("offline_conflict", message) from err
-            except Exception:
-                await set_state("checking")
-                raise
-            note_changes = payload["note"] is not None
-            if (
-                not note_changes or _same_text(current.get("note"), payload["note"])
-            ) and _same_quantity(current.get("quantity"), payload["quantity"]):
-                result = {"ok": True, "already_applied": True, "item": current}
-                await set_state("completed", result=result)
-                return result
-            if (
-                note_changes and not _same_text(current.get("note"), payload["expected_note"])
-            ) or not _same_quantity(current.get("quantity"), payload["expected_quantity"]):
-                message = "This item was changed on another device. Review both values"
-                await set_state("conflict", message=message)
-                raise AtelierError("offline_conflict", message)
-        elif action == "shopping_toggle":
+        if op["action"] == "shopping_toggle":
             try:
                 current = await self._client.shopping_item(payload["item_id"])
             except Exception:
@@ -290,29 +209,23 @@ class OfflineLedger:
                 message = "This item was changed on another device. Review both values"
                 await set_state("conflict", message=message)
                 raise AtelierError("offline_conflict", message)
-        elif action == "shopping_add" and record["state"] in ("uncertain", "sending"):
+        elif record["state"] in ("uncertain", "sending"):
             raise _add_uncertain()
 
         # Persist the sending marker BEFORE touching Mealie, so a crash cannot cause a blind replay.
         await set_state("sending")
         try:
-            if action == "shopping_toggle":
+            if op["action"] == "shopping_toggle":
                 # Write exactly the item that was just compared, not a fresh read.
                 mealie_result = await self._client.set_shopping_item_checked(
                     payload["item_id"], payload["checked"], current
                 )
-            elif action == "shopping_update":
-                changes: dict[str, Any] = {"quantity": payload["quantity"]}
-                if payload["note"] is not None:
-                    changes["note"] = payload["note"].strip()
-                mealie_result = await self._client.update_shopping_item(
-                    payload["item_id"], changes, current
-                )
             else:
-                mealie_result = await self._client.mutate(action, payload)
+                mealie_result = await self._client.mutate(op["action"], payload)
         except Exception as exc:
             await set_state(
-                "uncertain" if action == "shopping_add" else "checking", message=str(exc)[:200]
+                "checking" if op["action"] == "shopping_toggle" else "uncertain",
+                message=str(exc)[:200],
             )
             raise
         response = {"ok": True, "result": mealie_result}
