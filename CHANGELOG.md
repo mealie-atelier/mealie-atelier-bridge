@@ -6,7 +6,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ### Added
 
-- Shopping list editing. The mutate command accepts `shopping_update` (note and quantity), `shopping_delete` and `shopping_clear_checked`, behind the same write permission as the other shopping actions. The offline replay ledger accepts the same three actions: an update is compared with the value the user saw and becomes a conflict when another device changed it, a delete of an item that is already gone counts as done, and none of them is ever blocked as a possible duplicate after a crash. A new error code `shopping_item_not_found` reports an update of an item that no longer exists. The status payload advertises `features.shopping_edit`.
+- Shopping list editing. The mutate command accepts `shopping_update` (rename, note and quantity; a rename of an item linked to a food turns it into a free text item, and an empty note removes the note), `shopping_delete` and `shopping_clear_checked`, behind the same write permission as the other shopping actions. The offline replay ledger accepts the same three actions: an update is compared with the value the user saw and becomes a conflict when another device changed it, a delete of an item that is already gone counts as done, and an offline clear must name the ticked item IDs the user saw and becomes a conflict when another device ticked or unticked an item meanwhile. None of them is ever blocked as a possible duplicate after a crash. A new error code `shopping_item_not_found` reports an update of an item that no longer exists. The status payload advertises `features.shopping_edit`.
 
 ## [0.10.1] - 2026-10-29
 

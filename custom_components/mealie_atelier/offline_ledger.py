@@ -19,7 +19,13 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
-from .api import MealieClient, MealieError
+from .api import (
+    MealieClient,
+    MealieError,
+    apply_shopping_changes,
+    shopping_item_name,
+    shopping_rename_applied,
+)
 from .const import OFFLINE_PRUNE_DAYS, OFFLINE_RECORD_LIMIT, OFFLINE_STORE_VERSION
 from .errors import AtelierError
 from .recipe_editing import _run
@@ -60,16 +66,29 @@ def _is_number(value: Any) -> bool:
 
 
 def _clean_update(payload: dict[str, Any]) -> dict[str, Any]:
-    """An update names its item, the new note and/or quantity, and the value seen for each."""
+    """An update names its item, the new name, note and/or quantity, and the value seen for each."""
     if not _is_id(payload.get("item_id")):
         raise _invalid("Update needs an item ID")
     clean: dict[str, Any] = {"item_id": payload["item_id"]}
+    if "name" in payload:
+        name = payload["name"]
+        expected = payload.get("expected_name")
+        if (
+            "note" in payload
+            or not isinstance(name, str)
+            or not 0 < len(name.strip()) <= 250
+            or not (expected is None or isinstance(expected, str))
+            or "expected_name" not in payload
+        ):
+            raise _invalid("A rename needs the new and the original name, and no note")
+        clean["name"] = name.strip()
+        clean["expected_name"] = expected
     if "note" in payload:
         note = payload["note"]
         expected = payload.get("expected_note")
         if (
             not isinstance(note, str)
-            or not 0 < len(note.strip()) <= 250
+            or len(note.strip()) > 250
             or not (expected is None or isinstance(expected, str))
             or "expected_note" not in payload
         ):
@@ -88,7 +107,7 @@ def _clean_update(payload: dict[str, Any]) -> dict[str, Any]:
         clean["quantity"] = quantity
         clean["expected_quantity"] = expected
     if len(clean) == 1:
-        raise _invalid("Update needs a note or a quantity")
+        raise _invalid("Update needs a name, a note or a quantity")
     return clean
 
 
@@ -121,7 +140,10 @@ def validate_operation(operation: Any) -> dict[str, Any]:
     elif action == "shopping_clear_checked":
         if not _is_id(payload.get("list_id")):
             raise _invalid("Clearing ticked items needs a list ID")
-        clean = {"list_id": payload["list_id"]}
+        ids = payload.get("expected_ids")
+        if not isinstance(ids, list) or not 0 < len(ids) <= 1000 or not all(map(_is_id, ids)):
+            raise _invalid("Clearing ticked items needs the IDs of the items the user saw")
+        clean = {"list_id": payload["list_id"], "expected_ids": list(dict.fromkeys(ids))}
     elif action == "shopping_update":
         clean = _clean_update(payload)
     else:
@@ -285,16 +307,36 @@ class OfflineLedger:
             except Exception:
                 await set_state("checking")
                 raise
-            changes = {key: payload[key] for key in ("note", "quantity") if key in payload}
-            if all(_same(key, current.get(key), value) for key, value in changes.items()):
+            changes = _update_changes(payload)
+            if all(_applied(key, current, value) for key, value in changes.items()):
                 result = {"ok": True, "already_applied": True, "item": current}
                 await set_state("completed", result=result)
                 return result
             for key in changes:
-                if not _same(key, current.get(key), payload[f"expected_{key}"]):
+                if not _same(key, _seen(key, current), payload[f"expected_{key}"]):
                     message = "This item was changed on another device. Review both values"
                     await set_state("conflict", message=message)
                     raise AtelierError("offline_conflict", message)
+            try:
+                apply_shopping_changes(current, changes)
+            except ValueError as err:
+                await set_state("checking")
+                raise _invalid(str(err)) from err
+        elif action == "shopping_clear_checked":
+            try:
+                items = await self._client.shopping_items(payload["list_id"])
+            except Exception:
+                await set_state("checking")
+                raise
+            ticked = {i["id"] for i in items if i.get("checked") is True and "id" in i}
+            existing = {i.get("id") for i in items}
+            expected = set(payload["expected_ids"])
+            # Items the user saw ticked that were deleted meanwhile are fine. Any other
+            # difference means another device ticked or unticked something the user never saw.
+            if ticked != {i for i in expected if i in existing}:
+                message = "The ticked items changed on another device. Review the list"
+                await set_state("conflict", message=message)
+                raise AtelierError("offline_conflict", message)
         elif record["state"] in ("uncertain", "sending") and action not in _RECHECKABLE:
             raise _add_uncertain()
 
@@ -307,7 +349,7 @@ class OfflineLedger:
                     payload["item_id"], payload["checked"], current
                 )
             elif action == "shopping_update":
-                changes = {key: payload[key] for key in ("note", "quantity") if key in payload}
+                changes = _update_changes(payload)
                 mealie_result = await self._client.update_shopping_item(
                     payload["item_id"], changes, current
                 )
@@ -334,9 +376,24 @@ class OfflineLedger:
         return response
 
 
+def _update_changes(payload: dict[str, Any]) -> dict[str, Any]:
+    return {key: payload[key] for key in ("name", "note", "quantity") if key in payload}
+
+
+def _seen(key: str, item: dict[str, Any]) -> Any:
+    """The value of an item as the user saw it for one changed field."""
+    return shopping_item_name(item) if key == "name" else item.get(key)
+
+
+def _applied(key: str, item: dict[str, Any], wanted: Any) -> bool:
+    if key == "name":
+        return shopping_rename_applied(item, wanted)
+    return _same(key, item.get(key), wanted)
+
+
 def _same(key: str, current: Any, wanted: Any) -> bool:
-    """Compare a note or quantity; an empty note equals none, a missing quantity equals zero."""
-    if key == "note":
+    """Compare a name, note or quantity; an empty note equals none, a missing quantity zero."""
+    if key in ("note", "name"):
         return (current or "").strip() == (wanted or "").strip()
     return (current or 0) == (wanted or 0)
 
