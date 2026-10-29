@@ -11,7 +11,7 @@ from urllib.parse import quote, urlsplit
 import aiohttp
 
 from .const import MAX_PAGE_SIZE, MAX_PARALLEL_REQUESTS, UPLOAD_MAX_BYTES
-from .errors import structured_editor_required
+from .errors import AtelierError, structured_editor_required
 
 _RECIPE_SLUG = re.compile(r"^[\w\-]{1,150}$", re.ASCII)
 _ITEM_ID = re.compile(r"^[\w\-]{1,150}$", re.ASCII)
@@ -558,9 +558,7 @@ class MealieClient:
             item_id, changes = shopping_update_changes(payload)
             return await self.update_shopping_item(item_id, changes)
         if action == "shopping_delete":
-            return await self.request(
-                "DELETE", f"/api/households/shopping/items/{safe_id(payload.get('item_id'))}"
-            )
+            return await self.delete_shopping_item(safe_id(payload.get("item_id")))
         if action == "shopping_clear_checked":
             return await self.clear_checked_shopping(
                 safe_id(payload.get("list_id")), clear_expected_ids(payload)
@@ -698,13 +696,30 @@ class MealieClient:
 
         Pass the item that was just read as `current` to write exactly the state that was compared.
         """
-        if current is None:
-            current = await self.shopping_item(item_id)
-        updated = apply_shopping_changes(current, changes)
-        result = await self.request(
-            "PUT", f"/api/households/shopping/items/{safe_id(item_id)}", data=updated
-        )
+        try:
+            if current is None:
+                current = await self.shopping_item(item_id)
+            updated = apply_shopping_changes(current, changes)
+            result = await self.request(
+                "PUT", f"/api/households/shopping/items/{safe_id(item_id)}", data=updated
+            )
+        except MealieError as err:
+            if err.status == 404:
+                raise AtelierError(
+                    "shopping_item_not_found", "This item no longer exists in Mealie"
+                ) from err
+            raise
         return result if isinstance(result, dict) else updated
+
+    async def delete_shopping_item(self, item_id: str) -> dict:
+        """Delete one item. An item that is already gone counts as done."""
+        try:
+            await self.request("DELETE", f"/api/households/shopping/items/{safe_id(item_id)}")
+        except MealieError as err:
+            if err.status != 404:
+                raise
+            return {"ok": True, "already_applied": True}
+        return {"ok": True}
 
     async def clear_checked_shopping(
         self, list_id: str, expected_ids: list[str] | None = None

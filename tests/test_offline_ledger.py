@@ -276,10 +276,13 @@ async def test_update_conflict_when_another_device_changed_it(ledger, client, ha
     client.update_shopping_item.assert_not_awaited()
 
 
-async def test_update_of_a_deleted_item_is_a_sticky_conflict(ledger, client, hass_storage):
+async def test_update_of_a_deleted_item_reports_the_same_code_on_replay(
+    ledger, client, hass_storage
+):
     client.shopping_item.side_effect = MealieError("gone", status=404)
     assert await code_of(ledger.process(update())) == "shopping_item_not_found"
-    assert stored(hass_storage)[uid(1)]["state"] == "conflict"
+    assert stored(hass_storage)[uid(1)]["state"] == "checking"
+    assert await code_of(ledger.process(update())) == "shopping_item_not_found"
 
 
 async def test_update_read_and_write_failures_stay_retryable(ledger, client, hass_storage):
@@ -307,7 +310,7 @@ async def test_delete_calls_mealie_once_and_replays(ledger, client, hass_storage
 
 
 async def test_delete_of_a_missing_item_is_already_applied(ledger, client, hass_storage):
-    client.mutate.side_effect = MealieError("gone", status=404)
+    client.mutate.return_value = {"ok": True, "already_applied": True}
     result = await ledger.process(delete())
     assert result == {"ok": True, "already_applied": True}
     assert stored(hass_storage)[uid(1)]["state"] == "completed"

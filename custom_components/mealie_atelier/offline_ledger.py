@@ -299,9 +299,11 @@ class OfflineLedger:
                 current = await self._client.shopping_item(payload["item_id"])
             except MealieError as err:
                 if err.status == 404:
-                    message = "This item no longer exists in Mealie"
-                    await set_state("conflict", message=message)
-                    raise AtelierError("shopping_item_not_found", message) from err
+                    # Not sticky: a replay must report the same code again.
+                    await set_state("checking")
+                    raise AtelierError(
+                        "shopping_item_not_found", "This item no longer exists in Mealie"
+                    ) from err
                 await set_state("checking")
                 raise
             except Exception:
@@ -354,11 +356,8 @@ class OfflineLedger:
                     payload["item_id"], changes, current
                 )
             elif action == "shopping_delete":
-                try:
-                    mealie_result = await self._client.mutate(action, payload)
-                except MealieError as err:
-                    if err.status != 404:
-                        raise
+                mealie_result = await self._client.mutate(action, payload)
+                if isinstance(mealie_result, dict) and mealie_result.get("already_applied"):
                     # Already gone: the wish of the user is fulfilled.
                     result = {"ok": True, "already_applied": True}
                     await set_state("completed", result=result)
