@@ -137,7 +137,7 @@ async def test_create_is_idempotent_but_rejects_conflicting_reuse(manager: Timer
 async def test_create_caps_the_number_of_active_timers(manager: TimerManager):
     manager.alarms = [
         stored_alarm(status="scheduled", owner=f"user-{i}", deadline=now_ms() + 60_000)
-        for i in range(301)
+        for i in range(300)
     ]
 
     with pytest.raises(ServiceValidationError) as caught:

@@ -114,7 +114,7 @@ class TimerManager:
                 await self._save()
             active = [a for a in self.alarms if a.get("status") in ACTIVE_STATUSES]
             if (
-                len(active) > MAX_ACTIVE_TIMERS
+                len(active) >= MAX_ACTIVE_TIMERS
                 or sum(1 for a in active if a["owner"] == owner) >= MAX_ACTIVE_TIMERS_PER_USER
             ):
                 raise _invalid("too_many_timers")
