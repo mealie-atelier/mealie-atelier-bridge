@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
+from .ai_client import AiError
 from .api import MealieAuthError, MealieError, recipe_update_changes, safe_slug
 from .const import (
     VERSION,
@@ -98,6 +99,8 @@ def _fail(connection, msg: dict, exc: Exception) -> None:
         return
     if isinstance(exc, (ValueError, ServiceValidationError)):
         code = "invalid_request"
+    elif isinstance(exc, AiError):
+        code = "ai_error"
     elif isinstance(exc, MealieAuthError):
         code = "mealie_auth"
     else:

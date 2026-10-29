@@ -54,7 +54,7 @@ Open the integration and choose **Configure**. The options page is called **Secu
 | **Users allowed to change data** | Limits shopping list and meal plan changes to the chosen Home Assistant users. Empty means every user. Administrators can always write. Recipe editing stays admin only. |
 | **Structured ingredient editing** | Experimental. Lets administrators edit ingredients with linked foods and units. A backup is saved before every change. |
 | **USDA FoodData Central API key** | Optional. Free key used for nutrition lookup. |
-| **OpenAI API key** | Optional. Only used for food search suggestions. Leave empty to disable. |
+| **AI API key (OpenAI or Anthropic)** | Optional. Powers the AI helpers: food search terms, ingredient substitutes and the recipe check. The provider follows the key: keys starting with `sk-ant-` go to Anthropic, any other key to OpenAI. Leave empty to disable. |
 | **Timer notification service** | Optional. A notify service such as `notify.mobile_app_your_phone` that receives a push message when a kitchen timer ends. Leave empty for in-app notifications only. |
 
 Make a Mealie backup before you test recipe edits.

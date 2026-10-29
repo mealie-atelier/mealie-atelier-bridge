@@ -13,6 +13,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 - The Mealie token, the USDA key and the AI key are entered in masked password fields.
 - The timer notify service only accepts lowercase ASCII names such as `notify.mobile_app_pixel`.
 - The example address in the URL help text is shown as code, so Home Assistant no longer turns it into a link.
+- AI failures show their own message instead of claiming Mealie is unreachable.
 - `mealie_atelier/status` accepts the `entry_id` that a card bound to one entry sends, instead of rejecting the request.
 - The sign-up links in the options are passed as description placeholders, because hassfest rejects URLs inside translations.
 - At most six requests per entry reach Mealie at the same time. Mealie stops answering for good once about 30 arrive at once, which a tablet with several cards could trigger.

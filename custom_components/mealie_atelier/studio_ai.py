@@ -6,8 +6,7 @@ import json
 
 import aiohttp
 
-from .ai_client import request_json
-from .api import MealieError
+from .ai_client import AiError, request_json
 
 
 async def substitutes(session: aiohttp.ClientSession, key: str, ingredient: str, recipe: str):
@@ -76,7 +75,7 @@ async def substitutes(session: aiohttp.ClientSession, key: str, ingredient: str,
         json.JSONDecodeError,
         ValueError,
     ) as exc:
-        raise MealieError("AI substitution request could not be validated") from exc
+        raise AiError("AI substitution request could not be validated") from exc
 
 
 async def audit_recipe(session: aiohttp.ClientSession, key: str, recipe: dict):
@@ -158,4 +157,4 @@ async def audit_recipe(session: aiohttp.ClientSession, key: str, recipe: dict):
         ValueError,
         json.JSONDecodeError,
     ) as exc:
-        raise MealieError("AI audit unavailable or invalid") from exc
+        raise AiError("AI audit unavailable or invalid") from exc

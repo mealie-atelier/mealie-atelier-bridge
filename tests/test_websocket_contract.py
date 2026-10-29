@@ -372,3 +372,20 @@ async def test_status_accepts_the_entry_id_a_configured_card_sends(
     response = await send(client, {"type": "mealie_atelier/status", "entry_id": ENTRY_ID})
     assert response["success"], response
     assert response["result"]["entries"][0]["entry_id"] == ENTRY_ID
+
+
+def test_ai_failures_use_their_own_error_code():
+    from unittest.mock import MagicMock
+
+    from custom_components.mealie_atelier.ai_client import AiError
+    from custom_components.mealie_atelier.api import MealieError
+    from custom_components.mealie_atelier.websocket import _fail
+
+    for exc, code in (
+        (AiError("AI provider unavailable"), "ai_error"),
+        (MealieError("Mealie down"), "mealie_error"),
+        (ValueError("AI is not configured"), "invalid_request"),
+    ):
+        connection = MagicMock()
+        _fail(connection, {"id": 7}, exc)
+        connection.send_error.assert_called_once_with(7, code, str(exc))

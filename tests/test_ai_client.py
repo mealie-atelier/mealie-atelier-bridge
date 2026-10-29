@@ -187,3 +187,47 @@ async def test_german_instructions_address_the_reader_with_du(fake):
     await studio_ai.audit_recipe(session, ANT_KEY, RECIPE)
     for request in state["seen"]:
         assert "informally with du" in request["body"]["system"]
+
+
+@pytest.mark.parametrize(
+    ("key", "requested", "expected"),
+    [
+        (ANT_KEY, 25, ai_client.ANTHROPIC_MIN_TIMEOUT),
+        (ANT_KEY, 120, 120),
+        ("sk-openai-test", 25, 25),
+    ],
+)
+async def test_anthropic_gets_a_longer_total_timeout(key, requested, expected):
+    seen = {}
+
+    def post(url, **kwargs):
+        seen["total"] = kwargs["timeout"].total
+        raise TimeoutError
+
+    session = type("S", (), {"post": staticmethod(post)})()
+    with pytest.raises(ai_client.AiError):
+        await ai_client.request_json(
+            session,
+            key,
+            instructions="i",
+            input_text="t",
+            schema={},
+            schema_name="s",
+            timeout=requested,
+        )
+    assert seen["total"] == expected
+    assert ai_client.ANTHROPIC_MIN_TIMEOUT >= 60
+
+
+async def test_ai_helpers_raise_ai_error_on_bad_shape(fake):
+    state, session = fake
+    state["reply"] = {
+        "stop_reason": "end_turn",
+        "content": [{"type": "text", "text": json.dumps({"unexpected": 1})}],
+    }
+    with pytest.raises(ai_client.AiError):
+        await n.ai_suggest(session, ANT_KEY, ["oats"])
+    with pytest.raises(ai_client.AiError):
+        await studio_ai.substitutes(session, ANT_KEY, "Butter", "Kuchen")
+    with pytest.raises(ai_client.AiError):
+        await studio_ai.audit_recipe(session, ANT_KEY, RECIPE)

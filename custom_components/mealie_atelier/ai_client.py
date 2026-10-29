@@ -20,6 +20,11 @@ ANTHROPIC_MODEL = "claude-opus-5-5"
 ANTHROPIC_VERSION = "2026-10-21"
 ANTHROPIC_BETA = "server-side-fallback-2026-07-01"
 ANTHROPIC_PREFIX = "sk-ant-"
+ANTHROPIC_MIN_TIMEOUT = 60.0
+
+
+class AiError(MealieError):
+    """An AI provider call failed or returned something unusable."""
 
 
 def provider_for(key: str) -> str:
@@ -29,10 +34,10 @@ def provider_for(key: str) -> str:
 
 def _raise_for_status(status: int) -> None:
     if status in (401, 403):
-        raise MealieError("AI provider rejected the API key", status)
+        raise AiError("AI provider rejected the API key", status)
     if status in (429, 529) or status >= 500:
-        raise MealieError(f"AI provider is temporarily unavailable (HTTP {status})", status)
-    raise MealieError(f"AI provider returned HTTP {status}", status)
+        raise AiError(f"AI provider is temporarily unavailable (HTTP {status})", status)
+    raise AiError(f"AI provider returned HTTP {status}", status)
 
 
 async def request_json(
@@ -47,13 +52,14 @@ async def request_json(
 ) -> Any:
     """Send one structured request and return the parsed JSON document.
 
-    Raises MealieError for transport, status, refusal and unparsable output.
+    Raises AiError for transport, status, refusal and unparsable output.
     Callers validate the shape of the returned document.
     """
     key = key.strip()
     anthropic = provider_for(key) == "anthropic"
     if anthropic:
         url = ANTHROPIC_URL
+        timeout = max(timeout, ANTHROPIC_MIN_TIMEOUT)
         headers = {
             "x-api-key": key,
             "anthropic-version": ANTHROPIC_VERSION,
@@ -99,16 +105,16 @@ async def request_json(
             if response.status != 200:
                 if anthropic:
                     _raise_for_status(response.status)
-                raise MealieError(f"AI provider returned HTTP {response.status}", response.status)
+                raise AiError(f"AI provider returned HTTP {response.status}", response.status)
             data = await response.json()
     except (aiohttp.ClientError, TimeoutError) as exc:
-        raise MealieError("AI provider unavailable") from exc
+        raise AiError("AI provider unavailable") from exc
     try:
         if anthropic:
             if data.get("stop_reason") == "refusal":
-                raise MealieError("AI provider refused the request")
+                raise AiError("AI provider refused the request")
             if data.get("stop_reason") == "max_tokens":
-                raise MealieError("AI answer was cut off")
+                raise AiError("AI answer was cut off")
             text = next(block["text"] for block in data["content"] if block.get("type") == "text")
         else:
             text = next(
@@ -119,4 +125,4 @@ async def request_json(
             )
         return json.loads(text)
     except (KeyError, StopIteration, TypeError, AttributeError, ValueError) as exc:
-        raise MealieError("AI answer could not be read") from exc
+        raise AiError("AI answer could not be read") from exc

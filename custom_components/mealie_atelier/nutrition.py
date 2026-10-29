@@ -14,7 +14,7 @@ from typing import Any
 
 import aiohttp
 
-from .ai_client import request_json
+from .ai_client import AiError, request_json
 from .api import MealieError
 
 _FDC = "https://api.nal.usda.gov/fdc/v1"
@@ -335,4 +335,4 @@ async def ai_suggest(session: aiohttp.ClientSession, key: str, ingredient_texts:
             raise ValueError("AI returned mismatched ingredient suggestions")
         return suggestions
     except (KeyError, StopIteration, TypeError, ValueError, json.JSONDecodeError) as exc:
-        raise MealieError("AI suggestions could not be validated") from exc
+        raise AiError("AI suggestions could not be validated") from exc
