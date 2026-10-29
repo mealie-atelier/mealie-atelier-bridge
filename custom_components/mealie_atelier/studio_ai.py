@@ -7,6 +7,7 @@ import json
 import aiohttp
 
 from .ai_client import AiError, request_json
+from .errors import AtelierError
 
 _DISCLAIMERS = {
     "de": {
@@ -38,7 +39,9 @@ async def substitutes(
     session: aiohttp.ClientSession, key: str, ingredient: str, recipe: str, language: str = "de"
 ):
     if not key:
-        raise ValueError("AI is not configured")
+        raise AtelierError(
+            "ai_not_configured", "AI is not configured; add an API key in the integration options"
+        )
     if (
         not isinstance(ingredient, str)
         or not 2 <= len(ingredient) <= 160
@@ -109,7 +112,9 @@ async def audit_recipe(
     session: aiohttp.ClientSession, key: str, recipe: dict, language: str = "de"
 ):
     if not key:
-        raise ValueError("AI is not configured")
+        raise AtelierError(
+            "ai_not_configured", "AI is not configured; add an API key in the integration options"
+        )
     name = str(recipe.get("name") or "")[:180]
     ingredients = [
         str(x.get("display") or x.get("originalText") or (x.get("food") or {}).get("name") or "")[

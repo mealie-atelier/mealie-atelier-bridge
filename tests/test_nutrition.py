@@ -63,6 +63,8 @@ class NutritionTests(unittest.IsolatedAsyncioTestCase):
             if request.path.startswith("/fdc/"):
                 if request.query.get("api_key") == "BAD_REQUEST_KEY":
                     return web.json_response({"error": "Bad request"}, status=400)
+                if request.query.get("api_key") == "FORBIDDEN_KEY":
+                    return web.json_response({"error": "Forbidden"}, status=403)
                 if request.query.get("api_key") == "LIMITED_KEY":
                     return web.json_response({"error": "Slow down"}, status=429)
                 if request.query.get("api_key") != "TEST_USDA_KEY":
@@ -209,6 +211,16 @@ class NutritionTests(unittest.IsolatedAsyncioTestCase):
             await n.search(self.session, "WRONG_KEY", "oats")
         self.assertEqual(caught.exception.code, "usda_key_invalid")
 
+    async def test_forbidden_usda_key_has_its_own_error_code(self):
+        with self.assertRaises(AtelierError) as caught:
+            await n.search(self.session, "FORBIDDEN_KEY", "oats")
+        self.assertEqual(caught.exception.code, "usda_key_invalid")
+
+    async def test_ai_without_key_has_its_own_error_code(self):
+        with self.assertRaises(AtelierError) as caught:
+            await n.ai_suggest(self.session, "", ["1 cup oats"])
+        self.assertEqual(caught.exception.code, "ai_not_configured")
+
     async def test_malformed_request_is_not_blamed_on_the_key(self):
         with self.assertRaises(MealieError) as caught:
             await n.search(self.session, "BAD_REQUEST_KEY", "oats")
@@ -224,7 +236,7 @@ class NutritionTests(unittest.IsolatedAsyncioTestCase):
             self.session, "TEST_AI_KEY", ["100 g oats", "50 g berries"]
         )
         self.assertEqual([x["query"] for x in suggestions], ["oats", "berries"])
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AtelierError):
             await n.ai_suggest(self.session, "", ["something"])
         self.assertEqual(self.calls[-1]["path"], "/v1/responses")
 

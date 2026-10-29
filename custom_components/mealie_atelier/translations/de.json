@@ -124,9 +124,6 @@
     "timer_not_permitted": {
       "message": "Du darfst den Küchentimer einer anderen Person nicht abbrechen."
     },
-    "timer_dispatched": {
-      "message": "Der Küchentimer wurde bereits ausgelöst."
-    },
     "use_structured_editor": {
       "message": "Bearbeite Zutaten mit dem strukturierten Zutaten-Editor. Das Ersetzen per Freitext gibt es nicht mehr."
     },
@@ -195,6 +192,9 @@
     },
     "conflict": {
       "message": "Jemand anderes hat das inzwischen geändert. Lade neu und versuche es erneut."
+    },
+    "ai_not_configured": {
+      "message": "KI ist nicht eingerichtet. Trage einen API-Schlüssel in den Optionen von Mealie Atelier Bridge ein."
     },
     "usda_key_invalid": {
       "message": "Der USDA-FoodData-Central-Schlüssel wurde abgelehnt. Prüfe den Schlüssel in den Optionen von Mealie Atelier Bridge."

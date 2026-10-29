@@ -261,3 +261,17 @@ async def test_ai_answers_follow_the_requested_language(language, name, word, di
         assert f"in {name}" in call.kwargs["instructions"]
     assert subs["disclaimer"].startswith(word)
     assert disclaimer in audit["disclaimer"]
+
+
+async def test_studio_ai_without_key_raises_the_coded_error():
+    import pytest
+
+    from custom_components.mealie_atelier.errors import AtelierError
+
+    for call in (
+        studio_ai.substitutes(None, "", "Butter", "Kuchen"),
+        studio_ai.audit_recipe(None, "", RECIPE),
+    ):
+        with pytest.raises(AtelierError) as caught:
+            await call
+        assert caught.value.code == "ai_not_configured"

@@ -124,9 +124,6 @@
     "timer_not_permitted": {
       "message": "You may not cancel another user's kitchen timer."
     },
-    "timer_dispatched": {
-      "message": "The kitchen timer has already been dispatched."
-    },
     "use_structured_editor": {
       "message": "Edit ingredients with the structured ingredient editor. Plain-text replacement is no longer available."
     },
@@ -195,6 +192,9 @@
     },
     "conflict": {
       "message": "Someone else changed this in the meantime. Reload and try again."
+    },
+    "ai_not_configured": {
+      "message": "AI is not configured. Add an API key in the Mealie Atelier Bridge options."
     },
     "usda_key_invalid": {
       "message": "The USDA FoodData Central key was refused. Check the key in the Mealie Atelier Bridge options."
