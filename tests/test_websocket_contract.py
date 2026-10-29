@@ -421,6 +421,24 @@ async def test_status_reports_ai_only_with_a_key(
     assert await ai_flag() is True
 
 
+async def test_status_names_the_ai_provider(
+    hass: HomeAssistant,
+    setup_integration: MockConfigEntry,
+    hass_ws_client: WebSocketGenerator,
+):
+    client = await hass_ws_client()
+
+    async def ai_state() -> tuple[bool, str]:
+        reply = await send(client, {"type": "mealie_atelier/status"})
+        entry = reply["result"]["entries"][0]
+        return entry["ai_enabled"], entry["ai_provider"]
+
+    assert await ai_state() == (False, "none")
+    for key, provider in (("sk-ant-abc", "anthropic"), ("sk-abc", "openai")):
+        hass.config_entries.async_update_entry(setup_integration, options={CONF_AI_KEY: key})
+        assert await ai_state() == (True, provider)
+
+
 async def test_ai_commands_use_the_card_language_else_the_home_assistant_language(
     hass: HomeAssistant,
     setup_integration: MockConfigEntry,
