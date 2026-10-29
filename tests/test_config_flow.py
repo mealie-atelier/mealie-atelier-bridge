@@ -521,3 +521,14 @@ async def test_options_flow_does_not_offer_admins(hass):
     values = [o["value"] for o in selector.config["options"]]
     assert owner.id not in values
     assert values == [anna.id]
+
+
+async def test_options_flow_does_not_offer_services_that_cannot_notify(hass):
+    for name in ("mobile_app_phone", "send_message", "persistent_notification"):
+        hass.services.async_register("notify", name, lambda call: None)
+    entry = _entry()
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    schema = result["data_schema"].schema
+    field = next(key for key in schema if key == CONF_TIMER_NOTIFY_SERVICE)
+    assert schema[field].config["options"] == ["notify.mobile_app_phone"]

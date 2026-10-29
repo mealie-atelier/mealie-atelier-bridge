@@ -149,7 +149,7 @@ async def _fdc_fetch(
                 raise AtelierError("usda_key_invalid", "The USDA FoodData Central key was refused")
             if response.status == 429:
                 raise AtelierError(
-                    "usda_rate_limited", "The USDA FoodData Central limit is reached"
+                    "usda_rate_limited", "The USDA FoodData Central limit has been reached"
                 )
             if response.status >= 300:
                 raise MealieError(f"FoodData Central returned HTTP {response.status}")

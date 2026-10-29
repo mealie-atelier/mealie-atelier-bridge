@@ -200,7 +200,7 @@
       "message": "The USDA FoodData Central key was refused. Check the key in the Mealie Atelier options."
     },
     "usda_rate_limited": {
-      "message": "The USDA FoodData Central limit is reached. Try again later."
+      "message": "The USDA FoodData Central limit has been reached. Try again later."
     }
   }
 }

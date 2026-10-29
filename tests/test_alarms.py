@@ -362,6 +362,7 @@ async def test_stop_without_start_is_harmless(manager: TimerManager):
     ("language", "title", "message"),
     [
         ("de", "Mealie Atelier · Küchentimer", "Pasta ist fertig!"),
+        ("de-CH", "Mealie Atelier · Küchentimer", "Pasta ist fertig!"),
         ("en", "Mealie Atelier · Kitchen timer", "Pasta is ready!"),
         ("fr", "Mealie Atelier · Kitchen timer", "Pasta is ready!"),
     ],

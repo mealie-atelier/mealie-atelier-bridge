@@ -160,7 +160,9 @@ class TimerManager:
         return {"alarms": deepcopy([a for a in self.alarms if admin or a["owner"] == actor])}
 
     async def _deliver(self, entry):
-        title, template = _TEXTS["de" if self.hass.config.language == "de" else "en"]
+        title, template = _TEXTS[
+            "de" if str(self.hass.config.language or "").lower().startswith("de") else "en"
+        ]
         message = template.format(label=entry["label"])
         channels = []
         # HA always receives an internal persistent notification (visible after reopening HA).

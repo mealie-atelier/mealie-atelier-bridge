@@ -60,6 +60,8 @@ class NutritionTests(unittest.IsolatedAsyncioTestCase):
                 {"method": request.method, "path": request.path, "query": dict(request.query)}
             )
             if request.path.startswith("/fdc/"):
+                if request.query.get("api_key") == "LIMITED_KEY":
+                    return web.json_response({"error": "Slow down"}, status=429)
                 if request.query.get("api_key") != "TEST_USDA_KEY":
                     return web.json_response({"error": "Bad key"}, status=401)
                 if request.path.endswith("/foods/search"):
@@ -203,6 +205,11 @@ class NutritionTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(AtelierError) as caught:
             await n.search(self.session, "WRONG_KEY", "oats")
         self.assertEqual(caught.exception.code, "usda_key_invalid")
+
+    async def test_exhausted_usda_limit_has_its_own_error_code(self):
+        with self.assertRaises(AtelierError) as caught:
+            await n.search(self.session, "LIMITED_KEY", "oats")
+        self.assertEqual(caught.exception.code, "usda_rate_limited")
 
     async def test_optional_ai_only_proposes_search_text(self):
         suggestions = await n.ai_suggest(

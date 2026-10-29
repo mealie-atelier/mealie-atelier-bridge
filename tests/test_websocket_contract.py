@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 from homeassistant.components.websocket_api.const import DOMAIN as WEBSOCKET_DOMAIN
 from homeassistant.core import HomeAssistant
@@ -11,7 +11,9 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
+from custom_components.mealie_atelier import websocket
 from custom_components.mealie_atelier.const import (
+    CONF_AI_KEY,
     CONF_READ_ONLY,
     CONF_WRITE_USERS,
 )
@@ -401,3 +403,50 @@ def test_translated_validation_errors_keep_their_own_code():
     args, kwargs = connection.send_error.call_args
     assert args[:2] == (9, "too_many_timers")
     assert kwargs["translation_key"] == "too_many_timers"
+
+
+async def test_status_reports_ai_only_with_a_key(
+    hass: HomeAssistant,
+    setup_integration: MockConfigEntry,
+    hass_ws_client: WebSocketGenerator,
+):
+    client = await hass_ws_client()
+
+    async def ai_flag() -> bool:
+        reply = await send(client, {"type": "mealie_atelier/status"})
+        return reply["result"]["entries"][0]["features"]["ai"]
+
+    assert await ai_flag() is False
+    hass.config_entries.async_update_entry(setup_integration, options={CONF_AI_KEY: "k"})
+    assert await ai_flag() is True
+
+
+async def test_ai_commands_use_the_card_language_else_the_home_assistant_language(
+    hass: HomeAssistant,
+    setup_integration: MockConfigEntry,
+    mock_mealie: AiohttpClientMocker,
+    hass_ws_client: WebSocketGenerator,
+):
+    mock_mealie.get(f"{MEALIE_URL}/api/recipes/gnocchi", json=RECIPE, headers=JSON)
+    hass.config_entries.async_update_entry(setup_integration, options={CONF_AI_KEY: "k"})
+    hass.config.language = "en"
+    client = await hass_ws_client()
+    substitute = {"type": "mealie_atelier/studio_substitute", "ingredient": "Butter", "recipe": "R"}
+    audit = {"type": "mealie_atelier/studio_ai_audit", "slug": "gnocchi"}
+    with (
+        patch.object(websocket, "ai_substitutes", AsyncMock(return_value={})) as subs,
+        patch.object(websocket, "ai_audit", AsyncMock(return_value={})) as review,
+    ):
+        for message in (substitute, audit):
+            assert (await send(client, message))["success"]
+        assert subs.call_args.args[-1] == "en"
+        assert review.call_args.args[-1] == "en"
+        hass.config.language = "de-CH"
+        for message in (substitute, audit):
+            assert (await send(client, message))["success"]
+        assert subs.call_args.args[-1] == "de-CH"
+        assert review.call_args.args[-1] == "de-CH"
+        for message in (substitute, audit):
+            assert (await send(client, dict(message, language="fr")))["success"]
+        assert subs.call_args.args[-1] == "fr"
+        assert review.call_args.args[-1] == "fr"
