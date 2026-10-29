@@ -10,6 +10,9 @@ CONF_VERIFY_SSL = "verify_ssl"
 CONF_READ_ONLY = "read_only"
 CONF_WRITE_USERS = "write_users"
 CONF_EXPERIMENTAL_INGREDIENTS = "experimental_ingredient_edits"
+# Sign-up pages linked from the options form (hassfest forbids URLs inside translations).
+OPENAI_KEYS_URL = "https://platform.openai.com/api-keys"
+USDA_SIGNUP_URL = "https://fdc.nal.usda.gov/api-key-signup"
 CONF_WRITE_USERS = "write_users"
 DEFAULT_TIMEOUT = 20
 MAX_PAGE_SIZE = 60

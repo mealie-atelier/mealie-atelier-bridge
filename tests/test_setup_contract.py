@@ -110,3 +110,18 @@ def test_every_translation_key_used_in_code_has_an_exception_message(name: str) 
     used |= CONTRACT_ERROR_CODES
     assert used <= set(exceptions)
     assert all(exceptions[key]["message"] for key in used)
+
+
+def _strings(node: object) -> list[str]:
+    if isinstance(node, dict):
+        return [text for value in node.values() for text in _strings(value)]
+    return [node] if isinstance(node, str) else []
+
+
+@pytest.mark.parametrize("name", ["strings.json", "translations/en.json", "translations/de.json"])
+def test_translations_carry_no_urls(name: str) -> None:
+    # Hassfest rejects links to sites in translations; they come in as description placeholders.
+    # Example addresses such as http://192.168.1.20:9000 are accepted and stay.
+    texts = _strings(json.loads((INTEGRATION / name).read_text()))
+    assert texts
+    assert not [text for text in texts if re.search(r"https?://[a-z][\w-]*(\.[\w-]+)+", text)]

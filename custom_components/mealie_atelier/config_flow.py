@@ -29,6 +29,8 @@ from .const import (
     CONF_VERIFY_SSL,
     CONF_WRITE_USERS,
     DOMAIN,
+    OPENAI_KEYS_URL,
+    USDA_SIGNUP_URL,
 )
 
 
@@ -255,4 +257,9 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(schema, suggested),
             errors=errors,
+            # Hassfest rejects URLs inside translations, so the sign-up links are placeholders.
+            description_placeholders={
+                "openai_keys_url": OPENAI_KEYS_URL,
+                "usda_signup_url": USDA_SIGNUP_URL,
+            },
         )

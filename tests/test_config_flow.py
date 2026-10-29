@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+import re
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -24,6 +27,7 @@ URL = "http://mealie.test:9000"
 ACCOUNT = {"id": "user-1", "username": "chef"}
 CHECK = "custom_components.mealie_atelier.config_flow.MealieClient.check_connection"
 SETUP = "custom_components.mealie_atelier.async_setup_entry"
+INTEGRATION = Path(__file__).resolve().parents[1] / "custom_components" / "mealie_atelier"
 
 
 @pytest.fixture(autouse=True)
@@ -188,6 +192,20 @@ async def test_options_flow_save(hass):
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert entry.options[CONF_READ_ONLY] is True
     assert entry.options[CONF_TIMER_NOTIFY_SERVICE] == "notify.mobile_app_phone"
+
+
+async def test_options_form_fills_every_link_placeholder(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    placeholders = result["description_placeholders"]
+    for locale in ("en", "de"):
+        strings = json.loads((INTEGRATION / "translations" / f"{locale}.json").read_text())
+        help_texts = strings["options"]["step"]["init"]["data_description"].values()
+        used = {name for text in help_texts for name in re.findall(r"\{(\w+)\}", text)}
+        assert used == {"openai_keys_url", "usda_signup_url"}
+        assert used <= set(placeholders)
+    assert all(url.startswith("https://") for url in placeholders.values())
 
 
 async def test_options_flow_rejects_bad_notify_service(hass):

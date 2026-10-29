@@ -7,6 +7,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 ### Fixed
 
 - `mealie_atelier/status` accepts the `entry_id` that a card bound to one entry sends, instead of rejecting the request.
+- The sign-up links in the options are passed as description placeholders, because hassfest rejects URLs inside translations.
 
 ### Changed
 
