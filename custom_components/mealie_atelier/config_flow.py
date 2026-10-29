@@ -63,7 +63,8 @@ def _clean_url(url: str) -> str:
             break
     else:
         return url
-    return urlunsplit((parts.scheme, parts.netloc, "/".join(segments), parts.query, parts.fragment))
+    # Query and fragment belong to the cut browser page, so they go too.
+    return urlunsplit((parts.scheme, parts.netloc, "/".join(segments), "", ""))
 
 
 def _error_key(error: Exception) -> str:
@@ -306,9 +307,10 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
             }
         )
         suggested = dict(user_input or self.config_entry.options)
-        # Suggested values travel to the browser, so secrets are never among them.
-        for key, _clear_key in _CLEARABLE_KEYS:
-            suggested.pop(key, None)
+        if not user_input:
+            # Stored secrets never travel to the browser. A key the user just typed stays.
+            for key, _clear_key in _CLEARABLE_KEYS:
+                suggested.pop(key, None)
         suggested[CONF_WRITE_USERS] = [
             user_id for user_id in suggested.get(CONF_WRITE_USERS) or [] if user_id in known
         ]

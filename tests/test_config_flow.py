@@ -384,6 +384,8 @@ async def test_entry_title_names_the_server(hass):
         f"{URL}/g/home/",
         f"{URL}/g/home/recipes",
         f"{URL}/LOGIN/",
+        f"{URL}/login?redirect=%2Fg%2Fhome",
+        f"{URL}/g/home#x",
     ],
 )
 async def test_user_step_strips_browser_paths(hass, pasted):
@@ -467,6 +469,17 @@ async def test_options_form_does_not_send_saved_keys(hass):
     text = _serialized(result["data_schema"])
     assert "fdc-secret" not in text
     assert "ai-secret" not in text
+
+
+async def test_options_error_redisplay_keeps_typed_key(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_AI_KEY: "typed-key", CONF_TIMER_NOTIFY_SERVICE: "notify.Bad"}
+    )
+    assert result["errors"] == {CONF_TIMER_NOTIFY_SERVICE: "invalid_notify_service"}
+    assert "typed-key" in _serialized(result["data_schema"])
 
 
 async def test_options_empty_key_keeps_saved_and_clear_removes(hass):
