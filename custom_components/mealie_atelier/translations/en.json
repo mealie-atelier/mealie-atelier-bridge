@@ -186,6 +186,9 @@
     "mealie_error": {
       "message": "Mealie is unreachable or returned an error. Check that Mealie is running and try again."
     },
+    "ai_error": {
+      "message": "The AI provider did not answer or sent an unusable answer. Check the API key and try again."
+    },
     "conflict": {
       "message": "Someone else changed this in the meantime. Reload and try again."
     }

@@ -186,6 +186,9 @@
     "mealie_error": {
       "message": "Mealie ist nicht erreichbar oder hat einen Fehler gemeldet. Prüfe, ob Mealie läuft, und versuche es erneut."
     },
+    "ai_error": {
+      "message": "Der KI-Anbieter hat nicht geantwortet oder eine unbrauchbare Antwort geliefert. Prüfe den API-Key und versuche es erneut."
+    },
     "conflict": {
       "message": "Jemand anderes hat das inzwischen geändert. Lade neu und versuche es erneut."
     }

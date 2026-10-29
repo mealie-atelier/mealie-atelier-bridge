@@ -71,6 +71,7 @@ CONTRACT_ERROR_CODES = {
     "invalid_request",
     "mealie_auth",
     "mealie_error",
+    "ai_error",
     "read_only",
     "unauthorized",
     "write_not_permitted",
