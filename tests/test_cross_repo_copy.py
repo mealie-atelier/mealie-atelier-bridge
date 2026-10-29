@@ -18,14 +18,38 @@ CARDS = Path(os.environ.get("MEALIE_ATELIER_CARDS_DIR", ROOT.parent / "mealie-at
 BRIDGE_DE = ROOT / "custom_components" / "mealie_atelier" / "translations" / "de.json"
 CARDS_DE = CARDS / "src" / "i18n" / "de.json"
 
+# "Token" is neuter in German. Every masculine form is flagged, with or without adjectives:
+#  - accusative (den, einen, deinen, diesen, jeden, welchen ...) plus optional adjectives ending in -en,
+#  - "ein", "kein", "dein" ... only with an adjective ending in -er ("ein neuer Token"), because
+#    "ein Token" and "dein Token" are valid neuter forms,
+#  - "jeder" always, and "der", "dieser", "welcher" when an adjective ending in -e follows or when
+#    they open a sentence or a clause, because "der Token" / "dieser Token" elsewhere can be the
+#    valid genitive plural ("die Liste der Token").
+_WORD = r"[^\W\d_]+"
+_TOKEN = r"(?:API-)?Token\b"
+_MASCULINE_TOKEN = (
+    r"\b(?i:(?:den|einen|keinen|deinen|meinen|seinen|ihren|unseren|diesen|jeden|welchen)"
+    rf"(?: {_WORD}en)*) {_TOKEN}"
+    r"|\b(?i:(?:ein|kein|dein|mein|sein|ihr|unser)(?: "
+    + _WORD
+    + r"er)+) "
+    + _TOKEN
+    + r"|\b(?i:jeder)(?: "
+    + _WORD
+    + r"e)* "
+    + _TOKEN
+    + r"|\b(?i:(?:der|dieser|welcher)(?: "
+    + _WORD
+    + r"e)+) "
+    + _TOKEN
+    + r"|(?:^|[.!?:;,] |\b(?i:ob|dass|wenn|weil|falls) )(?i:der|dieser|welcher) "
+    + _TOKEN
+)
+
 # One German term per concept in both repositories: the forbidden variant and the term to use.
 TERMS = [
     (r"\bSicherung", "Backup"),
-    (
-        r"\b(?i:(der|den|einen|keinen|deinen|diesen|jeden|jeder|"
-        r"seinen|ihren|unseren|welchen|meinen)) (API-)?Token\b",
-        "das Token",
-    ),
+    (_MASCULINE_TOKEN, "das Token"),
     (r"\bAPI-Tokens\b", "API-Token"),
 ]
 
@@ -80,14 +104,23 @@ def test_shopping_error_codes_use_the_same_wording_in_both_repositories(
     "text",
     [
         "Der Token ist abgelaufen",
+        "Dieser Token ist abgelaufen",
+        "Welcher Token?",
+        "Prüfe, ob der Token gültig ist",
         "Prüfe deinen Token",
         "Jeden API-Token prüfen",
         "Der API-Token fehlt",
+        "Erstelle einen neuen Token",
+        "Prüfe den alten API-Token",
+        "Ein neuer Token",
+        "Mealie lehnt jeder Token ab",
+        "Der neue Token fehlt",
+        "Du brauchst deinen neuen langen API-Token",
     ],
 )
-def test_masculine_token_pattern_catches_every_case(text: str) -> None:
+def test_masculine_token_pattern_catches_the_masculine_forms(text: str) -> None:
     pattern = next(p for p, term in TERMS if term == "das Token")
-    assert re.search(pattern, text)
+    assert re.search(pattern, text), text
 
 
 def test_neuter_token_is_not_flagged() -> None:
@@ -99,5 +132,10 @@ def test_neuter_token_is_not_flagged() -> None:
         "Die Gültigkeit des Tokens endet.",
         "Mit deinem API-Token geht es.",
         "Die Rechte der Tokens und mit den Tokens.",
+        "Die Liste der Token ist leer.",
+        "Die Rechte dieser Token enden.",
+        "Ein Token fehlt. Dein Token läuft ab.",
+        "Erstelle ein neues Token und prüfe das alte API-Token.",
+        "Mit dem neuen Token geht es.",
     ):
         assert not re.search(pattern, text), text

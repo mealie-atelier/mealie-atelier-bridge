@@ -4,20 +4,13 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-10-29
+
 ### Added
 
 - Shopping list editing. The mutate command accepts `shopping_update` (rename, note and quantity; a rename of an item linked to a food turns it into a free text item, and an empty note removes the note), `shopping_delete` and `shopping_clear_checked`, behind the same write permission as the other shopping actions. The offline replay ledger accepts the same three actions: an update is compared with the value the user saw (`expected_name`, `expected_note`, `expected_quantity`, each optional: without it the edit wins) and becomes a conflict when another device changed it, a delete of an item that is already gone counts as done (online and offline), and an offline clear must name the ticked item IDs the user saw and becomes a conflict when another device ticked or unticked an item meanwhile. None of them is ever blocked as a possible duplicate after a crash. A new error code `shopping_item_not_found` reports an update of an item that no longer exists, online and offline. The status payload advertises `features.shopping_edit`.
 - Free text shopping items added through the Bridge no longer get a forced quantity of 1, so Mealie shows the text without a leading "1". The cards send the values the user saw (`expected_name`, `expected_note`, `expected_quantity`, `expected_ids`) with queued offline edits, and the Bridge checks them when present.
 - Each status entry carries `ai_enabled` and `ai_provider` (`openai`, `anthropic` or `none`). The WebSocket contract with every error code is documented in `docs/WEBSOCKET_API.md`.
-
-### Changed
-
-- The German copy says "Backup" (like the cards and Home Assistant) instead of "Sicherung".
-
-## [0.10.1] - 2026-10-29
-
-### Added
-
 - The AI helpers also work with an Anthropic API key (Claude); the provider follows the key.
 
 ### Fixed
@@ -50,6 +43,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ### Changed
 
+- The German copy says "Backup" (like the cards and Home Assistant) instead of "Sicherung".
 - New Home Assistant brand icons and logos (the Week Dial bridge mark), in light and dark variants, at normal and 2x size. They replace the photo icon.
 - Live tests: `sync_live.py` can target a dedicated Bring! list (`SYNC_TODO`) and passed all 30 checks against one (Mealie v3.29.0, Home Assistant 2026.11.0b0). `capture_sync.py` records the sync setup for the guide. It writes only to the list named `SYNC_TEST_LIST` (default "Mealie Atelier") and fails if an account address would be visible.
 - The options explain what the USDA FoodData Central key and the OpenAI or Anthropic key are for, what is lost without them and where to get them, with links.

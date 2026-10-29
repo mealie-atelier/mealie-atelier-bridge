@@ -78,3 +78,23 @@ def test_websocket_doc_does_not_claim_fallback_codes_never_carry_a_translation_k
     assert "never by `translation_key`" in doc
     for action in ("shopping_update", "shopping_delete", "shopping_clear_checked", "expected_ids"):
         assert action in doc
+
+
+def test_changelog_releases_the_manifest_version_and_keeps_unreleased_empty() -> None:
+    """The release tag sits on the commit that carries the manifest version, so nothing may wait under Unreleased."""
+    import json
+
+    manifest = json.loads(
+        (ROOT / "custom_components" / "mealie_atelier" / "manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    version = manifest["version"]
+    assert f"## [{version}] - " in changelog
+    unreleased = changelog.split("## [Unreleased]", 1)[1].split("\n## ", 1)[0]
+    assert unreleased.strip() == ""
+    assert (
+        f"[Unreleased]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v{version}...HEAD"
+        in changelog
+    )
