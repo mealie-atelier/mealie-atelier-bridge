@@ -66,7 +66,7 @@ def _is_number(value: Any) -> bool:
 
 
 def _clean_update(payload: dict[str, Any]) -> dict[str, Any]:
-    """An update names its item, the new name, note and/or quantity, and the value seen for each."""
+    """An update names its item, the new name, note and/or quantity. The value the user saw for each is optional: without it the edit wins."""
     if not _is_id(payload.get("item_id")):
         raise _invalid("Update needs an item ID")
     clean: dict[str, Any] = {"item_id": payload["item_id"]}
@@ -78,11 +78,11 @@ def _clean_update(payload: dict[str, Any]) -> dict[str, Any]:
             or not isinstance(name, str)
             or not 0 < len(name.strip()) <= 250
             or not (expected is None or isinstance(expected, str))
-            or "expected_name" not in payload
         ):
-            raise _invalid("A rename needs the new and the original name, and no note")
+            raise _invalid("A rename needs a name, no note, and a text as the original name")
         clean["name"] = name.strip()
-        clean["expected_name"] = expected
+        if "expected_name" in payload:
+            clean["expected_name"] = expected
     if "note" in payload:
         note = payload["note"]
         expected = payload.get("expected_note")
@@ -90,22 +90,19 @@ def _clean_update(payload: dict[str, Any]) -> dict[str, Any]:
             not isinstance(note, str)
             or len(note.strip()) > 250
             or not (expected is None or isinstance(expected, str))
-            or "expected_note" not in payload
         ):
-            raise _invalid("A note change needs the new and the original note")
+            raise _invalid("A note change needs a text of at most 250 characters")
         clean["note"] = note.strip()
-        clean["expected_note"] = expected
+        if "expected_note" in payload:
+            clean["expected_note"] = expected
     if "quantity" in payload:
         quantity = payload["quantity"]
         expected = payload.get("expected_quantity")
-        if (
-            not _is_number(quantity)
-            or not (expected is None or _is_number(expected))
-            or "expected_quantity" not in payload
-        ):
-            raise _invalid("A quantity change needs the new and the original quantity")
+        if not _is_number(quantity) or not (expected is None or _is_number(expected)):
+            raise _invalid("A quantity change needs a number from 0 to 100000")
         clean["quantity"] = quantity
-        clean["expected_quantity"] = expected
+        if "expected_quantity" in payload:
+            clean["expected_quantity"] = expected
     if len(clean) == 1:
         raise _invalid("Update needs a name, a note or a quantity")
     return clean
@@ -315,7 +312,10 @@ class OfflineLedger:
                 await set_state("completed", result=result)
                 return result
             for key in changes:
-                if not _same(key, _seen(key, current), payload[f"expected_{key}"]):
+                # The cards may omit the value they saw. Then the edit simply wins.
+                if f"expected_{key}" in payload and not _same(
+                    key, _seen(key, current), payload[f"expected_{key}"]
+                ):
                     message = "This item was changed on another device. Review both values"
                     await set_state("conflict", message=message)
                     raise AtelierError("offline_conflict", message)

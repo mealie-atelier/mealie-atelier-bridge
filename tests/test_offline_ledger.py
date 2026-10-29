@@ -112,17 +112,14 @@ async def code_of(awaitable) -> str:
         {**clear(), "payload": {"list_id": "list-1"}},
         {**clear(), "payload": {"list_id": "list-1", "expected_ids": []}},
         {**clear(), "payload": {"list_id": "list-1", "expected_ids": ["bad id!"]}},
-        {**update(), "payload": {"item_id": "item-1", "name": "Sugar"}},
         {**update(), "payload": {"item_id": "item-1", "name": " ", "expected_name": "A"}},
         {
             **update(),
             "payload": {"item_id": "item-1", "name": "S", "expected_name": "A", "note": "x"},
         },
         {**update(), "payload": {"item_id": "item-1"}},
-        {**update(), "payload": {"item_id": "item-1", "note": "Oat milk"}},
         {**update(), "payload": {"item_id": "item-1", "note": "x" * 251, "expected_note": "M"}},
         {**update(), "payload": {"item_id": "item-1", "note": "x", "expected_note": 5}},
-        {**update(), "payload": {"item_id": "item-1", "quantity": 2}},
         {**update(), "payload": {"item_id": "item-1", "quantity": True, "expected_quantity": 1}},
         {**update(), "payload": {"item_id": "item-1", "quantity": -1, "expected_quantity": 1}},
         {
@@ -404,6 +401,39 @@ async def test_rename_already_applied_when_unlinked_with_that_name(ledger, clien
     op = update(name="Rohrzucker", expected_name="2 g Zucker")
     assert (await ledger.process(op))["already_applied"] is True
     client.update_shopping_item.assert_not_awaited()
+
+
+async def test_edits_without_the_seen_values_are_accepted_as_the_cards_send_them(ledger, client):
+    # The cards queue {item_id, name | note | quantity} without expected_* values.
+    for number, payload in enumerate(
+        (
+            {"item_id": "item-1", "note": "Oat milk"},
+            {"item_id": "item-1", "name": "Rohrzucker"},
+            {"item_id": "item-1", "quantity": 3},
+        ),
+        start=1,
+    ):
+        client.shopping_item.return_value = {**FOOD_ITEM, "note": "other", "quantity": 1}
+        op = {"id": uid(number), "action": "shopping_update", "payload": payload}
+        assert (await ledger.process(op))["ok"]
+    changes = [call.args[1] for call in client.update_shopping_item.await_args_list]
+    assert changes == [{"note": "Oat milk"}, {"name": "Rohrzucker"}, {"quantity": 3}]
+
+
+async def test_edit_without_the_seen_value_never_reports_a_false_conflict(ledger, client):
+    client.shopping_item.return_value = {"id": "item-1", "note": "Soy milk", "quantity": 5}
+    op = {
+        "id": uid(1),
+        "action": "shopping_update",
+        "payload": {"item_id": "item-1", "quantity": 2},
+    }
+    assert (await ledger.process(op))["ok"]
+
+
+async def test_a_seen_value_that_differs_is_still_a_conflict(ledger, client):
+    client.shopping_item.return_value = {"id": "item-1", "note": "Soy milk", "quantity": 5}
+    op = update(quantity=2, expected_quantity=1)
+    assert await code_of(ledger.process(op)) == "offline_conflict"
 
 
 async def test_removing_the_note_of_a_food_item_is_allowed(ledger, client):
