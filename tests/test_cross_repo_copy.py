@@ -21,7 +21,11 @@ CARDS_DE = CARDS / "src" / "i18n" / "de.json"
 # One German term per concept in both repositories: the forbidden variant and the term to use.
 TERMS = [
     (r"\bSicherung", "Backup"),
-    (r"\b(den|einen|dein|diesen|keinen) (API-)?Token\b", "das Token"),
+    (
+        r"\b(?i:(der|den|dem|des|einen|einem|keinen|dein|deinen|deinem|diesen|diesem|jeden|jeder|"
+        r"seinen|ihren|unseren|welchen|mein|meinen)) (API-)?Token(s)?\b",
+        "das Token",
+    ),
     (r"\bAPI-Tokens\b", "API-Token"),
 ]
 
@@ -70,3 +74,23 @@ def test_shopping_error_codes_use_the_same_wording_in_both_repositories(
     ]
     cards = json.loads((CARDS_DIR / f"{language}.json").read_text())[key]
     assert _first_sentence(bridge) == _first_sentence(cards)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Der Token ist abgelaufen",
+        "Prüfe deinen Token",
+        "Jeden API-Token prüfen",
+        "Mit dem Token geht es",
+        "Der API-Token fehlt",
+    ],
+)
+def test_masculine_token_pattern_catches_every_case(text: str) -> None:
+    pattern = next(p for p, term in TERMS if term == "das Token")
+    assert re.search(pattern, text) or re.search(pattern, text)
+
+
+def test_neuter_token_is_not_flagged() -> None:
+    pattern = next(p for p, term in TERMS if term == "das Token")
+    assert not re.search(pattern, "Das Token ist abgelaufen. Prüfe das Token.")
