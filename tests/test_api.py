@@ -109,6 +109,18 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
                 )
             if path == "/api/households/shopping/items/item-1" and request.method == "PUT":
                 return web.json_response(data)
+            if path == "/api/households/shopping/items/item-1" and request.method == "DELETE":
+                return web.Response(status=204)
+            if path == "/api/households/shopping/items" and request.method == "GET":
+                return web.json_response(
+                    {
+                        "items": [
+                            {"id": "item-1", "shoppingListId": "list-1", "checked": True},
+                            {"id": "item-2", "shoppingListId": "list-1", "checked": False},
+                            {"id": "item-3", "shoppingListId": "list-2", "checked": True},
+                        ]
+                    }
+                )
             return web.json_response({"error": "Not found"}, status=404)
 
         self.app = web.Application()
@@ -173,6 +185,33 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
             await self.client.mutate(
                 "shopping_from_recipe", {"list_id": "../secret", "recipe_id": "recipe-1"}
             )
+
+    async def test_shopping_update_keeps_the_rest_of_the_item(self):
+        item = await self.client.mutate(
+            "shopping_update", {"item_id": "item-1", "note": " Oat milk ", "quantity": 2}
+        )
+        self.assertEqual(item["note"], "Oat milk")
+        self.assertEqual(item["quantity"], 2)
+        self.assertEqual(item["shoppingListId"], "list-1")
+        for bad in ({}, {"quantity": True}, {"quantity": -1}, {"note": " "}):
+            with self.assertRaises(ValueError):
+                await self.client.mutate("shopping_update", {"item_id": "item-1", **bad})
+
+    async def test_shopping_delete_treats_a_missing_item_as_done(self):
+        self.assertEqual(
+            await self.client.mutate("shopping_delete", {"item_id": "item-1"}), {"deleted": 1}
+        )
+        self.assertEqual(
+            await self.client.mutate("shopping_delete", {"item_id": "item-9"}), {"deleted": 0}
+        )
+        with self.assertRaises(ValueError):
+            await self.client.mutate("shopping_delete", {"item_id": "../x"})
+
+    async def test_clear_checked_deletes_only_ticked_items_of_that_list(self):
+        result = await self.client.mutate("shopping_clear_checked", {"list_id": "list-1"})
+        self.assertEqual(result, {"deleted": 1})
+        deletes = [c["path"] for c in self.calls if c["method"] == "DELETE"]
+        self.assertEqual(deletes, ["/api/households/shopping/items/item-1"])
 
     async def test_metadata_includes_household_cookbooks(self):
         result = await self.client.metadata()

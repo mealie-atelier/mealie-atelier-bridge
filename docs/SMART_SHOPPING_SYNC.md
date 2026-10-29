@@ -1,12 +1,12 @@
 # Smart Shopping Sync
 
-Smart Shopping Sync copies items from one Mealie shopping list to one Home Assistant To-do list, for example the list of your Bring! integration. It runs inside the Mealie Atelier Bridge, so it keeps working when no dashboard is open. The standalone web app does not sync.
+Smart Shopping Sync copies items from one Mealie shopping list to one Home Assistant to-do list, for example the list of your Bring! integration. It runs inside the Mealie Atelier Bridge, so it keeps working when no dashboard is open. The standalone web app does not sync.
 
-It uses Home Assistant's generic To-do entity, so any integration whose To-do list can add items works as a destination. The Bridge never asks for Bring credentials and never calls a provider directly.
+It uses Home Assistant's generic to-do entity, so any integration whose to-do list can add items works as a destination. The Bridge never asks for Bring credentials and never calls a provider directly.
 
 ## How it works
 
-1. An administrator creates a rule in the Atelier shopping view: the Mealie source list, the To-do destination, **Copy** or **Move**, when to sync and how duplicates are handled. Lists of the core Mealie integration cannot be a destination, so items never loop back into Mealie.
+1. An administrator creates a rule in the Atelier shopping view: the Mealie source list, the to-do destination, **Copy** or **Move**, when to sync and how duplicates are handled. Lists of the core Mealie integration cannot be a destination, so items never loop back into Mealie.
 2. The preview shows how each line will look at the destination, for example `300 g Kartoffeln`. Amounts and units are kept as written in Mealie and never converted. A note goes into the item description when the destination supports one, otherwise it is appended in parentheses.
 3. Nothing syncs on its own until the first batch has been sent and confirmed. After that a rule runs after Atelier adds ingredients to the list and, if enabled, when a regular check of the list finds changes made elsewhere (every 2 minutes by default). Changes are collected for 30 seconds by default, so one recipe becomes one batch.
 4. **Copy** leaves Mealie unchanged. **Move** checks an item off in Mealie only after the destination accepted it, or after an identical open line was found there.
@@ -38,7 +38,7 @@ It uses Home Assistant's generic To-do entity, so any integration whose To-do li
 
 ## Privacy
 
-- Item text goes only to the To-do integration you picked.
+- Item text goes only to the to-do integration you picked.
 - The run log keeps time, rule, item count and outcome, never item text. Diagnostics contain only counts.
 - Tokens and credentials are never logged.
 
