@@ -767,3 +767,40 @@ async def test_command_replays_a_delete_and_a_clear(wired, hass_ws_client, hass_
     cleared = await send(client, command(clear(2)))
     assert cleared["result"]["result"] == {"deleted": 1}
     assert hass_storage[KEY]["data"][uid(2)]["state"] == "completed"
+
+
+async def test_chained_rename_matches_the_name_the_earlier_edit_left_in_mealie(ledger, client):
+    # After a replayed rename Mealie holds the note and rebuilds the display with the quantity.
+    client.shopping_item.return_value = {
+        "id": "item-1",
+        "note": "Hafermilch",
+        "display": "Hafermilch",
+        "isFood": False,
+        "quantity": 2,
+    }
+    op = update(name="Sojamilch", expected_name="2 Hafermilch")
+    assert (await ledger.process(op))["ok"]
+
+
+async def test_chained_rename_after_a_quantity_edit_is_not_a_conflict(ledger, client):
+    client.shopping_item.return_value = {
+        "id": "item-1",
+        "note": "Milch",
+        "display": "2 Milch",
+        "isFood": False,
+        "quantity": 4,
+    }
+    op = update(name="Hafermilch", expected_name="4 Milch")
+    assert (await ledger.process(op))["ok"]
+
+
+async def test_rename_still_conflicts_when_another_device_renamed_the_item(ledger, client):
+    client.shopping_item.return_value = {
+        "id": "item-1",
+        "note": "Butter",
+        "display": "2 Butter",
+        "isFood": False,
+        "quantity": 2,
+    }
+    op = update(name="Hafermilch", expected_name="2 Milch")
+    assert await code_of(ledger.process(op)) == "offline_conflict"

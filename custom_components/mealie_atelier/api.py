@@ -101,11 +101,12 @@ def apply_shopping_changes(current: dict, changes: dict) -> dict:
     A rename turns the item into a free text item: the link to its food is dropped, because the
     food name would otherwise keep being shown instead of the new name.
     """
-    updated = {**current}
+    # An empty display makes Mealie rebuild it (quantity, unit, name, note), as the web app server
+    # does, so a stale display is never written back.
+    updated = {**current, "display": ""}
     if "name" in changes:
         updated.update(
             note=changes["name"],
-            display=changes["name"],
             isFood=False,
             food=None,
             foodId=None,

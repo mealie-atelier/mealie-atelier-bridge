@@ -247,7 +247,10 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(renamed["quantity"], 2)
         cleared = apply_shopping_changes(food_item, {"note": ""})
         self.assertEqual(cleared["note"], "")
-        self.assertEqual(shopping_item_name(cleared), "2 g Zucker")
+        # Mealie rebuilds the display from an empty one, so the stale text is never written back.
+        self.assertEqual(cleared["display"], "")
+        self.assertEqual(renamed["display"], "")
+        self.assertEqual(apply_shopping_changes(food_item, {"quantity": 4})["display"], "")
         with self.assertRaises(ValueError):
             apply_shopping_changes({"id": "i", "note": "Milk"}, {"note": ""})
 

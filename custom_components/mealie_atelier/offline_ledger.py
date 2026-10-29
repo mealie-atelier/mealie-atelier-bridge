@@ -314,7 +314,7 @@ class OfflineLedger:
             for key in changes:
                 # The cards may omit the value they saw. Then the edit simply wins.
                 if f"expected_{key}" in payload and not _same(
-                    key, _seen(key, current), payload[f"expected_{key}"]
+                    key, _seen(key, current, payload[f"expected_{key}"]), payload[f"expected_{key}"]
                 ):
                     message = "This item was changed on another device. Review both values"
                     await set_state("conflict", message=message)
@@ -379,9 +379,47 @@ def _update_changes(payload: dict[str, Any]) -> dict[str, Any]:
     return {key: payload[key] for key in ("name", "note", "quantity") if key in payload}
 
 
-def _seen(key: str, item: dict[str, Any]) -> Any:
-    """The value of an item as the user saw it for one changed field."""
-    return shopping_item_name(item) if key == "name" else item.get(key)
+def _rebuilt_labels(item: dict[str, Any]) -> list[str]:
+    """The label Mealie shows once it rebuilds the display: quantity, unit, name and note."""
+    food = item.get("food") if isinstance(item.get("food"), dict) else None
+    unit = item.get("unit") if isinstance(item.get("unit"), dict) else {}
+    unit_name = str(unit.get("name") or unit.get("abbreviation") or "").strip()
+    name = str((food or {}).get("name") or "") if food else str(item.get("note") or "")
+    note = str(item.get("note") or "") if food else ""
+    quantity = item.get("quantity")
+    amount = (
+        quantity
+        if isinstance(quantity, (int, float)) and not isinstance(quantity, bool) and quantity > 0
+        else None
+    )
+    labels = []
+    for shown in (amount, amount if amount != 1 or unit_name else None):
+        number = "" if shown is None else f"{shown:g}"
+        parts = [number, unit_name, name.strip(), note.strip()]
+        labels.append(" ".join(part for part in parts if part))
+    return labels
+
+
+def _seen(key: str, item: dict[str, Any], wanted: Any = None) -> Any:
+    """The value of an item as the user saw it for one changed field.
+
+    The cards derive the label of an edited item themselves, so a name matches when it equals the
+    display text, the note or the food name that Mealie holds.
+    """
+    if key != "name":
+        return item.get(key)
+    food = item.get("food")
+    candidates = [
+        shopping_item_name(item),
+        item.get("display"),
+        item.get("note"),
+        food.get("name") if isinstance(food, dict) else None,
+        *_rebuilt_labels(item),
+    ]
+    for value in candidates:
+        if isinstance(value, str) and _same("name", value, wanted):
+            return value
+    return candidates[0]
 
 
 def _applied(key: str, item: dict[str, Any], wanted: Any) -> bool:
