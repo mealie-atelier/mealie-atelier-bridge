@@ -12,11 +12,11 @@ from .const import CONF_READ_ONLY, CONF_WRITE_USERS, DOMAIN
 Level = Literal["write", "admin"]
 
 _MESSAGES = {
-    "read_only": "Mealie Atelier is in read-only mode",
+    "read_only": "Mealie Atelier Bridge is in read-only mode",
     "unauthorized": "Only Home Assistant admins can do this",
     "write_not_permitted": (
         "Your Home Assistant user may not change data. "
-        "An administrator can grant access in the Mealie Atelier options"
+        "An administrator can grant access in the Mealie Atelier Bridge options"
     ),
 }
 

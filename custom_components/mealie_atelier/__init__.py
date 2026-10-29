@@ -81,7 +81,11 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def _retitle_legacy_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Rename a generated "Mealie Atelier · user" title; a title the user chose stays."""
+    """Rename a generated "Mealie Atelier · user" title.
+
+    The legacy generator stored no marker, so a custom title of exactly that shape cannot be
+    told apart from a generated one. Every other title the user chose stays.
+    """
     prefix = "Mealie Atelier · "
     username = entry.title.removeprefix(prefix)
     if entry.title.startswith(prefix) and username and "@" not in username:
@@ -91,7 +95,11 @@ async def _retitle_legacy_entry(hass: HomeAssistant, entry: ConfigEntry) -> None
 
 
 async def _drop_admin_write_grants(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Administrators always may write, so a stored admin id only narrows the list for others."""
+    """Administrators always may write, so a stored admin id only narrows the list for others.
+
+    A list that held only administrators meant "administrators only". Emptying it would let
+    everyone write, so such a list stays as it is.
+    """
     grants = entry.options.get(CONF_WRITE_USERS)
     if not grants:
         return
@@ -100,7 +108,7 @@ async def _drop_admin_write_grants(hass: HomeAssistant, entry: ConfigEntry) -> N
         user = await hass.auth.async_get_user(user_id)
         if user is None or not user.is_admin:
             kept.append(user_id)
-    if kept != list(grants):
+    if kept and kept != list(grants):
         hass.config_entries.async_update_entry(
             entry, options={**entry.options, CONF_WRITE_USERS: kept}
         )

@@ -90,8 +90,8 @@ Step-by-step guides in German: [setup](https://alles-automatisch.de/lernen/meali
 | Read-only mode | Blocks all changes to recipes, meal plans and shopping lists. It wins over every write grant. |
 | Users allowed to change data | Limits shopping list and meal plan changes to the chosen Home Assistant users. Empty means every user. Administrators can always write, and recipe editing stays admin only. |
 | Structured ingredient editing | Lets administrators edit ingredients with linked foods and units. A backup is saved before every change. |
-| USDA FoodData Central API key | Optional. Free key for nutrition lookup. |
-| AI API key (OpenAI or Anthropic) | Optional. Turns on the AI helpers: food search suggestions, ingredient substitutes and the recipe check. A key starting with `sk-ant-` uses Anthropic Claude, any other key uses OpenAI. |
+| USDA FoodData Central API key | Optional. Free key for nutrition lookup. Leave the field empty to keep a saved key, or enable "Remove the saved USDA key" to delete it. |
+| AI API key (OpenAI or Anthropic) | Optional. Turns on the AI helpers: food search suggestions, ingredient substitutes and the recipe check. A key starting with `sk-ant-` uses Anthropic Claude, any other key uses OpenAI. Leave the field empty to keep a saved key, or enable "Remove the saved AI key" to turn the helpers off. |
 | Timer notification service | Optional. A notify service such as `notify.mobile_app_your_phone` that gets a push message when a kitchen timer ends. |
 
 Re-authentication and **Reconfigure** are available from the integration page. Details and troubleshooting are in the [installation guide](docs/INSTALLATION.md).

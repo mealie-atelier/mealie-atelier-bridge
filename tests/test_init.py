@@ -13,6 +13,7 @@ from custom_components.mealie_atelier.alarms import TimerManager
 from custom_components.mealie_atelier.api import MealieClient
 from custom_components.mealie_atelier import async_migrate_entry
 from custom_components.mealie_atelier.const import CONF_WRITE_USERS, DOMAIN
+from custom_components.mealie_atelier.permissions import can_write
 
 from .conftest import MEALIE_URL
 
@@ -146,4 +147,18 @@ async def test_migration_drops_stored_admin_ids_from_the_write_list(hass: HomeAs
     await async_migrate_entry(hass, admin_only)
 
     assert entry.options[CONF_WRITE_USERS] == [member.id, "deleted-user"]
-    assert admin_only.options[CONF_WRITE_USERS] == []
+    assert admin_only.options[CONF_WRITE_USERS] == [admin.id]
+    assert not can_write(admin_only, member)
+    assert can_write(admin_only, admin)
+
+
+def test_user_facing_texts_use_the_full_integration_name():
+    import json
+    import pathlib
+    import re
+
+    root = pathlib.Path(__file__).parents[1] / "custom_components" / "mealie_atelier"
+    for name in ("strings.json", "translations/en.json", "translations/de.json"):
+        text = (root / name).read_text(encoding="utf-8")
+        assert not re.search(r"Mealie[ -]Atelier(?! Bridge)(?!-Bridge)", text), name
+        json.loads(text)

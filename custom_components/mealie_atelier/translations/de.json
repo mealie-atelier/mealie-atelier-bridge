@@ -86,13 +86,13 @@
   },
   "exceptions": {
     "read_only": {
-      "message": "Mealie Atelier ist im Nur-Lesen-Modus."
+      "message": "Mealie Atelier Bridge ist im Nur-Lesen-Modus."
     },
     "unauthorized": {
       "message": "Das dürfen nur Home-Assistant-Administratoren."
     },
     "write_not_permitted": {
-      "message": "Dein Home-Assistant-Nutzer darf keine Daten ändern. Ein Administrator kann dir in den Mealie-Atelier-Optionen Zugriff geben."
+      "message": "Dein Home-Assistant-Nutzer darf keine Daten ändern. Ein Administrator kann dir in den Optionen von Mealie Atelier Bridge Zugriff geben."
     },
     "auth_failed": {
       "message": "Mealie hat den Zugriff verweigert. Prüfe das API-Token und seine Berechtigungen."
@@ -152,7 +152,7 @@
       "message": "Der Schritt hat sich inzwischen geändert. Lade das Rezept neu und versuche es erneut."
     },
     "disabled": {
-      "message": "Die strukturierte Zutatenbearbeitung ist in den Mealie-Atelier-Optionen ausgeschaltet."
+      "message": "Die strukturierte Zutatenbearbeitung ist in den Optionen von Mealie Atelier Bridge ausgeschaltet."
     },
     "sync_rule_not_found": {
       "message": "Diese Sync-Regel gibt es nicht mehr. Lade die Sync-Einstellungen neu."
@@ -197,7 +197,7 @@
       "message": "Jemand anderes hat das inzwischen geändert. Lade neu und versuche es erneut."
     },
     "usda_key_invalid": {
-      "message": "Der USDA-FoodData-Central-Schlüssel wurde abgelehnt. Prüfe den Schlüssel in den Optionen von Mealie Atelier."
+      "message": "Der USDA-FoodData-Central-Schlüssel wurde abgelehnt. Prüfe den Schlüssel in den Optionen von Mealie Atelier Bridge."
     },
     "usda_rate_limited": {
       "message": "Das Limit von USDA FoodData Central ist erreicht. Versuche es später noch einmal."
