@@ -10,8 +10,8 @@ from .ai_client import AiError, request_json
 
 _DISCLAIMERS = {
     "de": {
-        "substitutes": "Unverbindliche KI-Ideen. Zutaten, Allergene und Garzeiten selbst prüfen.",
-        "audit": "KI-Prüfung mit möglichen Fehlern. Alle Vorschläge vor manueller Übernahme prüfen.",
+        "substitutes": "Unverbindliche KI-Ideen. Prüfe Zutaten, Allergene und Garzeiten selbst.",
+        "audit": "KI-Prüfung mit möglichen Fehlern. Prüfe alle Vorschläge vor der manuellen Übernahme.",
     },
     "en": {
         "substitutes": "Non-binding AI ideas. Check ingredients, allergens and cooking times yourself.",

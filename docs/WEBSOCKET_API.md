@@ -19,15 +19,14 @@ The Mealie Atelier Bridge exposes an allowlist of Home Assistant WebSocket comma
 
 ## Error codes
 
-A failed command returns an error whose `code` is stable and whose message is English. The `translation_key` equals the code, and every code has a text in `strings.json`. Cards choose their message by code, never by message text.
+A failed command returns an error whose `code` is stable and whose message is English. Cards choose their message by code, never by message text. Codes raised as Home Assistant exceptions (the timer, USDA, upload and similar codes) also carry a `translation_key` equal to the code, with a text in `strings.json`. The fallback codes `ai_error`, `invalid_request`, `mealie_auth`, `mealie_error` and `not_configured` carry no `translation_key`: a card must map them by code.
 
 | Code | When |
 | --- | --- |
-| `timer_dispatched` | The timer was already delivered. Cancelling it counts as success. |
 | `timer_not_found` | No timer with that id. Cancelling it counts as success. |
 | `timer_not_permitted` | The timer belongs to another user. |
 | `timer_exists` | A timer with that id already exists. |
-| `too_many_timers` | The user reached the limit of 20 active timers. |
+| `too_many_timers` | The user reached the limit of 20 active timers, or the Bridge reached its global limit of 300 active timers. |
 | `invalid_timer` | The timer id, label or deadline is invalid. |
 | `usda_key_invalid` | The USDA FoodData Central key was refused. |
 | `usda_rate_limited` | The USDA FoodData Central limit has been reached. |

@@ -92,7 +92,7 @@
       "message": "Only Home Assistant administrators can do this."
     },
     "write_not_permitted": {
-      "message": "Your Home Assistant user may not change data. An administrator can grant access in the Mealie Atelier options."
+      "message": "Your Home Assistant user may not change data. An administrator can grant access in the Mealie Atelier Bridge options."
     },
     "auth_failed": {
       "message": "Mealie refused access. Check the API token and its permissions."
@@ -152,7 +152,7 @@
       "message": "The step changed in the meantime. Reload the recipe and try again."
     },
     "disabled": {
-      "message": "Structured ingredient editing is switched off in the Mealie Atelier options."
+      "message": "Structured ingredient editing is switched off in the Mealie Atelier Bridge options."
     },
     "sync_rule_not_found": {
       "message": "This shopping sync rule no longer exists. Reload the sync settings."
@@ -200,7 +200,7 @@
       "message": "Someone else changed this in the meantime. Reload and try again."
     },
     "usda_key_invalid": {
-      "message": "The USDA FoodData Central key was refused. Check the key in the Mealie Atelier options."
+      "message": "The USDA FoodData Central key was refused. Check the key in the Mealie Atelier Bridge options."
     },
     "usda_rate_limited": {
       "message": "The USDA FoodData Central limit has been reached. Try again later."

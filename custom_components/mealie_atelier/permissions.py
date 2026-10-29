@@ -16,7 +16,7 @@ _MESSAGES = {
     "unauthorized": "Only Home Assistant admins can do this",
     "write_not_permitted": (
         "Your Home Assistant user may not change data. "
-        "An administrator can grant access in the Mealie Atelier options"
+        "An administrator can grant access in the Mealie Atelier Bridge options"
     ),
 }
 
