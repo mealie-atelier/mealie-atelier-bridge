@@ -11,11 +11,14 @@ import pytest
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers.selector import TextSelector, TextSelectorType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.mealie_atelier.api import MealieAuthError, MealieError
 from custom_components.mealie_atelier.const import (
+    CONF_AI_KEY,
     CONF_API_TOKEN,
+    CONF_FDC_KEY,
     CONF_READ_ONLY,
     CONF_TIMER_NOTIFY_SERVICE,
     CONF_VERIFY_SSL,
@@ -278,3 +281,44 @@ async def test_options_flow_defaults_to_no_grants(hass):
     result = await hass.config_entries.options.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert entry.options[CONF_WRITE_USERS] == []
+
+
+def _assert_password(schema, key):
+    selector = next(v for k, v in schema.schema.items() if k == key)
+    assert isinstance(selector, TextSelector)
+    assert selector.config["type"] == TextSelectorType.PASSWORD
+
+
+async def test_secret_fields_use_password_selector(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    user = await _start_user(hass)
+    _assert_password(user["data_schema"], CONF_API_TOKEN)
+    reauth = await entry.start_reauth_flow(hass)
+    _assert_password(reauth["data_schema"], CONF_API_TOKEN)
+    reconfigure = await entry.start_reconfigure_flow(hass)
+    _assert_password(reconfigure["data_schema"], CONF_API_TOKEN)
+    options = await hass.config_entries.options.async_init(entry.entry_id)
+    _assert_password(options["data_schema"], CONF_FDC_KEY)
+    _assert_password(options["data_schema"], CONF_AI_KEY)
+
+
+@pytest.mark.parametrize("service", ["notify.é", "notify.Mobile_App", "notify.", "notify.a b"])
+async def test_options_flow_rejects_non_ascii_or_uppercase_notify(hass, service):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_TIMER_NOTIFY_SERVICE: service}
+    )
+    assert result["errors"] == {CONF_TIMER_NOTIFY_SERVICE: "invalid_notify_service"}
+
+
+async def test_options_flow_accepts_lowercase_notify(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_TIMER_NOTIFY_SERVICE: "notify.mobile_app_pixel"}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY

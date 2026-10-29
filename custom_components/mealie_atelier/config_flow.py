@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from typing import Any
 
@@ -16,6 +17,9 @@ from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
 )
 
 from .api import MealieAuthError, MealieClient, MealieError
@@ -58,6 +62,11 @@ def _unique_id(client: MealieClient, account: Mapping[str, Any]) -> str:
     return f"{client.url.casefold()}:{account['id']}"
 
 
+# Explicit password selector so masking does not depend on frontend name heuristics.
+SECRET_SELECTOR = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
+NOTIFY_SERVICE_RE = re.compile(r"notify\.[a-z0-9_]+")
+
+
 class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Set up a secure, server-side connection to Mealie."""
 
@@ -98,7 +107,7 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Schema(
                     {
                         vol.Required(CONF_URL): str,
-                        vol.Required(CONF_API_TOKEN): str,
+                        vol.Required(CONF_API_TOKEN): SECRET_SELECTOR,
                         vol.Optional(CONF_VERIFY_SSL, default=True): bool,
                     }
                 ),
@@ -135,7 +144,7 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
         return self.async_show_form(
             step_id="reauth_confirm",
-            data_schema=vol.Schema({vol.Required(CONF_API_TOKEN): str}),
+            data_schema=vol.Schema({vol.Required(CONF_API_TOKEN): SECRET_SELECTOR}),
             description_placeholders={"url": entry.data[CONF_URL]},
             errors=errors,
         )
@@ -180,7 +189,7 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Schema(
                     {
                         vol.Required(CONF_URL): str,
-                        vol.Required(CONF_API_TOKEN): str,
+                        vol.Required(CONF_API_TOKEN): SECRET_SELECTOR,
                         vol.Optional(CONF_VERIFY_SSL, default=True): bool,
                     }
                 ),
@@ -208,9 +217,7 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
         known = {user.id for user in users}
         if user_input is not None:
             service = user_input.get(CONF_TIMER_NOTIFY_SERVICE, "").strip()
-            if service and not (
-                service.startswith("notify.") and service[7:].replace("_", "").isalnum()
-            ):
+            if service and not NOTIFY_SERVICE_RE.fullmatch(service):
                 errors[CONF_TIMER_NOTIFY_SERVICE] = "invalid_notify_service"
             else:
                 return self.async_create_entry(
@@ -239,8 +246,8 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
                     )
                 ),
                 vol.Required(CONF_EXPERIMENTAL_INGREDIENTS, default=False): bool,
-                vol.Optional(CONF_FDC_KEY, default=""): str,
-                vol.Optional(CONF_AI_KEY, default=""): str,
+                vol.Optional(CONF_FDC_KEY, default=""): SECRET_SELECTOR,
+                vol.Optional(CONF_AI_KEY, default=""): SECRET_SELECTOR,
                 vol.Optional(CONF_TIMER_NOTIFY_SERVICE, default=""): SelectSelector(
                     SelectSelectorConfig(
                         options=notify_options,

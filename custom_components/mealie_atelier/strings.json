@@ -10,7 +10,7 @@
           "verify_ssl": "Verify TLS certificate"
         },
         "data_description": {
-          "url": "The full address Home Assistant can reach, including http:// or https:// and the port, for example http://192.168.1.20:9000. For the Mealie Home Assistant app, use port 9090. Do not use an ingress or login URL.",
+          "url": "The full address Home Assistant can reach, including http:// or https:// and the port, for example `http://192.168.1.20:9000`. For the Mealie Home Assistant app, use port 9090. Do not use an ingress or login URL.",
           "api_token": "Create a token in Mealie under User profile > API Tokens, then paste it here. Home Assistant stores it securely. It must never go in card YAML.",
           "verify_ssl": "Leave this enabled. Disable it only for a self-signed certificate on a trusted local network."
         }
@@ -34,7 +34,7 @@
           "verify_ssl": "Verify TLS certificate"
         },
         "data_description": {
-          "url": "The full address Home Assistant can reach, including http:// or https:// and the port, for example http://192.168.1.20:9000. Do not use an ingress or login URL.",
+          "url": "The full address Home Assistant can reach, including http:// or https:// and the port, for example `http://192.168.1.20:9000`. Do not use an ingress or login URL.",
           "api_token": "Create a token in Mealie under User profile > API Tokens, then paste it here. Home Assistant stores it securely.",
           "verify_ssl": "Leave this enabled. Disable it only for a self-signed certificate on a trusted local network."
         }
