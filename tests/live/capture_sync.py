@@ -27,7 +27,7 @@ HERE = Path(__file__).parent
 OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "state" / "guide-sync"
 TODO = os.environ.get("SYNC_TODO", "")
 SOURCE = "Wochenmarkt"
-RULE = "Wochenmarkt nach Bring"
+RULE = "Wochenmarkt nach Bring!"
 ITEMS = ["Tomaten", "Basilikum", "Mozzarella"]
 PLACEHOLDER = "kueche@example.com"
 # The only list this script may write to; household lists are refused by name.

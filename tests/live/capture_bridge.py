@@ -34,7 +34,7 @@ async def ws(command: dict) -> object:
 async def create_rule() -> str:
     shopping = await ws({"type": "mealie_atelier/shopping"})
     rule = {
-        "name": "Bring" if LANGUAGE == "de" else "Groceries",
+        "name": "Bring!" if LANGUAGE == "de" else "Groceries",
         "source_list_id": shopping["lists"][0]["id"],
         "destination_entity_id": "todo.shopping_list",
         "mode": "copy",

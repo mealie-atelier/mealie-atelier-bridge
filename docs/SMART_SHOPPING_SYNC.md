@@ -47,7 +47,7 @@ It uses Home Assistant's generic to-do entity, so any integration whose to-do li
 | Destination | Status |
 |---|---|
 | Home Assistant Shopping list (`todo.shopping_list`) | Passed the live end-to-end test: preview, first-batch gate, confirmed delivery, duplicate skip, after-add trigger, move mode. |
-| Bring! | Supported through Home Assistant's Bring! integration; the live test against a dedicated test account is pending. |
+| Bring! | Expected to work through Home Assistant's Bring! integration, but not yet tested live. The live test needs a dedicated Bring! test account, so no result is claimed. |
 
 Other to-do integrations that can add items should work. Please report results in the [discussions](https://github.com/orgs/mealie-atelier/discussions).
 
