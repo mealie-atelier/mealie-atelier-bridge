@@ -172,6 +172,12 @@
     "sync_not_activated": {
       "message": "Bestätige zuerst den ersten Stapel, bevor diese Regel selbstständig synchronisiert."
     },
+    "sync_source_gone": {
+      "message": "Dieser Artikel existiert in Mealie nicht mehr und kann nicht erneut gesendet werden. Verwirf ihn stattdessen."
+    },
+    "sync_source_checked": {
+      "message": "Dieser Artikel ist in Mealie abgehakt und kann nicht erneut gesendet werden. Hake ihn in Mealie wieder ab oder verwirf ihn."
+    },
     "offline_op_reused": {
       "message": "Diese Offline-Änderungs-ID wurde schon für eine andere Änderung verwendet. Lade die Karte neu und versuche es erneut."
     },

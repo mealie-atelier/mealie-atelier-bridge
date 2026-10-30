@@ -998,6 +998,21 @@ class SyncManager:
         await self.store.async_save()
         return await self.async_run(rule_id, "retry")
 
+    async def _require_open_source(self, record: dict[str, Any]) -> None:
+        """Refuse a resend whose Mealie item is gone or ticked: the next run would drop it unseen."""
+        try:
+            item = await self.client.shopping_item(record["source_item_id"])
+        except MealieError as error:
+            if error.status == 404:
+                raise SyncError(
+                    "sync_source_gone", "The item no longer exists in Mealie"
+                ) from error
+            return
+        except ValueError:
+            return
+        if item.get("checked"):
+            raise SyncError("sync_source_checked", "The item is ticked off in Mealie")
+
     async def _current_text(self, rule_id: str, record: dict[str, Any]) -> dict[str, Any]:
         """The text a resend will carry, so the waiting list shows the edited item, not the old."""
         try:
@@ -1027,6 +1042,8 @@ class SyncManager:
             raise ValueError("Only conflicts and uncertain items can be resolved")
         group = [record, *self._members(record)]
         deleted = False
+        if action == "resend" and len(group) == 1:
+            await self._require_open_source(record)
         refreshed = (
             await self._current_text(rule_id, record)
             if action == "resend" and len(group) == 1

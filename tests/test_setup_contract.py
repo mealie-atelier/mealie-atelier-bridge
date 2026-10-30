@@ -102,6 +102,8 @@ CONTRACT_ERROR_CODES = {
     "sync_source_taken",
     "sync_too_many_rules",
     "sync_not_activated",
+    "sync_source_gone",
+    "sync_source_checked",
     "offline_op_reused",
     "offline_conflict",
     "offline_add_uncertain",

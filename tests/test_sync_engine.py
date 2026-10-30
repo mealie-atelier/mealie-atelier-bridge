@@ -25,6 +25,7 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClien
 from custom_components.mealie_atelier.const import EVENT_SYNC_FINISHED
 from custom_components.mealie_atelier.shopping_sync import SyncManager, engine
 from custom_components.mealie_atelier.shopping_sync.mapping import fingerprint
+from custom_components.mealie_atelier.shopping_sync.model import SyncError
 from custom_components.mealie_atelier.shopping_sync.store import prune
 
 from .conftest import ENTRY_ID, MEALIE_TOKEN, MEALIE_URL
@@ -470,6 +471,27 @@ async def test_changes_after_send_are_flagged_and_destination_untouched(
     assert result["sent"] == 1
     assert bring.calls[-1] == "3 Milch"
     assert states(sync, rule_id) == {"a": "sent"}
+
+
+async def test_resend_of_a_gone_or_ticked_item_is_refused_and_keeps_the_record(
+    sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
+):
+    mealie.add(mealie_item("a", note="Milch"), mealie_item("b", note="Brot"))
+    rule_id, _ = await activate(sync)
+    mealie.items["a"]["checked"] = True
+    del mealie.items["b"]
+    await sync.async_run(rule_id, "manual")
+    before = states(sync, rule_id)
+    assert set(before.values()) <= {"changed_after_send", "removed_after_send"}
+
+    with pytest.raises(SyncError) as ticked:
+        await sync.async_resolve(rule_id, f"{rule_id}:a", "resend")
+    with pytest.raises(SyncError) as gone:
+        await sync.async_resolve(rule_id, f"{rule_id}:b", "resend")
+
+    assert ticked.value.code == "sync_source_checked"
+    assert gone.value.code == "sync_source_gone"
+    assert states(sync, rule_id) == before
 
 
 async def test_dismissed_change_on_completed_item_is_stable(

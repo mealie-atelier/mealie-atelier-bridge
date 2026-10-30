@@ -172,6 +172,12 @@
     "sync_not_activated": {
       "message": "Send and confirm the first batch before this rule syncs on its own."
     },
+    "sync_source_gone": {
+      "message": "This item no longer exists in Mealie, so it cannot be sent again. Dismiss it instead."
+    },
+    "sync_source_checked": {
+      "message": "This item is ticked off in Mealie, so it cannot be sent again. Untick it in Mealie first or dismiss it."
+    },
     "offline_op_reused": {
       "message": "That offline change ID was already used for a different change. Reload the card and try again."
     },
