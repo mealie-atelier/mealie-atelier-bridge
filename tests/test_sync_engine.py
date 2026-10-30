@@ -265,6 +265,20 @@ async def test_confirmed_duplicate_completes_in_move_mode(
     assert sorted(mealie.puts) == ["a", "b"]
 
 
+async def test_run_count_ignores_skipped_duplicates(
+    sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
+):
+    bring.seed("1 Milch")
+    mealie.add(mealie_item("a", note="Milch"), mealie_item("b", note="Brot"))
+
+    rule_id, result = await activate(sync)
+
+    assert result["sent"] == 1
+    assert result["skipped_duplicates"] == 1
+    assert sync.rules[rule_id]["last_run"]["count"] == 1
+    assert sync.store.data["audit"][-1]["count"] == 1
+
+
 async def test_in_batch_duplicate_follows_a_rejected_lead(
     sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
 ):

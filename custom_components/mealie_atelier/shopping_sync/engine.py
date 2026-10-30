@@ -439,7 +439,12 @@ class SyncManager:
     ) -> dict[str, Any]:
         rule_id = rule["id"]
         result = self._result(rule_id, batch_id, outcome, counts)
-        items = sum(counts[key] for key in _RESULT_COUNTS if key != "completed_in_source")
+        # Skipped duplicates never reached the destination, so they are not part of the count.
+        items = sum(
+            counts[key]
+            for key in _RESULT_COUNTS
+            if key not in ("completed_in_source", "skipped_duplicates")
+        )
         count = (
             items
             or counts["completed_in_source"]
