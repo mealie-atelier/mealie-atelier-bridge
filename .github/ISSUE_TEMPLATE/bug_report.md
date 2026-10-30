@@ -9,7 +9,7 @@ labels: bug
 
 ## Package (required)
 
-<!-- Cards, Bridge or standalone Web. -->
+<!-- Cards (Home Assistant dashboard cards), Bridge (Home Assistant integration), Web (standalone app) or Demo. -->
 
 ## Mealie Atelier version (required)
 
@@ -26,6 +26,10 @@ labels: bug
 ## Expected behavior (required)
 
 ## Actual behavior (required)
+
+## Relevant logs (redacted)
+
+<!-- Home Assistant log (Settings > System > Logs) or downloaded diagnostics for the Mealie Atelier integration. Remove API tokens, hostnames, URLs containing credentials and personal recipe data. -->
 
 ## Safe evidence
 

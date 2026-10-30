@@ -54,3 +54,9 @@ def test_faq_does_not_mention_issue_forms() -> None:
     faq = (DIR.parents[1] / "docs" / "FAQ.md").read_text(encoding="utf-8")
     assert "Issue forms" not in faq
     assert "issue forms" not in faq.lower()
+
+
+def test_bridge_bug_template_asks_for_redacted_logs() -> None:
+    text = (DIR / "bug_report.md").read_text(encoding="utf-8")
+    assert "## Relevant logs (redacted)" in text
+    assert "Settings > System > Logs" in text
