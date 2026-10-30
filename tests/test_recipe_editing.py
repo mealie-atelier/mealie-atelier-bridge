@@ -844,3 +844,74 @@ async def test_photo_commands_refuse_read_only_and_non_admins(
     for command in commands:
         assert (await send(admin, command))["error"]["code"] == "read_only"
     assert mock_mealie.call_count == calls
+
+
+# Step objects and unchanged saves
+
+
+async def test_mutate_step_objects_keep_titles_ids_and_photos(
+    setup_integration: MockConfigEntry,
+    server: FakeRecipeServer,
+    hass_ws_client: WebSocketGenerator,
+):
+    server.recipe["recipeInstructions"][0].update(
+        {"title": "Dough", "summary": "Warm", "ingredientReferences": [{"referenceId": FLOUR}]}
+    )
+    client = await hass_ws_client()
+
+    response = await send(
+        client,
+        {
+            "type": "mealie_atelier/mutate",
+            "action": "recipe_update",
+            "payload": {
+                "slug": SLUG,
+                "instructions": [
+                    {"id": "step-b", "text": "Knead well."},
+                    {"id": "step-a", "text": "Boil gently."},
+                    {"id": "unknown", "text": "Serve."},
+                ],
+            },
+        },
+    )
+
+    assert response["success"], response
+    steps = server.recipe["recipeInstructions"]
+    assert steps[0] == {"id": "step-b", "title": "", "text": "Knead well."}
+    assert steps[1]["id"] == "step-a"
+    assert steps[1]["title"] == "Dough"
+    assert steps[1]["ingredientReferences"] == [{"referenceId": FLOUR}]
+    assert steps[1]["text"] == "Boil gently."
+    assert steps[2] == {"text": "Serve."}
+    assert server.snapshots()[0]["kind"] == "instructions"
+
+
+async def test_mutate_without_changes_writes_no_backup_and_no_patch(
+    setup_integration: MockConfigEntry,
+    server: FakeRecipeServer,
+    hass_ws_client: WebSocketGenerator,
+):
+    client = await hass_ws_client()
+
+    response = await send(
+        client,
+        {
+            "type": "mealie_atelier/mutate",
+            "action": "recipe_update",
+            "payload": {
+                "slug": SLUG,
+                "name": " Gnocchi ",
+                "description": "Soft potato dumplings",
+                "servings": 4,
+                "instructions": [
+                    {"id": "step-a", "text": "Boil the potatoes."},
+                    {"id": "step-b", "text": "Knead the dough."},
+                ],
+            },
+        },
+    )
+
+    assert response["success"], response
+    assert response["result"]["unchanged"] is True
+    assert server.snapshots() == []
+    assert not any(event[0] == "patch" for event in server.events)

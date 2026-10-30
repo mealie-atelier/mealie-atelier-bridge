@@ -623,6 +623,9 @@ class MealieClient:
             )
         if action == "recipe_update":
             slug, changes = recipe_update_changes(payload)
+            if any(isinstance(step, dict) for step in payload.get("instructions") or ()):
+                # Steps are merged by id into the stored ones so titles and photos survive.
+                slug, changes = recipe_update_changes(payload, await self.recipe(slug))
             return await self.request("PATCH", f"/api/recipes/{slug}", data=changes)
         if action == "recipe_import":
             recipe_url = safe_text(payload.get("url"), 2000)
@@ -758,8 +761,28 @@ def clear_expected_ids(payload: dict) -> list[str] | None:
     return [safe_id(item) for item in ids]
 
 
-def recipe_update_changes(payload: dict) -> tuple[str, dict]:
-    """Validate a recipe_update payload and return the slug and the Mealie PATCH body."""
+def _merge_steps(lines: list, current: list) -> list[dict]:
+    """Build the new step list: a submitted {id, text} replaces only the text of that step."""
+    stored = {step["id"]: step for step in current if isinstance(step, dict) and step.get("id")}
+    merged = []
+    for line in lines:
+        if not isinstance(line, dict):
+            merged.append({"text": safe_text(line, 2000)})
+            continue
+        text = safe_text(line.get("text"), 2000)
+        step_id = line.get("id")
+        # An unknown or repeated id becomes a new step instead of a second copy of one.
+        original = stored.pop(safe_id(step_id), None) if step_id else None
+        merged.append({**original, "text": text} if original else {"text": text})
+    return merged
+
+
+def recipe_update_changes(payload: dict, recipe: dict | None = None) -> tuple[str, dict]:
+    """Validate a recipe_update payload and return the slug and the Mealie PATCH body.
+
+    Steps may be plain strings or {id, text} objects. With the current recipe, objects are
+    merged into the stored steps by id; without it they are only validated.
+    """
     slug = safe_slug(payload.get("slug"))
     changes = {}
     if "name" in payload:
@@ -777,10 +800,29 @@ def recipe_update_changes(payload: dict) -> tuple[str, dict]:
         lines = payload["instructions"]
         if not isinstance(lines, list) or len(lines) > 60:
             raise ValueError("Too many cooking steps")
-        changes["recipeInstructions"] = [{"text": safe_text(line, 2000)} for line in lines]
+        current = (recipe or {}).get("recipeInstructions") or []
+        changes["recipeInstructions"] = _merge_steps(lines, current)
     if "ingredients" in payload:
         # Plain text would destroy linked foods and units; the structured editor owns this.
         raise structured_editor_required()
     if not changes:
         raise ValueError("Nothing to update")
     return slug, changes
+
+
+def recipe_update_is_noop(changes: dict, recipe: dict) -> bool:
+    """True when saving the validated changes would leave the stored recipe as it is."""
+    for key, value in changes.items():
+        if key == "recipeInstructions":
+            stored = [
+                (step.get("id"), str(step.get("text") or "").strip())
+                for step in recipe.get(key) or []
+            ]
+            if [(step.get("id"), step["text"]) for step in value] != stored:
+                return False
+        elif key == "description":
+            if value.strip() != str(recipe.get(key) or "").strip():
+                return False
+        elif recipe.get(key) != value:
+            return False
+    return True

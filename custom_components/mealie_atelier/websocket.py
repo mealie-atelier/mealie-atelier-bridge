@@ -12,7 +12,13 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .ai_client import AiError, provider_for
-from .api import MealieAuthError, MealieError, recipe_update_changes, safe_slug
+from .api import (
+    MealieAuthError,
+    MealieError,
+    recipe_update_changes,
+    recipe_update_is_noop,
+    safe_slug,
+)
 from .const import (
     VERSION,
     ADMIN_ACTIONS,
@@ -311,6 +317,10 @@ async def ws_mutation(hass, connection, msg):
             # Snapshot first: a failed backup means no Mealie write at all.
             payload = msg["payload"]
             recipe = await client.recipe(payload.get("slug"))
+            _slug, changes = recipe_update_changes(payload, recipe)
+            if recipe_update_is_noop(changes, recipe):
+                # Nothing differs: no restore point and no Mealie write.
+                return {**recipe, "unchanged": True}
             kind = "instructions" if set(payload) <= {"slug", "instructions"} else "basics"
             await entry.runtime_data.backups.async_snapshot(client, recipe, kind, connection.user)
         result = await client.mutate(action, msg["payload"])
