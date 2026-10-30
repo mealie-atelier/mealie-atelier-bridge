@@ -103,6 +103,12 @@
     "not_configured": {
       "message": "Configure Mealie Atelier Bridge first."
     },
+    "entry_reauth": {
+      "message": "The Mealie token was rejected. Re-authenticate Mealie Atelier Bridge under Settings > Devices & services."
+    },
+    "entry_unavailable": {
+      "message": "Mealie Atelier Bridge cannot reach Mealie right now. Check that Mealie is running, then reload the integration."
+    },
     "recipe_changed": {
       "message": "The recipe changed since the preview. Reopen the analysis before continuing."
     },

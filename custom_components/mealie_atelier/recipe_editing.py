@@ -15,7 +15,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from .api import MealieAuthError, MealieClient, MealieError, safe_id, safe_slug
 from .const import CONF_EXPERIMENTAL_INGREDIENTS, DOMAIN
-from .errors import AtelierError, send_atelier_error
+from .errors import AtelierError, send_atelier_error, send_missing_entry
 from .models import MealieAtelierConfigEntry, get_loaded_entry
 from .permissions import check
 from .recipe_safety import fingerprint, merge, preview, verified
@@ -71,13 +71,7 @@ async def _run(
     """Resolve the entry, apply the permission level before any Mealie request, answer."""
     entry = get_loaded_entry(hass, msg.get("entry_id"))
     if entry is None:
-        connection.send_error(
-            msg["id"],
-            "not_configured",
-            "Configure Mealie Atelier Bridge",
-            translation_key="not_configured",
-            translation_domain=DOMAIN,
-        )
+        send_missing_entry(hass, connection, msg, "Configure Mealie Atelier Bridge")
         return
     if level is not None and not check(connection, msg, entry, level):
         return

@@ -12,6 +12,7 @@ from homeassistant.exceptions import HomeAssistantError
 
 from ..api import MealieAuthError, MealieError
 from ..const import DOMAIN
+from ..errors import send_missing_entry
 from ..models import get_loaded_entry
 from ..permissions import check
 from .engine import SyncManager
@@ -52,7 +53,7 @@ async def _handle(
 ) -> None:
     entry = get_loaded_entry(hass, msg.get("entry_id"))
     if entry is None:
-        _error(connection, msg, "not_configured", "Configure Mealie Atelier Bridge first")
+        send_missing_entry(hass, connection, msg, "Configure Mealie Atelier Bridge first")
         return
     # Gates are shared with every other command: read-only mode, grants and admin-only setup.
     if level != "read" and not check(connection, msg, entry, level):

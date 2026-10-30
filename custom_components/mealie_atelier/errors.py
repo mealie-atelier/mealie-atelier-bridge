@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import DOMAIN
@@ -35,3 +37,35 @@ def structured_editor_required() -> AtelierError:
         "use_structured_editor",
         "Ingredients are edited with the structured ingredient editor, not as plain text",
     )
+
+
+def missing_entry_code(hass: HomeAssistant, entry_id: str | None) -> str:
+    """Why no loaded entry answers: not set up at all, token rejected or Mealie unreachable."""
+    entry = hass.config_entries.async_get_entry(entry_id) if entry_id else None
+    if entry is None or entry.domain != DOMAIN:
+        return "not_configured"
+    if entry.state is ConfigEntryState.SETUP_ERROR and list(
+        entry.async_get_active_flows(hass, {SOURCE_REAUTH})
+    ):
+        return "entry_reauth"
+    if entry.state in (ConfigEntryState.SETUP_ERROR, ConfigEntryState.SETUP_RETRY):
+        return "entry_unavailable"
+    return "not_configured"
+
+
+def send_missing_entry(hass: HomeAssistant, connection, msg: dict, message: str) -> None:
+    """Answer a command that addressed an entry which is not loaded."""
+    code = missing_entry_code(hass, msg.get("entry_id"))
+    connection.send_error(
+        msg["id"],
+        code,
+        EXTRA_MESSAGES.get(code, message),
+        translation_key=code,
+        translation_domain=DOMAIN,
+    )
+
+
+EXTRA_MESSAGES = {
+    "entry_reauth": "The Mealie token was rejected. Re-authenticate in Settings, Devices & services",
+    "entry_unavailable": "Mealie Atelier Bridge cannot reach Mealie right now",
+}

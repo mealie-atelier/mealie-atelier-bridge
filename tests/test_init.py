@@ -251,3 +251,47 @@ def test_user_facing_texts_use_the_full_integration_name():
         assert not re.search(r"Mealie[ -]Atelier(?! Bridge)(?!-Bridge)", text), name
         if name.endswith(".json"):
             json.loads(text)
+
+
+async def _recipes_error(hass, hass_ws_client, entry_id: str) -> str:
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id({"type": "mealie_atelier/recipes", "entry_id": entry_id})
+    response = await client.receive_json()
+    return response["error"]["code"]
+
+
+async def test_card_is_told_when_the_entry_needs_reauthentication(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+    hass_ws_client,
+):
+    aioclient_mock.get(f"{MEALIE_URL}/api/users/self", status=401)
+    mock_config_entry.add_to_hass(hass)
+    assert not await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    code = await _recipes_error(hass, hass_ws_client, mock_config_entry.entry_id)
+
+    assert code == "entry_reauth"
+
+
+async def test_card_is_told_when_mealie_is_unreachable(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+    hass_ws_client,
+):
+    aioclient_mock.get(f"{MEALIE_URL}/api/users/self", status=500)
+    mock_config_entry.add_to_hass(hass)
+    assert not await hass.config_entries.async_setup(mock_config_entry.entry_id)
+
+    code = await _recipes_error(hass, hass_ws_client, mock_config_entry.entry_id)
+
+    assert code == "entry_unavailable"
+
+
+async def test_unknown_entry_is_still_not_configured(
+    hass: HomeAssistant, setup_integration: MockConfigEntry, hass_ws_client
+):
+    assert await _recipes_error(hass, hass_ws_client, "missing") == "not_configured"

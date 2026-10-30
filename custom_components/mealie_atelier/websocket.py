@@ -43,7 +43,13 @@ from .nutrition import (
 from .nutrition import (
     search as search_nutrition,
 )
-from .errors import AtelierError, send_atelier_error, structured_editor_required
+from .errors import (
+    AtelierError,
+    missing_entry_code,
+    send_atelier_error,
+    send_missing_entry,
+    structured_editor_required,
+)
 from .models import MealieAtelierConfigEntry, get_loaded_entry
 from .permissions import can_admin, can_write, check, check_personal
 from .signing import sign_images as _sign_images
@@ -133,9 +139,7 @@ def _fail(connection, msg: dict, exc: Exception) -> None:
 async def _respond(hass, connection, msg, func) -> None:
     entry = _entry(hass, msg)
     if entry is None:
-        connection.send_error(
-            msg["id"], "not_configured", "Install and configure Mealie Atelier Bridge"
-        )
+        send_missing_entry(hass, connection, msg, "Install and configure Mealie Atelier Bridge")
         return
     try:
         result = await func(entry.runtime_data.client)
@@ -204,7 +208,7 @@ async def ws_status(hass, connection, msg):
 async def ws_recipes(hass, connection, msg):
     entry = _entry(hass, msg)
     if not entry:
-        connection.send_error(msg["id"], "not_configured", "Configure Mealie Atelier Bridge")
+        send_missing_entry(hass, connection, msg, "Configure Mealie Atelier Bridge")
         return
     client = entry.runtime_data.client
     try:
@@ -225,7 +229,7 @@ async def ws_recipes(hass, connection, msg):
 async def ws_recipe(hass, connection, msg):
     entry = _entry(hass, msg)
     if not entry:
-        connection.send_error(msg["id"], "not_configured", "Configure Mealie Atelier Bridge")
+        send_missing_entry(hass, connection, msg, "Configure Mealie Atelier Bridge")
         return
     client = entry.runtime_data.client
     try:
@@ -247,7 +251,7 @@ async def ws_recipe(hass, connection, msg):
 async def ws_mealplan(hass, connection, msg):
     entry = _entry(hass, msg)
     if not entry:
-        connection.send_error(msg["id"], "not_configured", "Configure Mealie Atelier Bridge")
+        send_missing_entry(hass, connection, msg, "Configure Mealie Atelier Bridge")
         return
     client = entry.runtime_data.client
     try:
@@ -291,7 +295,7 @@ async def ws_metadata(hass, connection, msg):
 async def ws_mutation(hass, connection, msg):
     entry = _entry(hass, msg)
     if entry is None:
-        connection.send_error(msg["id"], "not_configured", "Configure Mealie Atelier Bridge")
+        send_missing_entry(hass, connection, msg, "Configure Mealie Atelier Bridge")
         return
     action = msg["action"]
     # Unknown actions fail before any permission decision can reveal which actions exist.
@@ -343,7 +347,7 @@ async def ws_mutation(hass, connection, msg):
 def _nutrition_entry(hass, connection, msg):
     entry = _entry(hass, msg)
     if not entry:
-        raise _translated("not_configured")
+        raise _translated(missing_entry_code(hass, msg.get("entry_id")))
     return entry.runtime_data.client, entry
 
 
