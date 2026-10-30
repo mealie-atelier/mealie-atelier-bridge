@@ -17,7 +17,7 @@
       },
       "reauth_confirm": {
         "title": "Re-authenticate Mealie Atelier Bridge",
-        "description": "Mealie rejected the saved API token for {url}. Create a new token in Mealie under User profile > API Tokens and enter it here.",
+        "description": "Mealie rejected the saved API token of {account} ({url}). Create a new token in Mealie for this account under User profile > API Tokens and enter it here.",
         "data": {
           "api_token": "New Mealie API token"
         },
@@ -69,7 +69,7 @@
           "timer_notify_service": "Timer notification service"
         },
         "data_description": {
-          "read_only": "Blocks all changes to recipes, meal plans and shopping lists. Useful for shared tablets.",
+          "read_only": "Blocks all changes to recipes, meal plans, shopping lists, kitchen timers, the journal and pantry and family data. Useful for shared tablets, but timers then run only on the device.",
           "write_users": "Leave empty to let every Home Assistant user change shopping lists and meal plans. If you select at least one user, only the selected users and administrators can write. Administrators can always write. Select only administrators to allow administrators alone. Recipe editing stays admin only.",
           "experimental_ingredient_edits": "Lets administrators edit ingredients with linked foods and units. A backup is saved before every change.",
           "usda_fdc_api_key": "Optional. Only for the nutrition lab: the Bridge looks up ingredients in the free US food database FoodData Central and calculates nutrients per serving. For security the field never shows a saved key: leave it empty to keep it. Without a key only the nutrition lookup is off. Get a free key with your name and email at [fdc.nal.usda.gov/api-key-signup]({usda_signup_url}).",

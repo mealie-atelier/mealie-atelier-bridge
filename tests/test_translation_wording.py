@@ -39,3 +39,10 @@ def test_both_languages_describe_the_mealie_integration_as_built_in() -> None:
     de = json.loads(DE.read_text(encoding="utf-8"))["config"]["step"]["user"]["description"]
     assert "built-in Mealie integration" in en
     assert "eingebaute Mealie-Integration" in de
+
+
+def test_read_only_option_text_names_timers_and_journal() -> None:
+    for path, words in ((EN, ("timers", "journal")), (DE, ("Timern", "Journal"))):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        text = data["options"]["step"]["init"]["data_description"]["read_only"]
+        assert all(word in text for word in words), path.name

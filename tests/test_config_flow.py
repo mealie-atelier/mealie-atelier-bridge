@@ -10,6 +10,7 @@ from unittest.mock import patch
 import pytest
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.const import CONF_URL
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers.selector import TextSelector, TextSelectorType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -252,6 +253,47 @@ async def test_options_flow_rejects_notify_send_message(hass):
         result["flow_id"], {CONF_TIMER_NOTIFY_SERVICE: "notify.send_message"}
     )
     assert result["errors"] == {CONF_TIMER_NOTIFY_SERVICE: "invalid_notify_service"}
+
+
+async def test_options_flow_rejects_notify_persistent_notification(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_TIMER_NOTIFY_SERVICE: "notify.persistent_notification"}
+    )
+    assert result["errors"] == {CONF_TIMER_NOTIFY_SERVICE: "invalid_notify_service"}
+
+
+async def test_reauth_form_names_the_account(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    result = await entry.start_reauth_flow(hass)
+    assert result["description_placeholders"]["account"] == entry.title
+    component = Path(__file__).parents[1] / "custom_components" / "mealie_atelier"
+    for path in (component / "strings.json", *(component / "translations").glob("*.json")):
+        step = json.loads(path.read_text(encoding="utf-8"))["config"]["step"]["reauth_confirm"]
+        assert "{account}" in step["description"]
+
+
+async def test_url_host_case_is_normalized_in_stored_url_and_title(hass):
+    result = await _start_user(hass)
+    account = {"id": "case-1", "username": "second"}
+    with patch(CHECK, return_value=account):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], _input(url="HTTP://MEALIE:9000/Login?x=1")
+        )
+    assert result["data"][CONF_URL] == "http://mealie:9000"
+    assert result["title"] == "second@mealie:9000"
+
+
+async def test_url_host_case_is_normalized_without_a_browser_path(hass):
+    result = await _start_user(hass)
+    with patch(CHECK, return_value={"id": "case-2", "username": "x"}):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], _input(url="http://MEALIE.Test:9000")
+        )
+    assert result["data"][CONF_URL] == "http://mealie.test:9000"
 
 
 async def _options_form(hass, entry):

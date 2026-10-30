@@ -57,17 +57,24 @@ async def _validate(
 _NON_BASE_SEGMENTS = frozenset({"login", "api", "g"})
 
 
+def _lower_host(netloc: str) -> str:
+    """Lower-case the host of a netloc, keeping user info and port as typed."""
+    userinfo, at, hostport = netloc.rpartition("@")
+    return f"{userinfo}{at}{hostport.lower()}"
+
+
 def _clean_url(url: str) -> str:
     """Cut a pasted browser address (/login, /g/home, /api/docs) back to the server base."""
     url = url.strip()
     parts = urlsplit(url)
+    parts = parts._replace(netloc=_lower_host(parts.netloc))
     segments = parts.path.split("/")
     for index, segment in enumerate(segments):
         if segment.casefold() in _NON_BASE_SEGMENTS:
             segments = segments[:index]
             break
     else:
-        return url
+        return urlunsplit(parts)
     # Query and fragment belong to the cut browser page, so they go too.
     return urlunsplit((parts.scheme, parts.netloc, "/".join(segments), "", ""))
 
@@ -116,7 +123,7 @@ CONF_CLEAR_FDC_KEY = "clear_fdc_key"
 CONF_CLEAR_AI_KEY = "clear_ai_key"
 _CLEARABLE_KEYS = ((CONF_FDC_KEY, CONF_CLEAR_FDC_KEY), (CONF_AI_KEY, CONF_CLEAR_AI_KEY))
 # notify.send_message needs an entity_id and can never deliver a timer.
-NOTIFY_SERVICE_RE = re.compile(r"notify\.(?!send_message$)[a-z0-9_]+")
+NOTIFY_SERVICE_RE = re.compile(r"notify\.(?!(?:send_message|persistent_notification)$)[a-z0-9_]+")
 
 
 class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -197,7 +204,7 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="reauth_confirm",
             data_schema=vol.Schema({vol.Required(CONF_API_TOKEN): SECRET_SELECTOR}),
-            description_placeholders={"url": entry.data[CONF_URL]},
+            description_placeholders={"url": entry.data[CONF_URL], "account": entry.title},
             errors=errors,
         )
 

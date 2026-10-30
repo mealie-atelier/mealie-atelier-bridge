@@ -17,7 +17,7 @@
       },
       "reauth_confirm": {
         "title": "Mealie Atelier Bridge erneut anmelden",
-        "description": "Mealie hat das gespeicherte API-Token für {url} abgelehnt. Erstelle in Mealie unter Benutzerprofil > API-Token ein neues Token und gib es hier ein.",
+        "description": "Mealie hat das gespeicherte API-Token von {account} ({url}) abgelehnt. Erstelle in Mealie für dieses Konto unter Benutzerprofil > API-Token ein neues Token und gib es hier ein.",
         "data": {
           "api_token": "Neues Mealie-API-Token"
         },
@@ -69,7 +69,7 @@
           "timer_notify_service": "Benachrichtigungsdienst für Timer"
         },
         "data_description": {
-          "read_only": "Verhindert alle Änderungen an Rezepten, Wochenplan und Einkaufslisten. Praktisch für gemeinsam genutzte Tablets.",
+          "read_only": "Verhindert alle Änderungen an Rezepten, Wochenplan, Einkaufslisten, Küchen-Timern, Journal sowie Vorrats- und Familiendaten. Praktisch für gemeinsam genutzte Tablets, die Timer laufen dann nur auf dem Gerät.",
           "write_users": "Leer lassen, damit alle Home-Assistant-Nutzer Einkaufslisten und Wochenpläne ändern dürfen. Wählst du mindestens einen Nutzer aus, dürfen nur die Ausgewählten und Administratoren schreiben. Administratoren dürfen immer schreiben. Wähle nur Administratoren aus, damit ausschließlich Administratoren schreiben dürfen. Rezepte bearbeiten bleibt Administratoren vorbehalten.",
           "experimental_ingredient_edits": "Erlaubt Administratoren, Zutaten mit verknüpften Lebensmitteln und Einheiten zu bearbeiten. Vor jeder Änderung wird ein Backup gespeichert.",
           "usda_fdc_api_key": "Optional. Nur für das Nährwertlabor: Die Bridge sucht damit Zutaten in der freien US-Lebensmitteldatenbank FoodData Central und rechnet Nährwerte pro Portion aus. Aus Sicherheitsgründen zeigt das Feld einen gespeicherten Schlüssel nicht an: Leer lassen behält ihn. Ohne Schlüssel bleibt nur die Nährwertsuche aus. Den Schlüssel gibt es kostenlos mit Name und E-Mail unter [fdc.nal.usda.gov/api-key-signup]({usda_signup_url}).",

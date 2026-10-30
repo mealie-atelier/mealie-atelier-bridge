@@ -14,7 +14,7 @@ The Mealie token is stored in Home Assistant config-entry data and sent from the
 
 ## Who may change data?
 
-Read-only mode blocks every change to recipes, meal plans and shopping lists. With read-only mode off, the option **Users allowed to change data** limits shopping list and meal plan changes to the chosen Home Assistant users. If it is empty, every user may change them. Administrators always can. Recipe editing is admin only. Kitchen timers and journal entries are personal and are blocked only by read-only mode.
+Read-only mode blocks every change to recipes, meal plans, shopping lists, kitchen timers, the journal and pantry and family data. With read-only mode off, the option **Users allowed to change data** limits shopping list and meal plan changes to the chosen Home Assistant users. If it is empty, every user may change them. Administrators always can. Recipe editing is admin only. Kitchen timers and journal entries are personal and are blocked only by read-only mode.
 
 ## Does the Bridge sync Mealie groceries to a to-do list such as Bring!?
 
