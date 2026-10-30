@@ -493,11 +493,7 @@ class SyncManager:
         if rule["source_missing"]:
             return self._finish(rule, trigger, batch_id, "source_missing", counts)
         by_id = {item["id"]: item for item in items if isinstance(item.get("id"), str)}
-        language = (self.hass.config.language or "en").lower()
-        options = {
-            "decimal_comma": language.startswith("de"),
-            "supports_description": destination["supports"]["description"],
-        }
+        options = self._map_options(destination)
         destination_items = await self._destination_items(entity_id)
         if destination_items is not None:
             settled, confirmed = self._reconcile(rule_id, destination_items)
@@ -535,6 +531,13 @@ class SyncManager:
         return self._finish(
             rule, trigger, batch_id, outcome, counts, confirm=confirm, present=set(by_id)
         )
+
+    def _map_options(self, destination: dict[str, Any]) -> dict[str, bool]:
+        language = (self.hass.config.language or "en").lower()
+        return {
+            "decimal_comma": language.startswith("de"),
+            "supports_description": destination["supports"]["description"],
+        }
 
     async def _source_list_is_gone(self, rule: dict[str, Any]) -> bool:
         try:
@@ -989,6 +992,22 @@ class SyncManager:
         await self.store.async_save()
         return await self.async_run(rule_id, "retry")
 
+    async def _current_text(self, rule_id: str, record: dict[str, Any]) -> dict[str, Any]:
+        """The text a resend will carry, so the waiting list shows the edited item, not the old."""
+        try:
+            item = await self.client.shopping_item(record["source_item_id"])
+        except (MealieError, ValueError):
+            return {}
+        options = self._map_options(self.destination(self._rule(rule_id)["destination_entity_id"]))
+        mapped = map_item(item, **options) if not item.get("checked") else None
+        if mapped is None:
+            return {}
+        return {
+            "title": mapped["title"],
+            "description": mapped["description"],
+            "fingerprint": fingerprint(item),
+        }
+
     async def async_resolve(self, rule_id: str, record_key: str, action: str) -> dict[str, Any]:
         self._rule(rule_id)
         record = self.records.get(record_key)
@@ -1002,6 +1021,11 @@ class SyncManager:
             raise ValueError("Only conflicts and uncertain items can be resolved")
         group = [record, *self._members(record)]
         deleted = False
+        refreshed = (
+            await self._current_text(rule_id, record)
+            if action == "resend" and len(group) == 1
+            else {}
+        )
         for member in group:
             if action == "resend":
                 self._set(
@@ -1015,6 +1039,7 @@ class SyncManager:
                     completion_pending=False,
                     sent_at=None,
                     completed_at=None,
+                    **refreshed,
                 )
             elif member["state"] == RecordState.REMOVED_AFTER_SEND:
                 del self.records[member["key"]]

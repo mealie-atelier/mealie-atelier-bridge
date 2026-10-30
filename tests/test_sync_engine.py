@@ -461,7 +461,10 @@ async def test_changes_after_send_are_flagged_and_destination_untouched(
 
     removed = await sync.async_resolve(rule_id, f"{rule_id}:b", "dismiss")
     assert removed["deleted"] is True
-    await sync.async_resolve(rule_id, f"{rule_id}:a", "resend")
+    resolved = await sync.async_resolve(rule_id, f"{rule_id}:a", "resend")
+    # The waiting line already shows what the next run sends.
+    assert resolved["record"]["title"] == "3 Milch"
+    assert sync.records[f"{rule_id}:a"]["title"] == "3 Milch"
     result = await sync.async_run(rule_id, "manual")
 
     assert result["sent"] == 1
