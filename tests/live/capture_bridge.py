@@ -107,22 +107,6 @@ async def abort_flows() -> None:
             await ws({"type": "config_entries/flow/abort", "flow_id": flow["flow_id"]})
 
 
-# The status dialog stacks the add button directly on the "Recent runs" card without a gap
-# (cards: no margin after .form-actions). Until the cards repo fixes that, the shot adds the gap.
-GAP_STYLE = ".atelier .sync-panel .form-actions + .editor-card { margin-block-start: var(--ds-space-3, 12px); }"
-
-
-def add_gap(page: Page) -> None:
-    page.locator(".sync-panel").first.evaluate(
-        """(el, css) => {
-            const style = document.createElement('style');
-            style.textContent = css;
-            el.getRootNode().appendChild(style);
-        }""",
-        GAP_STYLE,
-    )
-
-
 def drop_focus(page: Page) -> None:
     """Blur the autofocused control (through shadow roots) so no focus ring shows."""
     page.locator(".sync-panel").first.evaluate(
@@ -136,6 +120,8 @@ def drop_focus(page: Page) -> None:
 
 def fit_dialog(page: Page) -> None:
     """Lift the dialog's height cap and size the viewport to it, so nothing is cut off."""
+    # The editor fills in once the destination lists have loaded; measure only the finished dialog.
+    page.get_by_role("button", name=re.compile("Save changes|Änderungen speichern")).wait_for()
     page.locator(".sync-panel").first.evaluate(
         """(el, css) => {
             const style = document.createElement('style');
@@ -218,7 +204,6 @@ def main() -> None:
                 settle(page)
                 page.locator("[data-action='sync-open'] >> visible=true").click()
                 page.locator("[data-action='sync-setup-open'] >> visible=true").first.wait_for()
-                add_gap(page)
                 shoot(page, "bridge-sync-status")
                 page.locator(f"[data-action='sync-setup-open'][data-value='{rule_id}']").click()
                 page.wait_for_load_state("networkidle")

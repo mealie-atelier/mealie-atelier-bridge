@@ -102,7 +102,9 @@ Re-authentication and **Reconfigure** are available from the integration page. D
 
 Send what you need from a Mealie shopping list to the list your household actually shops with, for example Bring! through its Home Assistant integration. The sync runs in Home Assistant, so it works when no dashboard is open.
 
-<p align="center"><img width="400" alt="Shopping sync rule with its state and actions" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/sync-status.webp"> <img width="400" alt="Sync rule editor with source list, destination list and copy or move mode" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/sync-setup.webp"></p>
+<p align="center"><img width="560" alt="Shopping sync rule with its state and actions" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/sync-status.webp"></p>
+
+<p align="center"><img width="560" alt="Sync rule editor with source list, destination list and copy or move mode" src="https://raw.githubusercontent.com/mealie-atelier/mealie-atelier-bridge/main/assets/screens/sync-setup.webp"></p>
 
 1. Set up the destination through its own integration first, so it appears as a to-do list. The Bridge never asks for Bring! credentials.
 2. As an administrator, open the Atelier shopping view and add a sync rule: Mealie source list, to-do destination, **Copy** or **Move**, when to sync and how to handle duplicates.
