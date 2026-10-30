@@ -2,8 +2,8 @@
 
 Usage: uv run --with playwright --with pillow python tests/live/capture_guides.py <out-dir>
 
-Writes one webp per guide image (same names and pixel sizes as the site's
-public/images/guides/mealie-atelier/, except where a shot needs more room to show everything whole)
+Writes one webp per guide image (same names as the site's public/images/guides/mealie-atelier/; the pixel
+width is kept and the height follows the window where a shot needs more room to show everything whole)
 and the OG crops as 1200x630 jpg files into <out-dir>/og/ (same names as public/images/og/mealie/).
 Every OG crop keeps the aspect ratio of its source box, so nothing is stretched. Everything is German: the Home Assistant user profile, the card
 language and the browser locale. The clock is pinned to 09:00 local on the day of the run.
@@ -18,9 +18,16 @@ Environment:
   LIVE_STATE   folder with ha-token and mealie-token (default ./state, needed in a worktree)
   CARDS_BUNDLE built mealie-atelier-cards.js (default: ../mealie-atelier-cards/dist next to this repo)
   GUIDE_ONLY   comma separated image names to capture, for example "dashboard-hell,web-app"
+  GUIDE_KEPT   folder with the shipped guide images that are not captured (mealie-api-token feeds the OG crop)
+
+No shot shows the credit line ("Mit ♥ von ..."): its text is made invisible before every screenshot, the
+layout stays as shipped. The sync, cook mode and Design Studio dialogs are not cut by injected CSS: where one scrolls (it never gets taller than
+1040 px), the window height is chosen so the dialog ends in a gap between sections.
 
 Not captured on purpose: bring-integration and bring-todo-liste (they come from a real Bring! account)
-and mealie-api-token unless it shows a wrong UI. Run `uv run ... capture_guides.py` again to redo all.
+and mealie-api-token (the shipped image is right; the OG crop is cut from it, not from a new capture).
+The browser is Chromium in its new headless mode, which takes its UI language from --lang (the date field
+then reads "tt.mm.jjjj" instead of "dd.mm.yyyy").
 """
 
 from __future__ import annotations
@@ -90,14 +97,13 @@ SIZES: dict[str, tuple[int, int]] = {
     "karte-vorraete": (1600, 978),
     "karte-wochenplan": (1600, 1067),
     "karten-editor": (1600, 1400),
-    "mealie-api-token": (1600, 1067),
     "kochmodus-dunkel": (1600, 1067),
     "kochmodus-handy": (780, 1688),
     "rezept-hell": (1600, 1101),
     "web-app-design-studio": (1920, 1200),
     "web-app-einkaufs-sync": (1920, 1200),
     "web-app-einkaufsliste": (1920, 1680),
-    "web-app-handy": (780, 1660),
+    "web-app-handy": (680, 1660),
     "web-app-installieren": (780, 1688),
     "web-app-kochmodus": (1920, 1200),
     "web-app-rezept": (1920, 1200),
@@ -114,11 +120,14 @@ OG_CROPS: dict[str, tuple[str, float, float, float]] = {
     "dashboard": ("dashboard-dunkel", 0.325, 0.058, 1.0),
     "web-app": ("web-app-wochenplan", 0.0208, 0.0933, 0.9896),
     "web-app-phone": ("web-app-handy", 0.0, 0.0, 1.0),
-    "mealie-token": ("mealie-api-token", 0.1875, 0.0562, 0.9375),
+    "mealie-token": ("mealie-api-token", 0.3125, 0.4124, 0.8625),
     "recipe-hero": ("dashboard-dunkel", 0.325, 0.4956, 0.995),
-    "sync-status": ("einkaufs-sync-status", 0.1615, 0.09375, 0.8385),
-    "bridge-options": ("bridge-optionen", 0.2381, 0.0225, 0.7619),
+    "sync-status": ("einkaufs-sync-status", 0.2104, 0.3969, 0.7896),
+    "bridge-options": ("bridge-optionen", 0.29375, 0.739, 0.70625),
 }
+
+# Folder with the shipped guide images that this script does not capture (mealie-api-token comes from there).
+KEPT = Path(os.environ["GUIDE_KEPT"]) if os.environ.get("GUIDE_KEPT") else None
 
 RAW: dict[str, Image.Image] = {}
 FAILED: list[str] = []
@@ -172,8 +181,66 @@ def finish(name: str, png: bytes, save: bool = True) -> None:
 
 def viewport(name: str) -> dict[str, int]:
     width, height = SIZES[name]
-    css_width = 390 if width == 780 else 1440
+    css_width = width // 2 if width < 1000 else 1440
     return {"width": css_width, "height": round(height * css_width / width)}
+
+
+def set_height(page: Page, name: str, css_height: int, css_width: int | None = None) -> None:
+    """Resize the viewport and let the guide image follow: same pixel width, height from the new ratio."""
+    css_width = css_width or page.viewport_size["width"]
+    width = SIZES[name][0]
+    SIZES[name] = (width, round(css_height * width / css_width))
+    page.set_viewport_size({"width": css_width, "height": css_height})
+    page.wait_for_timeout(500)
+
+
+# Finds the first element for a selector, also inside shadow roots (the cards live in one).
+DEEP = """
+const deep = (selector, root = document) => {
+  const hit = root.querySelector(selector);
+  if (hit) return hit;
+  for (const el of root.querySelectorAll('*')) {
+    if (el.shadowRoot) { const inner = deep(selector, el.shadowRoot); if (inner) return inner; }
+  }
+  return null;
+};
+"""
+
+
+def grow_to_fit(page: Page, name: str, selector: str, limit: int = 4000) -> None:
+    """Make the viewport tall enough that the scrolling element needs no scrolling: nothing is cut."""
+    for _ in range(8):
+        extra = page.evaluate(
+            "([deepSrc, sel]) => { const deep = new Function(deepSrc + 'return deep;')(); "
+            "const el = deep(sel); return el ? el.scrollHeight - el.clientHeight : 0; }",
+            [DEEP, selector],
+        )
+        height = page.viewport_size["height"]
+        if extra <= 1 or height >= limit:
+            return
+        set_height(page, name, min(limit, height + extra + 2))
+
+
+def fit_document(page: Page, name: str) -> None:
+    """Window as tall as the page, so the sidebar and the content end whole instead of at the window edge."""
+    for _ in range(4):
+        total = page.evaluate("document.documentElement.scrollHeight")
+        if total <= page.viewport_size["height"]:
+            return
+        set_height(page, name, total)
+
+
+def fit_modal_height(
+    page: Page, name: str, target: float, selector: str = ".modal[role='dialog']"
+) -> None:
+    """Move the viewport height until the dialog box is `target` css pixels high (the dialog follows the window)."""
+    modal = page.locator(f"{selector} >> visible=true").first
+    for _ in range(6):
+        have = modal.evaluate("el => el.getBoundingClientRect().height")
+        if abs(have - target) <= 1:
+            return
+        set_height(page, name, page.viewport_size["height"] + round(target - have))
+    raise RuntimeError(f"{name}: the dialog height did not settle on {target}")
 
 
 def og_image(name: str, image: Image.Image, left: float, top: float, right: float) -> Image.Image:
@@ -187,30 +254,54 @@ def og_image(name: str, image: Image.Image, left: float, top: float, right: floa
     return image.crop((x0, y0, x1, y1)).resize(OG_SIZE, Image.Resampling.LANCZOS)
 
 
-def og_phone(image: Image.Image) -> Image.Image:
-    """The whole portrait phone shot, centred on a canvas in the colour of its edge."""
+def og_phone(handy: Image.Image, install: Image.Image) -> Image.Image:
+    """Two phones side by side on a canvas in the colour of the first one's edge, each a whole-row crop.
+
+    Left the start page down to the gap above the next block, right the install dialog (its blurred top
+    trimmed). Each phone is about 30 percent of the width, so the screen text stays readable in a small card.
+    """
     height = OG_SIZE[1]
-    width = round(image.width * height / image.height)
-    canvas = Image.new("RGB", OG_SIZE, image.getpixel((2, image.height // 2)))
-    canvas.paste(
-        image.resize((width, height), Image.Resampling.LANCZOS), ((OG_SIZE[0] - width) // 2, 0)
-    )
+    left = handy.crop((0, 0, handy.width, round(handy.width * 1170 / 680)))
+    right = install.crop((0, round(install.height * 480 / 1688), install.width, install.height))
+    shots = [
+        shot.resize((round(shot.width * height / shot.height), height), Image.Resampling.LANCZOS)
+        for shot in (left, right)
+    ]
+    gap = 40
+    total = sum(shot.width for shot in shots) + gap
+    canvas = Image.new("RGB", OG_SIZE, handy.getpixel((2, handy.height // 2)))
+    x = (OG_SIZE[0] - total) // 2
+    for shot in shots:
+        canvas.paste(shot, (x, 0))
+        x += shot.width + gap
     return canvas
+
+
+def load_source(name: str) -> Image.Image | None:
+    """A source image of this run, else the saved one next to it, else the shipped one that is kept."""
+    if name in RAW:
+        return RAW[name]
+    for folder in (OUT, KEPT):
+        if folder and (folder / f"{name}.webp").exists():
+            return Image.open(folder / f"{name}.webp").convert("RGB")
+    return None
 
 
 def write_og() -> None:
     og = OUT / "og"
     og.mkdir(parents=True, exist_ok=True)
     for name, (source, left, top, right) in OG_CROPS.items():
-        image = RAW.get(source)
+        image = load_source(source)
         if image is None:
-            path = OUT / f"{source}.webp"
-            if not path.exists():
+            print(f"skip og/{name}: no {source} image (set GUIDE_KEPT for the shipped ones)")
+            continue
+        if name == "web-app-phone":
+            install = load_source("web-app-installieren")
+            if install is None:
                 continue
-            image = Image.open(path).convert("RGB")
-        out = (
-            og_phone(image) if name == "web-app-phone" else og_image(name, image, left, top, right)
-        )
+            out = og_phone(image, install)
+        else:
+            out = og_image(name, image, left, top, right)
         out.save(og / f"{name}.jpg", "JPEG", quality=88)
         print(f"ok   og/{name} {out.width}x{out.height}")
 
@@ -556,8 +647,24 @@ def ha_page(
     return context, page
 
 
+def hide_credit(page: Page) -> None:
+    """No credit line in any shot (it names the author). The text goes invisible, the layout stays as shipped."""
+    page.evaluate(
+        """() => {
+            const sheet = new CSSStyleSheet();
+            sheet.replaceSync('.atelier-credit{visibility:hidden!important}');
+            const walk = (root) => {
+                if (!root.adoptedStyleSheets.includes(sheet)) root.adoptedStyleSheets = [...root.adoptedStyleSheets, sheet];
+                for (const el of root.querySelectorAll('*')) if (el.shadowRoot) walk(el.shadowRoot);
+            };
+            walk(document);
+        }"""
+    )
+
+
 def blur_all(page: Page) -> None:
     """Drop focus (through shadow roots) and park the mouse on an empty edge: no ring, no hover."""
+    hide_credit(page)
     page.evaluate(
         """() => {
             let node = document.activeElement;
@@ -654,6 +761,8 @@ def shot_cook(browser: Browser) -> None:
     page.locator("[data-action='cook-start'] >> visible=true").click()
     page.locator("[data-action='cook-next'] >> visible=true").wait_for()
     settle_ha(page)
+    # The dialog is as tall as the window allows: grow the window until the footer buttons are whole in view.
+    grow_to_fit(page, "kochmodus-dunkel", ".modal[role='dialog']")
     snap(page, "kochmodus-dunkel")
     context.close()
 
@@ -665,16 +774,23 @@ def shot_cook_phone(browser: Browser) -> None:
     page.locator("[data-action='cook-start'] >> visible=true").click()
     page.locator("[data-action='cook-next'] >> visible=true").wait_for()
     settle_ha(page)
-    # The footer is sticky and would hide the tool tray at the top of the page: scroll until the whole tray
-    # (tools and timer) sits between the close strip and the footer.
-    page.locator(".modal[role='dialog'] >> visible=true").first.evaluate(
+    # Top of the dialog: photo, progress, the "keep awake" checkbox and the step. The dialog scrolls and its
+    # footer (Zurück, Zum Rezept, Weiter) is sticky, so the window height is chosen that the footer starts
+    # right where the tool tray begins: no half row hides under the footer.
+    modal = page.locator(".modal[role='dialog'] >> visible=true").first
+    need = modal.evaluate(
         """modal => {
-            const tray = modal.querySelector('.cook-utility').getBoundingClientRect();
             const box = modal.getBoundingClientRect();
-            const strip = modal.querySelector('.modal-close').getBoundingClientRect();
-            modal.scrollTop += tray.top - box.top - (strip.bottom - box.top) - (strip.top - box.top) - 44;
+            const tray = modal.querySelector('.cook-utility').getBoundingClientRect();
+            const footer = [...modal.querySelectorAll('*')].find((el) => {
+                const css = getComputedStyle(el);
+                return css.position === 'sticky' && css.bottom !== 'auto';
+            });
+            return (tray.top - box.top + modal.scrollTop) - 18 + footer.getBoundingClientRect().height;
         }"""
     )
+    fit_modal_height(page, "kochmodus-handy", need)
+    modal.evaluate("modal => { modal.scrollTop = 0; }")
     page.wait_for_timeout(600)
     snap(page, "kochmodus-handy")
     context.close()
@@ -707,11 +823,15 @@ def shot_bridge_pages(browser: Browser) -> None:
     if wanted("bridge-integration"):
         snap(page, "bridge-integration")
     if wanted("bridge-optionen"):
-        page.set_viewport_size(viewport("bridge-optionen"))
+        # The form is long: a window this tall holds all of it, down to "Benachrichtigungsdienst für Timer" and OK.
+        set_height(page, "bridge-optionen", 1400)
         page.get_by_role("button", name=re.compile("^(Konfigurieren|Configure)")).first.click()
         page.locator("ha-form >> visible=true").first.wait_for(timeout=30_000)
         page.wait_for_load_state("networkidle")
         page.wait_for_timeout(800)
+        last = page.get_by_text("Benachrichtigungsdienst für Timer").first.bounding_box()
+        if not last or last["y"] + last["height"] > page.viewport_size["height"] - 60:
+            raise RuntimeError("bridge-optionen: the last option is not whole in view")
         snap(page, "bridge-optionen")
         page.keyboard.press("Escape")
         page.wait_for_timeout(500)
@@ -783,41 +903,116 @@ def sync_modal(page: Page):
     return page.locator(".modal.sync-modal").first
 
 
-def crop_modal(page: Page, first: int, last: int) -> None:
-    """Show editor sections first..last (0 based) whole: the dialog height ends in the gap below."""
-    sync_modal(page).evaluate(
-        """(modal, [first, last]) => {
-            const cards = [...modal.querySelectorAll('.editor-card')];
-            const style = document.createElement('style');
-            modal.getRootNode().appendChild(style);
-            const gap = 24;
-            const box = modal.getBoundingClientRect();
-            const top = cards[first].getBoundingClientRect().top - box.top + modal.scrollTop;
-            const bottom = cards[last].getBoundingClientRect().bottom - box.top + modal.scrollTop;
-            const sticky = [...modal.children].find((el) => getComputedStyle(el).position === 'sticky');
-            const head = first === 0 || !sticky ? 0 : sticky.getBoundingClientRect().height;
-            const lead = first === 0 ? 0 : top - gap - head;
-            style.textContent = `.atelier .modal.sync-modal{max-height:${Math.ceil(bottom - lead + gap)}px!important}`;
-            modal.scrollTop = lead;
-        }""",
-        [first, last],
-    )
+SYNC_BOX_MAX = 1040  # css px: the dialog never grows taller, it scrolls
+
+
+def fit_sync_box(page: Page, name: str, target: Callable[[], float]) -> None:
+    """Window with the 3:2 ratio of the guide image in which the dialog box is `target()` css pixels high.
+
+    The dialog is as wide as the window allows, so its content reflows when the window changes: the target
+    is measured again after every resize until the dialog height matches it.
+    """
+    height = page.viewport_size["height"]
+    for _ in range(10):
+        set_height(page, name, height, css_width=round(height * 1.5))
+        want = min(target(), SYNC_BOX_MAX)
+        have = sync_modal(page).evaluate("el => el.getBoundingClientRect().height")
+        if abs(have - want) <= 1:
+            SIZES[name] = (SIZES[name][0], 1280)
+            page.wait_for_timeout(600)
+            return
+        height += round(want - have)
+    raise RuntimeError(f"{name}: the dialog height did not settle")
+
+
+def sync_window(page: Page, name: str, first: int, last: int) -> None:
+    """Show editor sections first..last (0 based) whole, with the dialog's own scrolling and nothing injected.
+
+    The window height decides how tall the dialog is. For sections at the top the dialog ends in the gap
+    below the last section; for sections at the bottom the dialog is scrolled to its end and starts in the gap
+    above the first section, below the sticky close bar.
+    """
+    gap = 12
+
+    def target() -> float:
+        info = sync_modal(page).evaluate(
+            """modal => {
+                const box = modal.getBoundingClientRect();
+                modal.scrollTop = 10 ** 6;
+                const close = modal.querySelector('.modal-close').getBoundingClientRect();
+                const head = close.bottom - box.top + 16;
+                modal.scrollTop = 0;
+                const cards = [...modal.querySelectorAll('.editor-card')].map((c) => {
+                    const r = c.getBoundingClientRect();
+                    return [r.top - box.top, r.bottom - box.top];
+                });
+                return {cards, head, total: modal.scrollHeight};
+            }"""
+        )
+        if first == 0:
+            return info["cards"][last][1] + gap
+        return info["total"] - (info["cards"][first][0] - gap - info["head"])
+
+    fit_sync_box(page, name, target)
+    sync_modal(page).evaluate("(m, top) => { m.scrollTop = top; }", 0 if first == 0 else 10**6)
     page.wait_for_timeout(500)
 
 
 def fit_ratio(page: Page, name: str) -> None:
-    """Viewport with the aspect ratio of the guide image around the whole dialog, nothing cut."""
-    width, height = SIZES[name]
-    box_height = sync_modal(page).evaluate("el => el.getBoundingClientRect().height")
-    need = int(box_height) + 220
-    target_h = max(viewport(name)["height"], need)
-    page.set_viewport_size({"width": round(target_h * width / height), "height": target_h})
+    """A dialog that fits whole: a window with the image ratio and room around it (the dialog does not scroll)."""
+    height = 0
+    for _ in range(4):
+        box = sync_modal(page).evaluate("el => el.getBoundingClientRect().height")
+        height = max(viewport(name)["height"], round(box) + 220)
+        set_height(page, name, height, css_width=round(height * 1.5))
+    SIZES[name] = (SIZES[name][0], 1280)
     page.wait_for_timeout(600)
+
+
+def shift_run_stamps(socket) -> None:
+    """Show the server's run times on the pinned clock.
+
+    The sync run is stamped by the server on the real clock, but every shot has the page clock fixed at 09:00.
+    Without this the dialog would read "in 6 Stunden" instead of "gerade eben". Every `at` stamp of the last
+    hour in a websocket message from Home Assistant moves to two seconds before the pinned time.
+    """
+    import json
+
+    server = socket.connect_to_server()
+    shown = (CLOCK - timedelta(seconds=2)).astimezone().isoformat()
+
+    def shift(node: object) -> object:
+        if isinstance(node, dict):
+            return {
+                key: shown if key == "at" and recent(value) else shift(value)
+                for key, value in node.items()
+            }
+        if isinstance(node, list):
+            return [shift(item) for item in node]
+        return node
+
+    def recent(value: object) -> bool:
+        try:
+            stamp = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except ValueError:
+            return False
+        if stamp.tzinfo is None:
+            stamp = stamp.astimezone()
+        return abs(datetime.now().astimezone() - stamp) < timedelta(hours=1)
+
+    def from_server(message: str | bytes) -> None:
+        if isinstance(message, str) and '"at"' in message:
+            message = json.dumps(shift(json.loads(message)))
+        socket.send(message)
+
+    socket.on_message(lambda message: server.send(message))
+    server.on_message(from_server)
 
 
 def shots_sync(browser: Browser) -> None:
     list_id = mealie_source_list()
     context, page = ha_page(browser, "einkaufs-sync-leer", "dark")
+    context.route_web_socket("**/api/websocket", shift_run_stamps)
     try:
         arun(reset_sync_state())
         open_dashboard(page, "atelier-shots-dark/shopping")
@@ -839,23 +1034,16 @@ def shots_sync(browser: Browser) -> None:
         destination.select_option(value=TODO_ENTITY)
         page.wait_for_timeout(1200)
         if wanted("einkaufs-sync-einrichten"):
-            page.set_viewport_size({"width": 1440, "height": 1080})
-            crop_modal(page, 0, 2)
-            fit_ratio(page, "einkaufs-sync-einrichten")
+            sync_window(page, "einkaufs-sync-einrichten", 0, 2)
             snap(page, "einkaufs-sync-einrichten")
         if wanted("einkaufs-sync-vorschau") or wanted("einkaufs-sync-status"):
             page.locator("[data-action='sync-preview']").click()
             page.get_by_text(re.compile("Beispielzeile")).first.wait_for(timeout=30_000)
             page.wait_for_timeout(800)
             if wanted("einkaufs-sync-vorschau"):
-                page.set_viewport_size({"width": 1440, "height": 1080})
-                crop_modal(page, 4, 6)
-                fit_ratio(page, "einkaufs-sync-vorschau")
+                sync_window(page, "einkaufs-sync-vorschau", 4, 6)
                 snap(page, "einkaufs-sync-vorschau")
             page.set_viewport_size({"width": 1440, "height": 960})
-            # The run time comes from the server, so the status shot reads "gerade eben" only when the page
-            # clock is the real time again. The dialog shows no time of day, only relative run times.
-            context.clock.set_fixed_time(datetime.now())
             page.locator("[data-action='sync-save'][data-value='send']").click()
             page.get_by_text(re.compile("Letzter Lauf")).first.wait_for(timeout=60_000)
             page.wait_for_timeout(1200)
@@ -866,26 +1054,6 @@ def shots_sync(browser: Browser) -> None:
         context.close()
         arun(reset_sync_state())
         mealie("DELETE", f"/api/households/shopping/lists/{list_id}")
-
-
-# ---------------------------------------------------------------------------------------------
-# Mealie's own token page (kept as is unless it shows a wrong UI)
-
-
-def shot_mealie_token(browser: Browser) -> None:
-    context = new_context(browser, "mealie-api-token", "light")
-    page = context.new_page()
-    page.goto(f"{MEALIE}/login")
-    page.locator("input[type='text'], input[type='email']").first.fill("changeme@example.com")
-    page.locator("input[type='password']").first.fill("MyPassword")
-    page.keyboard.press("Enter")
-    page.wait_for_url(lambda url: "/login" not in url, timeout=30_000)
-    page.goto(f"{MEALIE}/user/profile/api-tokens")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(1200)
-    # The shipped image stays unless it is asked for by name; the capture still feeds the OG crop.
-    finish("mealie-api-token", page.screenshot(), save="mealie-api-token" in ONLY)
-    context.close()
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1010,14 +1178,38 @@ def show_checked_item(page: Page) -> None:
     web_nav(page, "Einkaufsliste")
 
 
+def open_status_bar(page: Page) -> None:
+    """Open the status bar; the window ends in the gap under the first sidebar entry that follows the sub line.
+
+    Both the text row "Deine Küche, neu gedacht." and the sidebar entries are then whole at the bottom edge.
+    """
+    page.locator("details.atelier-connectivity summary").click()
+    page.wait_for_timeout(600)
+    bottom = page.evaluate(
+        """() => {
+            const all = (sel, root = document) => {
+                let out = [...root.querySelectorAll(sel)];
+                for (const el of root.querySelectorAll('*')) if (el.shadowRoot) out = out.concat(all(sel, el.shadowRoot));
+                return out;
+            };
+            const line = all('*').find((el) => el.children.length === 0 && /deine küche, neu gedacht/i.test(el.textContent));
+            const need = line.getBoundingClientRect().bottom + 8;
+            const edges = all('[data-action=nav]').map((el) => el.getBoundingClientRect().bottom).filter((y) => y > need);
+            return Math.min(...edges) + 4;
+        }"""
+    )
+    set_height(page, "web-app-statusleiste", round(bottom))
+
+
 def shots_web(browser: Browser) -> None:
     with WebApp() as app:
         names = {
             "web-app": lambda page: None,
-            "web-app-statusleiste": lambda page: page.locator(
-                "details.atelier-connectivity summary"
-            ).click(),
-            "web-app-wochenplan": lambda page: web_nav(page, "Wochenplan"),
+            "web-app-statusleiste": open_status_bar,
+            "web-app-wochenplan": lambda page: (
+                web_nav(page, "Wochenplan"),
+                fit_document(page, "web-app-wochenplan"),
+            ),
             "web-app-einkaufsliste": show_checked_item,
         }
         for name, prepare in names.items():
@@ -1059,11 +1251,15 @@ def shots_web(browser: Browser) -> None:
             page.locator("[data-action='settings'] >> visible=true").first.click()
             page.get_by_text("Design Studio").first.wait_for(timeout=30_000)
             page.wait_for_timeout(800)
-            cap_modal(
-                page,
-                """const group = modal.querySelector("[data-input='language']").closest('.settings-group');
-                   return group.getBoundingClientRect().bottom + 12;""",
+            # The dialog scrolls (it never gets taller than 1040 px). End it after the "Bewegung" group, just
+            # above the divider of the next one, so no group is cut and no lone divider hangs at the edge.
+            edge = page.locator(".modal[role='dialog'] >> visible=true").first.evaluate(
+                """modal => {
+                    const language = modal.querySelector("[data-input='language']").closest('.settings-group');
+                    return language.nextElementSibling.getBoundingClientRect().bottom - modal.getBoundingClientRect().top - 2;
+                }"""
             )
+            fit_modal_height(page, "web-app-design-studio", edge)
 
         for name, prepare in {
             "web-app-rezept": recipe,
@@ -1085,6 +1281,22 @@ def shots_web(browser: Browser) -> None:
                 context.close()
         if wanted("web-app-handy"):
             context, page = web_page(browser, app, "web-app-handy", mobile=True)
+            # The window is as wide as the first four tabs of the scrolling tab row, so no tab label is cut at the
+            # right edge, and ends just above the "Heute auf dem Teller" card instead of in the middle of it.
+            edge = page.evaluate(
+                """() => {
+                    const all = (sel, root = document) => {
+                        let out = [...root.querySelectorAll(sel)];
+                        for (const el of root.querySelectorAll('*')) if (el.shadowRoot) out = out.concat(all(sel, el.shadowRoot));
+                        return out;
+                    };
+                    const kicker = all('*').find((el) => el.children.length === 0 && /heute auf dem teller/i.test(el.textContent));
+                    let card = kicker;
+                    while (card.getBoundingClientRect().top > kicker.getBoundingClientRect().top - 10) card = card.parentElement || card.getRootNode().host;
+                    return card.getBoundingClientRect().top + window.scrollY;
+                }"""
+            )
+            set_height(page, "web-app-handy", round(edge) - 10)
             snap(page, "web-app-handy")
             context.close()
         if wanted("web-app-installieren"):
@@ -1103,7 +1315,7 @@ def main() -> None:
     arun(reset_sync_state())
     arun(start_session())
     with sync_playwright() as play:
-        browser = play.chromium.launch(headless=True, args=["--lang=de-DE"])
+        browser = play.chromium.launch(headless=True, channel="chromium", args=["--lang=de-DE"])
         try:
             run("dashboard-hell", lambda: shot_dashboard(browser, "dashboard-hell", "light"))
             run("dashboard-dunkel", lambda: shot_dashboard(browser, "dashboard-dunkel", "dark"))
@@ -1140,7 +1352,6 @@ def main() -> None:
                 ),
                 lambda: shots_sync(browser),
             )
-            run(("mealie-api-token", "mealie-token"), lambda: shot_mealie_token(browser))
             run(
                 (
                     "web-app",
