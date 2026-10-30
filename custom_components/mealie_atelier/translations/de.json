@@ -137,7 +137,7 @@
       "message": "Mealie hat die Änderung angenommen, aber das gespeicherte Rezept weicht ab. Backup {backup_id} macht sie rückgängig."
     },
     "backup_failed": {
-      "message": "Das Backup konnte nicht gespeichert werden, deshalb wurde nichts geändert. Prüfe den freien Speicherplatz und versuche es erneut."
+      "message": "Das Backup konnte nicht gespeichert werden, daher wurde nichts geändert. Prüfe den freien Speicherplatz und versuche es erneut."
     },
     "backup_not_found": {
       "message": "Dieses Backup existiert nicht mehr. Öffne den Versionsverlauf erneut."
