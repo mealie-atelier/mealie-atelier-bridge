@@ -102,3 +102,12 @@ def test_changelog_releases_the_manifest_version_and_keeps_unreleased_empty() ->
         f"[Unreleased]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v{version}...HEAD"
         in changelog
     )
+
+
+def test_websocket_doc_lists_every_registered_command() -> None:
+    doc = (ROOT / "docs" / "WEBSOCKET_API.md").read_text(encoding="utf-8")
+    registered: set[str] = set()
+    for source in (ROOT / "custom_components" / "mealie_atelier").rglob("*.py"):
+        registered |= set(re.findall(r'"mealie_atelier/([a-z_]+)"', source.read_text("utf-8")))
+    documented = set(re.findall(r"`mealie_atelier/([a-z_]+)`", doc))
+    assert registered - documented == set()

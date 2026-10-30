@@ -131,6 +131,7 @@ Found a vulnerability? Please report it privately, see the [security policy](.gi
 | --- | --- |
 | Installation and options | [docs/INSTALLATION.md](docs/INSTALLATION.md) |
 | Shopping sync behavior and guarantees | [docs/SMART_SHOPPING_SYNC.md](docs/SMART_SHOPPING_SYNC.md) |
+| WebSocket commands and error codes | [docs/WEBSOCKET_API.md](docs/WEBSOCKET_API.md) |
 | Questions and answers | [docs/FAQ.md](docs/FAQ.md) |
 | Changes per version | [CHANGELOG.md](CHANGELOG.md) |
 | Dashboard cards and standalone app | [Mealie Atelier Cards](https://github.com/mealie-atelier/mealie-atelier-cards#readme) |

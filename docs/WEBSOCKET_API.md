@@ -2,6 +2,59 @@
 
 The Mealie Atelier Bridge exposes an allowlist of Home Assistant WebSocket commands under the `mealie_atelier/` prefix. The Mealie Atelier cards use them. Every write checks the Home Assistant user's grant and read-only mode on the server. Mealie tokens never leave Home Assistant.
 
+## Commands
+
+Every command below is registered by the Bridge and nothing else is reachable. Access levels: `read` is open to every Home Assistant user. `write` needs the write grant and read-only mode off. `admin` needs a Home Assistant administrator and read-only mode off. `personal` (own timers and journal) is blocked only by read-only mode, grants do not apply. Commands take an optional `entry_id` to pick the entry.
+
+| Command | Purpose | Access |
+| --- | --- | --- |
+| `mealie_atelier/status` | Loaded entries, permissions, limits and features. | read |
+| `mealie_atelier/recipes` | Page and search of recipes. | read |
+| `mealie_atelier/recipe` | One recipe by slug. | read |
+| `mealie_atelier/recipe_backups` | List the backups kept for a recipe. | read |
+| `mealie_atelier/recipe_restore` | Restore a recipe from one of its backups. | admin |
+| `mealie_atelier/recipe_image_set` | Replace the main recipe photo from an upload. | admin |
+| `mealie_atelier/recipe_image_delete` | Remove the main recipe photo. | admin |
+| `mealie_atelier/step_image_add` | Attach a photo to a recipe step. | admin |
+| `mealie_atelier/step_image_remove` | Remove the photo of a recipe step. | admin |
+| `mealie_atelier/upload_begin` | Start a chunked photo upload. | admin |
+| `mealie_atelier/upload_chunk` | Send one chunk of a photo upload. | admin |
+| `mealie_atelier/ingredients_get` | Read the structured ingredients of a recipe. | read |
+| `mealie_atelier/ingredients_save` | Save structured ingredients. | admin |
+| `mealie_atelier/foods` | Search the Mealie food catalog. | read |
+| `mealie_atelier/units` | Search the Mealie unit catalog. | read |
+| `mealie_atelier/food_create` | Create a food. | admin |
+| `mealie_atelier/unit_create` | Create a unit. | admin |
+| `mealie_atelier/mealplan` | Meal plan entries for a date range. | read |
+| `mealie_atelier/shopping` | Shopping lists and their items. | read |
+| `mealie_atelier/metadata` | Categories, tags, cookbooks and other lookups. | read |
+| `mealie_atelier/mutate` | Recipe and shopping actions. Recipe create, update and import are admin, the shopping actions need write. | write or admin |
+| `mealie_atelier/offline_replay` | Replay shopping edits queued while the card was offline. | write |
+| `mealie_atelier/nutrition_prepare` | Prepare a nutrition calculation for a recipe. | read |
+| `mealie_atelier/nutrition_search` | Search USDA FoodData Central. | read |
+| `mealie_atelier/nutrition_ai` | AI estimate for nutrition values. | read |
+| `mealie_atelier/nutrition_calculate` | Calculate nutrition values from the ingredients. | read |
+| `mealie_atelier/nutrition_save` | Save nutrition values to Mealie. | admin |
+| `mealie_atelier/studio_state` | Journal, pantry, family members and session state. | read |
+| `mealie_atelier/studio_update` | Change journal, pantry, family members, helper tasks and session state. The journal needs only that read-only mode is off, family members and helper task edits need a Home Assistant admin. | write |
+| `mealie_atelier/studio_substitute` | AI ingredient substitution. | read |
+| `mealie_atelier/studio_ai_audit` | AI check of a recipe. | read |
+| `mealie_atelier/alarm_capabilities` | Whether background timers and push notifications are available. | read |
+| `mealie_atelier/alarm_create` | Start a background kitchen timer. | personal |
+| `mealie_atelier/alarm_cancel` | Cancel a background kitchen timer. | personal |
+| `mealie_atelier/alarms` | List the active timers of the user, all timers for an admin. | read |
+| `mealie_atelier/sync_state` | Rules, counts and recent runs of Smart Shopping Sync. | read |
+| `mealie_atelier/sync_destinations` | To-do lists a rule can send to. | read |
+| `mealie_atelier/sync_preview` | Show the first batch of a rule or draft without sending. | read |
+| `mealie_atelier/sync_records` | List the items of a rule by state. | read |
+| `mealie_atelier/sync_rule_save` | Create or change a rule. | admin |
+| `mealie_atelier/sync_rule_delete` | Delete a rule. | admin |
+| `mealie_atelier/sync_run` | Run a rule now. Confirming the first batch needs admin. | write or admin |
+| `mealie_atelier/sync_pause` | Pause a rule. | write |
+| `mealie_atelier/sync_resume` | Resume a rule. | write |
+| `mealie_atelier/sync_retry` | Retry failed items. | write |
+| `mealie_atelier/sync_resolve` | Dismiss or send again an item under review. | write |
+
 ## Status
 
 `mealie_atelier/status` lists every loaded entry. Besides the permissions and limits, each entry carries:
@@ -33,6 +86,7 @@ A failed command returns an error whose `code` is stable and whose message is En
 | `ai_error` | The AI provider failed or returned something unusable. |
 | `ai_not_configured` | An AI call was made without an API key in the options. |
 | `invalid_request` | Any other invalid input. |
+| `sync_source_gone`, `sync_source_checked` | Send again was refused because the item no longer exists in Mealie or is ticked off there. The item stays under review. |
 | `mealie_auth`, `mealie_error` | Mealie refused or failed the request. |
 | `not_configured` | No loaded Mealie Atelier Bridge entry. |
 
