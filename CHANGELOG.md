@@ -9,7 +9,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 - New error codes `entry_reauth` (Mealie rejected the saved token) and `entry_unavailable` (Mealie cannot be reached and Home Assistant is retrying), so cards tell these entries apart from a missing setup (`not_configured`). A command without `entry_id` gets them too when exactly one entry exists.
 - New error codes `sync_source_gone` and `sync_source_checked`: Send again is refused for a Smart Shopping Sync item that no longer exists in Mealie or is ticked off there. The item stays under review, and an edited item shows its new text in the waiting list.
 - A sync rule whose source list was deleted in Mealie reports the outcome `source_missing` instead of looking like a healthy empty rule.
-- `mealie_atelier/recipe_backups` entries carry `ingredient_count` and `step_count` (null for old backups), so cards can localise the backup summary. `summary` stays an English fallback.
+- `mealie_atelier/recipe_backups` entries carry `ingredient_count` and `step_count` (null for old backups), so cards can localize the backup summary. `summary` stays an English fallback.
 - `recipe_update` accepts step objects and merges them by step id.
 - `docs/WEBSOCKET_API.md` lists every allowlisted command with its access level.
 

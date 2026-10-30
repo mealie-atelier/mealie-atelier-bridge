@@ -171,7 +171,7 @@ async def test_removing_the_entry_deletes_store_and_photos(hass: HomeAssistant, 
     assert "mealie_atelier_recipe_backups_e1" not in hass_storage
 
 
-async def test_listing_carries_counts_for_a_localised_summary(hass: HomeAssistant):
+async def test_listing_carries_counts_for_a_localized_summary(hass: HomeAssistant):
     store = await RecipeBackupStore.async_load(hass, "e1")
     await store.async_snapshot(
         client(),
