@@ -3,8 +3,9 @@
 Usage: uv run --with playwright --with pillow python tests/live/capture_guides.py <out-dir>
 
 Writes one webp per guide image (same names and pixel sizes as the site's
-public/images/guides/mealie-atelier/) and the OG crops as 1:1 jpg files into <out-dir>/og/ (same names
-as public/images/og/mealie/). Everything is German: the Home Assistant user profile, the card
+public/images/guides/mealie-atelier/, except where a shot needs more room to show everything whole)
+and the OG crops as 1200x630 jpg files into <out-dir>/og/ (same names as public/images/og/mealie/).
+Every OG crop keeps the aspect ratio of its source box, so nothing is stretched. Everything is German: the Home Assistant user profile, the card
 language and the browser locale. The clock is pinned to 09:00 local on the day of the run.
 
 The script sets up everything it shows over the Home Assistant websocket, like a household would:
@@ -75,9 +76,9 @@ SIZES: dict[str, tuple[int, int]] = {
     "einkaufs-sync-leer": (1920, 1280),
     "einkaufs-sync-status": (1920, 1280),
     "einkaufs-sync-vorschau": (1920, 1280),
-    "einkaufsliste-handy": (780, 1688),
+    "einkaufsliste-handy": (780, 1712),
     "integration-suchen": (1600, 1067),
-    "karte-auswaehlen": (1600, 1067),
+    "karte-auswaehlen": (1600, 1200),
     "karte-einkauf": (1600, 1200),
     "karte-gemeinsam-kochen": (1600, 1500),
     "karte-heute": (1600, 1067),
@@ -95,26 +96,28 @@ SIZES: dict[str, tuple[int, int]] = {
     "rezept-hell": (1600, 1101),
     "web-app-design-studio": (1920, 1200),
     "web-app-einkaufs-sync": (1920, 1200),
-    "web-app-einkaufsliste": (1920, 1350),
-    "web-app-handy": (780, 1688),
+    "web-app-einkaufsliste": (1920, 1680),
+    "web-app-handy": (780, 1660),
     "web-app-installieren": (780, 1688),
     "web-app-kochmodus": (1920, 1200),
     "web-app-rezept": (1920, 1200),
-    "web-app-statusleiste": (1920, 1200),
+    "web-app-statusleiste": (1920, 1000),
     "web-app-wochenplan": (1920, 1200),
-    "web-app": (1920, 1200),
+    "web-app": (1920, 1340),
     "wochenplan-hell": (1600, 1067),
 }
-# OG crops: name -> (source image, crop box in css pixels of the 1440 wide capture, output size).
-# Crop boxes are given as fractions (left, top, right, bottom) of the source image.
-OG_CROPS: dict[str, tuple[str, tuple[float, float, float, float], tuple[int, int]]] = {
-    "dashboard": ("dashboard-dunkel", (0.0, 0.0, 0.78, 0.62), (1000, 600)),
-    "web-app": ("web-app", (0.0, 0.0, 0.9, 0.9), (1000, 625)),
-    "web-app-phone": ("web-app-handy", (0.0, 0.0, 1.0, 1.0), (360, 779)),
-    "mealie-token": ("mealie-api-token", (0.0, 0.0, 0.7, 0.35), (900, 394)),
-    "recipe-hero": ("dashboard-dunkel", (0.344, 0.482, 0.976, 0.816), (560, 222)),
-    "sync-status": ("einkaufs-sync-status", (0.24, 0.14, 0.76, 0.86), (760, 702)),
-    "bridge-options": ("bridge-optionen", (0.29, 0.01, 0.71, 0.80), (520, 839)),
+# OG crops, all 1200x630. name -> (source image, left, top, right as fractions of the source width,
+# top as fraction of the source height). The box height follows from the 1200:630 ratio, so the crop is
+# never stretched. A source can also be "phone": the portrait screenshot centred on a canvas of its own edge colour.
+OG_SIZE = (1200, 630)
+OG_CROPS: dict[str, tuple[str, float, float, float]] = {
+    "dashboard": ("dashboard-dunkel", 0.325, 0.058, 1.0),
+    "web-app": ("web-app-wochenplan", 0.0208, 0.0933, 0.9896),
+    "web-app-phone": ("web-app-handy", 0.0, 0.0, 1.0),
+    "mealie-token": ("mealie-api-token", 0.1875, 0.0562, 0.9375),
+    "recipe-hero": ("dashboard-dunkel", 0.325, 0.4956, 0.995),
+    "sync-status": ("einkaufs-sync-status", 0.1615, 0.09375, 0.8385),
+    "bridge-options": ("bridge-optionen", 0.2381, 0.0225, 0.7619),
 }
 
 RAW: dict[str, Image.Image] = {}
@@ -129,7 +132,7 @@ WEEK_PLAN = [  # (days after Monday, German recipe title)
 ]
 SOURCE_LIST = "Wochenmarkt"
 SYNC_ITEMS = ["Tomaten", "Basilikum", "Mozzarella"]
-RULE_NAME = "Wochenmarkt nach Bring!"
+RULE_NAME = "Wochenmarkt zur To-do-Liste"
 TODO_NAME = "Mealie Atelier"
 TODO_ENTITY = "todo.mealie_atelier"
 
@@ -173,22 +176,43 @@ def viewport(name: str) -> dict[str, int]:
     return {"width": css_width, "height": round(height * css_width / width)}
 
 
+def og_image(name: str, image: Image.Image, left: float, top: float, right: float) -> Image.Image:
+    """A 1200x630 crop: the box keeps the 1200:630 ratio of the output, so there is no stretching."""
+    w, h = image.size
+    x0, x1 = round(left * w), round(right * w)
+    y0 = round(top * h)
+    y1 = y0 + round((x1 - x0) * OG_SIZE[1] / OG_SIZE[0])
+    if y1 > h:
+        raise SystemExit(f"og/{name}: the crop box ends {y1 - h}px below the source image")
+    return image.crop((x0, y0, x1, y1)).resize(OG_SIZE, Image.Resampling.LANCZOS)
+
+
+def og_phone(image: Image.Image) -> Image.Image:
+    """The whole portrait phone shot, centred on a canvas in the colour of its edge."""
+    height = OG_SIZE[1]
+    width = round(image.width * height / image.height)
+    canvas = Image.new("RGB", OG_SIZE, image.getpixel((2, image.height // 2)))
+    canvas.paste(
+        image.resize((width, height), Image.Resampling.LANCZOS), ((OG_SIZE[0] - width) // 2, 0)
+    )
+    return canvas
+
+
 def write_og() -> None:
     og = OUT / "og"
     og.mkdir(parents=True, exist_ok=True)
-    for name, (source, box, size) in OG_CROPS.items():
+    for name, (source, left, top, right) in OG_CROPS.items():
         image = RAW.get(source)
         if image is None:
             path = OUT / f"{source}.webp"
             if not path.exists():
                 continue
             image = Image.open(path).convert("RGB")
-        w, h = image.size
-        crop = image.crop(
-            (round(box[0] * w), round(box[1] * h), round(box[2] * w), round(box[3] * h))
+        out = (
+            og_phone(image) if name == "web-app-phone" else og_image(name, image, left, top, right)
         )
-        crop.resize(size, Image.Resampling.LANCZOS).save(og / f"{name}.jpg", "JPEG", quality=86)
-        print(f"ok   og/{name} {size[0]}x{size[1]}")
+        out.save(og / f"{name}.jpg", "JPEG", quality=88)
+        print(f"ok   og/{name} {out.width}x{out.height}")
 
 
 # ---------------------------------------------------------------------------------------------
@@ -303,15 +327,15 @@ CARD_TABS = [
     "Heute",
     "Rezepte",
     "Wochenplan",
-    "Einkauf",
+    "Einkaufsliste",
     "Verwalten",
-    "Ideen",
+    "Kochinspo",
     "Vorräte",
-    "Familie",
+    "Gemeinsam kochen",
     "Kochbuch",
 ]
 SHOT_MODES = ["dashboard", "recipes", "mealplan", "shopping", "discover"]
-SHOT_TABS = ["Küche", "Rezepte", "Wochenplan", "Einkauf", "Kochinspo"]
+SHOT_TABS = ["Küche", "Rezepte", "Wochenplan", "Einkaufsliste", "Kochinspo"]
 
 
 async def prepare_ha() -> None:
@@ -345,10 +369,24 @@ async def prepare_ha() -> None:
         "atelier-shots-light": ("Atelier", False),
         "atelier-shots-dark": ("Atelier", False),
         "atelier-cards": ("Atelier", True),
-        "atelier-edit": ("Küche", True),
+        "atelier-edit": ("Küche", False),
+        "atelier-phone": ("Atelier", False),
     }
     for url_path, (title, sidebar) in wanted_dashboards.items():
-        if url_path not in existing:
+        if url_path in existing:
+            current = next(d for d in dashboards if d["url_path"] == url_path)
+            if current["show_in_sidebar"] != sidebar or current["title"] != title:
+                await ha_all(
+                    [
+                        {
+                            "type": "lovelace/dashboards/update",
+                            "dashboard_id": current["id"],
+                            "title": title,
+                            "show_in_sidebar": sidebar,
+                        }
+                    ]
+                )
+        else:
             await ha_all(
                 [
                     {
@@ -360,6 +398,12 @@ async def prepare_ha() -> None:
                         "icon": "mdi:silverware-fork-knife",
                     }
                 ]
+            )
+    # The English onboarding left the built-in map dashboard titled "Map": a German sidebar shows "Karte".
+    for entry in dashboards:
+        if entry["id"] == "map" and entry["title"] != "Karte":
+            await ha_all(
+                [{"type": "lovelace/dashboards/update", "dashboard_id": "map", "title": "Karte"}]
             )
     configs = []
     for theme in ("light", "dark"):
@@ -397,6 +441,18 @@ async def prepare_ha() -> None:
         ]
     }
     configs.append({"type": "lovelace/config/save", "url_path": "atelier-edit", "config": edit})
+    # One view only: Home Assistant then shows a title instead of a scrolling tab bar on a phone.
+    phone = {
+        "views": [
+            {
+                "title": "Einkaufsliste",
+                "path": "shopping",
+                "panel": True,
+                "cards": [card("card", "light", mode="shopping")],
+            }
+        ]
+    }
+    configs.append({"type": "lovelace/config/save", "url_path": "atelier-phone", "config": phone})
     for result in await ha_all(configs):
         if isinstance(result, dict) and "error" in result:
             raise SystemExit(f"dashboard config: {result['error']}")
@@ -491,9 +547,7 @@ def new_context(
 def ha_page(
     browser: Browser, name: str, scheme: str, *, mobile: bool = False, pin: bool = True
 ) -> tuple[BrowserContext, Page]:
-    """Signed-in Home Assistant page with the clock pinned. Sign-in happens on the real clock.
-
-    The sync dialogs run unpinned: they show relative run times ("jetzt") that follow the server."""
+    """Signed-in Home Assistant page with the clock pinned. Sign-in happens on the real clock."""
     context = new_context(browser, name, scheme, mobile=mobile)
     page = context.new_page()
     sign_in(page)
@@ -611,17 +665,29 @@ def shot_cook_phone(browser: Browser) -> None:
     page.locator("[data-action='cook-start'] >> visible=true").click()
     page.locator("[data-action='cook-next'] >> visible=true").wait_for()
     settle_ha(page)
+    # The footer is sticky and would hide the tool tray at the top of the page: scroll until the whole tray
+    # (tools and timer) sits between the close strip and the footer.
+    page.locator(".modal[role='dialog'] >> visible=true").first.evaluate(
+        """modal => {
+            const tray = modal.querySelector('.cook-utility').getBoundingClientRect();
+            const box = modal.getBoundingClientRect();
+            const strip = modal.querySelector('.modal-close').getBoundingClientRect();
+            modal.scrollTop += tray.top - box.top - (strip.bottom - box.top) - (strip.top - box.top) - 44;
+        }"""
+    )
+    page.wait_for_timeout(600)
     snap(page, "kochmodus-handy")
     context.close()
 
 
 def shot_shopping_phone(browser: Browser) -> None:
     context, page = ha_page(browser, "einkaufsliste-handy", "light", mobile=True)
-    open_dashboard(page, "atelier-shots-light/shopping")
-    # The checked item must show: scroll the list until the "Erledigt" row is whole.
-    page.get_by_text("Haferflocken").first.scroll_into_view_if_needed()
-    page.mouse.move(200, 400)
-    page.mouse.wheel(0, 120)
+    open_dashboard(page, "atelier-phone/shopping")
+    # Scroll the page until the whole list card sits just below the Home Assistant header.
+    top = page.locator(".shopping-card >> visible=true").first.evaluate(
+        "el => el.getBoundingClientRect().top + window.scrollY"
+    )
+    page.evaluate("y => window.scrollTo(0, y)", top - 72)
     page.wait_for_timeout(600)
     snap(page, "einkaufsliste-handy")
     context.close()
@@ -696,6 +762,8 @@ def shot_card_picker_and_editor(browser: Browser) -> None:
     search.wait_for(timeout=30_000)
     search.fill("Mealie Atelier")
     page.wait_for_timeout(1500)
+    page.get_by_text("Manuell", exact=True).first.scroll_into_view_if_needed()
+    page.wait_for_timeout(400)
     if wanted("karte-auswaehlen"):
         snap(page, "karte-auswaehlen")
     if wanted("karten-editor"):
@@ -749,7 +817,7 @@ def fit_ratio(page: Page, name: str) -> None:
 
 def shots_sync(browser: Browser) -> None:
     list_id = mealie_source_list()
-    context, page = ha_page(browser, "einkaufs-sync-leer", "dark", pin=False)
+    context, page = ha_page(browser, "einkaufs-sync-leer", "dark")
     try:
         arun(reset_sync_state())
         open_dashboard(page, "atelier-shots-dark/shopping")
@@ -785,6 +853,9 @@ def shots_sync(browser: Browser) -> None:
                 fit_ratio(page, "einkaufs-sync-vorschau")
                 snap(page, "einkaufs-sync-vorschau")
             page.set_viewport_size({"width": 1440, "height": 960})
+            # The run time comes from the server, so the status shot reads "gerade eben" only when the page
+            # clock is the real time again. The dialog shows no time of day, only relative run times.
+            context.clock.set_fixed_time(datetime.now())
             page.locator("[data-action='sync-save'][data-value='send']").click()
             page.get_by_text(re.compile("Letzter Lauf")).first.wait_for(timeout=60_000)
             page.wait_for_timeout(1200)
