@@ -265,6 +265,28 @@ async def test_confirmed_duplicate_completes_in_move_mode(
     assert sorted(mealie.puts) == ["a", "b"]
 
 
+async def test_switching_copy_to_move_keeps_earlier_items_open(
+    sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
+):
+    mealie.add(mealie_item("a", note="Milch"), mealie_item("b", note="Brot"))
+    rule_id, _ = await activate(sync)
+    mealie.add(mealie_item("c", note="Käse"))
+
+    await sync.async_save_rule(
+        draft("todo.einkauf", mode="move"),
+        rule_id=rule_id,
+        expected_revision=sync.rules[rule_id]["revision"],
+        reset_records=False,
+        user_id="admin-user",
+    )
+    result = await sync.async_run(rule_id, "manual")
+
+    assert result["sent"] == 1
+    assert result["completed_in_source"] == 1
+    assert sorted(mealie.puts) == ["c"]
+    assert states(sync, rule_id) == {"a": "sent", "b": "sent", "c": "source_completed"}
+
+
 async def test_run_count_ignores_skipped_duplicates(
     sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
 ):

@@ -129,6 +129,9 @@ class SyncManager:
 
     @staticmethod
     def _set(record: dict[str, Any], state: RecordState, **changes: Any) -> None:
+        if state != RecordState.SENT:
+            # Only a record that is still as it was sent under Copy keeps this mark.
+            record.pop("sent_as_copy", None)
         record.update(changes, state=state.value, updated_at=_now())
 
     def counts(self) -> dict[str, Any]:
@@ -749,6 +752,9 @@ class SyncManager:
         for record in self._rule_records(rule_id):
             if record["state"] != RecordState.SENT or rule_id not in self.rules:
                 continue
+            if record.get("sent_as_copy"):
+                # Sent while the rule was in Copy mode: Mealie keeps those items open.
+                continue
             item_id = record["source_item_id"]
             try:
                 current = await self.client.shopping_item(item_id)
@@ -913,6 +919,11 @@ class SyncManager:
                     del self.records[record["key"]]
                 rule["activated"] = False
                 self._cancel_scheduled(rule["id"])
+            if existing["mode"] == "copy" and fields["mode"] == "move":
+                # Earlier items were promised to stay open in Mealie, so Move starts with new ones.
+                for record in self._rule_records(rule["id"]):
+                    if record["state"] == RecordState.SENT:
+                        record["sent_as_copy"] = True
             rule.update(
                 fields,
                 name=name,
