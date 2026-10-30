@@ -414,12 +414,29 @@ async def test_connection_check_gives_up_sooner_than_a_normal_request():
     assert seen[1].total == 25
 
 
-async def test_recipe_search_without_letters_or_digits_is_an_empty_page_not_every_recipe():
-    class NoSession:
-        def request(self, *args, **kwargs):
-            raise AssertionError("Mealie must not be asked, it would list every recipe")
+async def test_recipe_search_with_characters_mealie_ignores_is_matched_literally():
+    recipes = [
+        {"name": "Tomatensuppe", "description": "Mit 100% Tomaten"},
+        {"name": "Pasta", "description": "<b>x</b> im Namen"},
+        {"name": "Salat", "description": None},
+    ]
+    asked = []
 
-    client = MealieClient(NoSession(), "http://mealie.test:9000", "token")
-    for query in ("%", "_", " %% ", "<>"):
+    class Client(MealieClient):
+        async def request(self, method, path, **kwargs):
+            asked.append(kwargs["params"])
+            assert "search" not in kwargs["params"], "Mealie would list every recipe"
+            return {"items": recipes, "total_pages": 1}
+
+    client = Client(object(), "http://mealie.test:9000", "token")
+    for query, names in (
+        ("%", ["Tomatensuppe"]),
+        ("<b>x</b>", ["Pasta"]),
+        ("<>", []),
+        ("_", []),
+        ("100%", ["Tomatensuppe"]),
+    ):
         page = await client.recipes(search=query)
-        assert page["items"] == [] and page["total"] == 0, query
+        assert [item["name"] for item in page["items"]] == names, query
+        assert page["total"] == len(names), query
+    assert asked

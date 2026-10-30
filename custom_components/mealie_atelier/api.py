@@ -167,6 +167,10 @@ async def read_capped(content: aiohttp.StreamReader, limit: int) -> bytes:
     return bytes(body)
 
 
+# Characters that make Mealie ignore the whole search term and return every recipe.
+_SEARCH_UNSAFE = re.compile(r"[%_<>\\]")
+
+
 class MealieClient:
     """Mealie API client for both dashboard data and allowlisted mutations."""
 
@@ -407,6 +411,39 @@ class MealieClient:
             raise MealieError("Mealie returned an unexpected account response")
         return data
 
+    async def _literal_search(self, query: str, page: int, per_page: int) -> dict:
+        needle = query.casefold()
+        matches: list[dict] = []
+        for source_page in range(1, 51):
+            result = await self.request(
+                "GET",
+                "/api/recipes",
+                params={
+                    "page": source_page,
+                    "perPage": MAX_PAGE_SIZE,
+                    "orderBy": "name",
+                    "orderDirection": "asc",
+                },
+            )
+            if not isinstance(result, dict):
+                raise MealieError("Unexpected recipe listing")
+            items = [item for item in result.get("items") or [] if isinstance(item, dict)]
+            matches.extend(
+                item
+                for item in items
+                if needle in f"{item.get('name') or ''} {item.get('description') or ''}".casefold()
+            )
+            if source_page >= int(result.get("total_pages") or 0):
+                break
+        start = (page - 1) * per_page
+        return {
+            "page": page,
+            "per_page": per_page,
+            "total": len(matches),
+            "total_pages": -(-len(matches) // per_page),
+            "items": matches[start : start + per_page],
+        }
+
     async def recipes(self, page: int = 1, per_page: int = 24, search: str = "") -> dict:
         page = max(1, min(10000, int(page)))
         per_page = max(1, min(MAX_PAGE_SIZE, int(per_page)))
@@ -417,10 +454,10 @@ class MealieClient:
             "orderDirection": "asc",
         }
         query = search.strip()[:100]
-        if query and not any(char.isalnum() for char in query):
-            # Mealie reads a query without letters or digits (such as "%") as no filter and lists
-            # every recipe, so answer here with the empty page the field asks for.
-            return {"page": page, "per_page": per_page, "total": 0, "total_pages": 0, "items": []}
+        if query and (not any(char.isalnum() for char in query) or _SEARCH_UNSAFE.search(query)):
+            # Mealie reads such a query (for example "%" or "<b>x</b>") as no filter and lists
+            # every recipe, so match the characters literally here instead.
+            return await self._literal_search(query, page, per_page)
         if query:
             params["search"] = query
         result = await self.request("GET", "/api/recipes", params=params)
