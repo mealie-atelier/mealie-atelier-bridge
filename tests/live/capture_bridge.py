@@ -3,7 +3,9 @@
 Usage: uv run --with playwright python tests/live/capture_bridge.py [out-dir] [language]
 Run capture_screens.py first (it builds the screenshot dashboards). Saves the setup form, the
 integration page and the Smart Shopping Sync dialogs in light theme. A sync rule is created for the
-dialog shots and deleted again; it is never activated, so nothing is sent.
+dialog shots and deleted again. Its first batch is sent once to Home Assistant's built-in shopping
+list (a throwaway destination) so the status shot shows an active rule with a last run; the sent
+items are removed from that list again.
 
 Set CARDS_BUNDLE to a built mealie-atelier-cards.js to capture a cards build other than the one the
 rig mounts, for example a worktree's dist, without touching the mounted files.
@@ -70,6 +72,35 @@ async def create_rule(source_list_id: str) -> str:
     return (await ws({"type": "mealie_atelier/sync_rule_save", "rule": rule}))["rule"]["id"]
 
 
+DESTINATION = "todo.shopping_list"
+
+
+def item_notes() -> list[str]:
+    if LANGUAGE == "de":
+        return ["Äpfel", "Haferflocken", "Zitronen"]
+    return ["Apples", "Oats", "Lemons"]
+
+
+async def activate(rule_id: str) -> None:
+    """Send the first batch so the rule is active and has a run to show."""
+    await ws({"type": "mealie_atelier/sync_run", "rule_id": rule_id, "confirm_first_batch": True})
+
+
+async def clear_destination() -> None:
+    listed = await ws({"type": "todo/item/list", "entity_id": DESTINATION})
+    ours = [i["uid"] for i in listed["items"] if i["summary"] in item_notes()]
+    if ours:
+        await ws(
+            {
+                "type": "call_service",
+                "domain": "todo",
+                "service": "remove_item",
+                "target": {"entity_id": DESTINATION},
+                "service_data": {"item": ours},
+            }
+        )
+
+
 async def abort_flows() -> None:
     for flow in await ws({"type": "config_entries/flow/progress"}):
         if flow.get("handler") == "mealie_atelier":
@@ -88,7 +119,14 @@ def main() -> None:
     list_id = mealie("POST", "/api/households/shopping/lists", {"name": list_name()})["id"]
     rule_id = ""
     try:
+        for note in item_notes():
+            mealie(
+                "POST",
+                "/api/households/shopping/items",
+                {"shoppingListId": list_id, "note": note, "quantity": 0, "checked": False},
+            )
         rule_id = asyncio.run(create_rule(list_id))
+        asyncio.run(activate(rule_id))
         with sync_playwright() as play:
             browser = play.chromium.launch(
                 headless=True, args=["--lang=de-DE" if LANGUAGE == "de" else "--lang=en-US"]
@@ -133,9 +171,7 @@ def main() -> None:
                 page.locator("[data-action='sync-open'] >> visible=true").click()
                 page.locator("[data-action='sync-setup-open'] >> visible=true").first.wait_for()
                 shoot(page, "bridge-sync-status")
-                page.locator(
-                    f"[data-action='sync-setup-open'][data-value='{rule_id}'].primary"
-                ).click()
+                page.locator(f"[data-action='sync-setup-open'][data-value='{rule_id}']").click()
                 page.wait_for_load_state("networkidle")
                 shoot(page, "bridge-sync-setup")
                 context.close()
@@ -149,7 +185,10 @@ def main() -> None:
             try:
                 mealie("DELETE", f"/api/households/shopping/lists/{list_id}")
             finally:
-                asyncio.run(abort_flows())
+                try:
+                    asyncio.run(clear_destination())
+                finally:
+                    asyncio.run(abort_flows())
     print(f"screenshots in {OUT}")
 
 
