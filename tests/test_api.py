@@ -395,3 +395,20 @@ class ParallelLimitTests(unittest.IsolatedAsyncioTestCase):
         results = await asyncio.gather(*calls)
         self.assertEqual(len(results), 60)
         self.assertEqual(self.peak, MAX_PARALLEL_REQUESTS)
+
+
+async def test_connection_check_gives_up_sooner_than_a_normal_request():
+    seen = []
+
+    class SilentSession:
+        def request(self, method, url, **kwargs):
+            seen.append(kwargs["timeout"])
+            raise TimeoutError
+
+    client = MealieClient(SilentSession(), "http://silent.test:9000", "token")
+    with pytest.raises(MealieError):
+        await client.check_connection()
+    with pytest.raises(MealieError):
+        await client.request("GET", "/api/users/self")
+    assert seen[0].total <= 10
+    assert seen[1].total == 25

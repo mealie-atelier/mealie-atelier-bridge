@@ -194,7 +194,13 @@ class MealieClient:
         self._verify_ssl = verify_ssl
 
     async def request(
-        self, method: str, path: str, *, params: dict | None = None, data: Any = None
+        self,
+        method: str,
+        path: str,
+        *,
+        params: dict | None = None,
+        data: Any = None,
+        timeout: aiohttp.ClientTimeout | None = None,
     ) -> Any:
         if (
             method not in ("GET", "POST", "PUT", "PATCH", "DELETE")
@@ -202,7 +208,7 @@ class MealieClient:
             or ".." in path
         ):
             raise ValueError("Unsupported request")
-        timeout = aiohttp.ClientTimeout(total=25)
+        timeout = timeout or aiohttp.ClientTimeout(total=25)
         try:
             async with (
                 self._slots,
@@ -393,7 +399,10 @@ class MealieClient:
             raise MealieError("Could not back up original photo") from exc
 
     async def check_connection(self) -> dict:
-        data = await self.request("GET", "/api/users/self")
+        # A host that drops packets must not keep the setup form spinning for the full 25 s.
+        data = await self.request(
+            "GET", "/api/users/self", timeout=aiohttp.ClientTimeout(total=10, connect=5)
+        )
         if not isinstance(data, dict) or not data.get("id"):
             raise MealieError("Mealie returned an unexpected account response")
         return data
