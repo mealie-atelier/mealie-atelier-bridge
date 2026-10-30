@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import math
 import re
 from typing import Any
@@ -12,6 +13,8 @@ import aiohttp
 
 from .const import MAX_PAGE_SIZE, MAX_PARALLEL_REQUESTS, UPLOAD_MAX_BYTES
 from .errors import AtelierError, structured_editor_required
+
+_LOGGER = logging.getLogger(__name__)
 
 _RECIPE_SLUG = re.compile(r"^[\w\-]{1,150}$", re.ASCII)
 _ITEM_ID = re.compile(r"^[\w\-]{1,150}$", re.ASCII)
@@ -167,8 +170,8 @@ async def read_capped(content: aiohttp.StreamReader, limit: int) -> bytes:
     return bytes(body)
 
 
-# Characters that make Mealie ignore the whole search term and return every recipe.
-_SEARCH_UNSAFE = re.compile(r"[%_<>\\]")
+# The literal search reads at most this many listing pages of MAX_PAGE_SIZE recipes.
+LITERAL_SEARCH_MAX_PAGES = 50
 
 
 class MealieClient:
@@ -414,7 +417,7 @@ class MealieClient:
     async def _literal_search(self, query: str, page: int, per_page: int) -> dict:
         needle = query.casefold()
         matches: list[dict] = []
-        for source_page in range(1, 51):
+        for source_page in range(1, LITERAL_SEARCH_MAX_PAGES + 1):
             result = await self.request(
                 "GET",
                 "/api/recipes",
@@ -433,8 +436,14 @@ class MealieClient:
                 for item in items
                 if needle in f"{item.get('name') or ''} {item.get('description') or ''}".casefold()
             )
-            if source_page >= int(result.get("total_pages") or 0):
+            total_pages = int(result.get("total_pages") or 0)
+            if source_page >= total_pages:
                 break
+        else:
+            _LOGGER.warning(
+                "Recipe search stopped after %s recipes, further recipes are not searched",
+                LITERAL_SEARCH_MAX_PAGES * MAX_PAGE_SIZE,
+            )
         start = (page - 1) * per_page
         return {
             "page": page,
@@ -454,9 +463,10 @@ class MealieClient:
             "orderDirection": "asc",
         }
         query = search.strip()[:100]
-        if query and (not any(char.isalnum() for char in query) or _SEARCH_UNSAFE.search(query)):
-            # Mealie reads such a query (for example "%" or "<b>x</b>") as no filter and lists
-            # every recipe, so match the characters literally here instead.
+        if query and not any(char.isalnum() for char in query):
+            # Mealie turns every punctuation character into a space and splits on it, so a query
+            # without letters or digits (for example "%") has no tokens and lists every recipe.
+            # A query with letters is safe: "a_b" or "<b>x</b>" become plain tokens.
             return await self._literal_search(query, page, per_page)
         if query:
             params["search"] = query

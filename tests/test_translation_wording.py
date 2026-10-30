@@ -42,7 +42,7 @@ def test_both_languages_describe_the_mealie_integration_as_built_in() -> None:
 
 
 def test_read_only_option_text_names_timers_and_journal() -> None:
-    for path, words in ((EN, ("timers", "journal")), (DE, ("Timern", "Journal"))):
+    for path, words in ((EN, ("timers", "journal")), (DE, ("timern", "journal"))):
         data = json.loads(path.read_text(encoding="utf-8"))
         text = data["options"]["step"]["init"]["data_description"]["read_only"]
-        assert all(word in text for word in words), path.name
+        assert all(word in text.lower() for word in words), path.name

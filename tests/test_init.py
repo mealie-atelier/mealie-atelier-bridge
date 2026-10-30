@@ -291,6 +291,39 @@ async def test_card_is_told_when_mealie_is_unreachable(
     assert code == "entry_unavailable"
 
 
+async def test_unbound_card_is_told_about_the_only_entry_in_reauth(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+    hass_ws_client,
+):
+    aioclient_mock.get(f"{MEALIE_URL}/api/users/self", status=401)
+    mock_config_entry.add_to_hass(hass)
+    assert not await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    client = await hass_ws_client(hass)
+
+    await client.send_json_auto_id({"type": "mealie_atelier/recipes"})
+
+    assert (await client.receive_json())["error"]["code"] == "entry_reauth"
+
+
+async def test_unbound_card_is_told_about_the_only_entry_being_unavailable(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+    hass_ws_client,
+):
+    aioclient_mock.get(f"{MEALIE_URL}/api/users/self", status=500)
+    mock_config_entry.add_to_hass(hass)
+    assert not await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    client = await hass_ws_client(hass)
+
+    await client.send_json_auto_id({"type": "mealie_atelier/recipes"})
+
+    assert (await client.receive_json())["error"]["code"] == "entry_unavailable"
+
+
 async def test_unknown_entry_is_still_not_configured(
     hass: HomeAssistant, setup_integration: MockConfigEntry, hass_ws_client
 ):

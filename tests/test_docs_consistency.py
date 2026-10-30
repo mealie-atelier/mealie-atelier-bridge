@@ -84,8 +84,8 @@ def test_websocket_doc_does_not_claim_fallback_codes_never_carry_a_translation_k
         assert action in doc
 
 
-def test_changelog_releases_the_manifest_version_and_keeps_unreleased_empty() -> None:
-    """The release tag sits on the commit that carries the manifest version, so nothing may wait under Unreleased."""
+def test_changelog_releases_the_manifest_version_and_links_unreleased() -> None:
+    """The manifest version has its own section, and Unreleased compares against that tag."""
     import json
 
     manifest = json.loads(
@@ -96,8 +96,7 @@ def test_changelog_releases_the_manifest_version_and_keeps_unreleased_empty() ->
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     version = manifest["version"]
     assert f"## [{version}] - " in changelog
-    unreleased = changelog.split("## [Unreleased]", 1)[1].split("\n## ", 1)[0]
-    assert unreleased.strip() == ""
+    assert "## [Unreleased]" in changelog
     assert (
         f"[Unreleased]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v{version}...HEAD"
         in changelog

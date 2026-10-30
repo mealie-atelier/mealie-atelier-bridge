@@ -88,7 +88,9 @@ A failed command returns an error whose `code` is stable and whose message is En
 | `invalid_request` | Any other invalid input. |
 | `sync_source_gone`, `sync_source_checked` | Send again was refused because the item no longer exists in Mealie or is ticked off there. The item stays under review. |
 | `mealie_auth`, `mealie_error` | Mealie refused or failed the request. |
-| `not_configured` | No loaded Mealie Atelier Bridge entry. |
+| `entry_reauth` | The addressed entry exists but Mealie rejected its token. The user must re-authenticate in Settings, Devices & services. Without `entry_id` this is reported when exactly one entry exists. |
+| `entry_unavailable` | The addressed entry exists but cannot reach Mealie right now and Home Assistant is retrying. Without `entry_id` this is reported when exactly one entry exists. |
+| `not_configured` | No Mealie Atelier Bridge entry exists, or the addressed entry is unknown or not loaded for another reason. |
 
 The other codes (`read_only`, `write_not_permitted`, `backup_failed`, `upload_*`, `sync_*`, `offline_*` and so on) are listed in `custom_components/mealie_atelier/strings.json` under `exceptions`.
 

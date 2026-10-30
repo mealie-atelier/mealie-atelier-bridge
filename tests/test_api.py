@@ -431,12 +431,48 @@ async def test_recipe_search_with_characters_mealie_ignores_is_matched_literally
     client = Client(object(), "http://mealie.test:9000", "token")
     for query, names in (
         ("%", ["Tomatensuppe"]),
-        ("<b>x</b>", ["Pasta"]),
         ("<>", []),
         ("_", []),
-        ("100%", ["Tomatensuppe"]),
     ):
         page = await client.recipes(search=query)
         assert [item["name"] for item in page["items"]] == names, query
         assert page["total"] == len(names), query
     assert asked
+
+
+async def test_recipe_search_with_letters_goes_to_mealie_unchanged():
+    # Mealie turns every punctuation character into a space and splits on it (SearchFilter in
+    # mealie/schema/response/query_search.py, v3.29), so "a_b", "100%" and "<b>x</b>" become
+    # plain tokens and never list every recipe. Only a query without tokens needs the literal path.
+    asked = []
+
+    class Client(MealieClient):
+        async def request(self, method, path, **kwargs):
+            asked.append(kwargs["params"].get("search"))
+            return {"items": [], "total_pages": 1}
+
+    client = Client(object(), "http://mealie.test:9000", "token")
+    queries = ["a_b", "100%", "<b>x</b>", "a\\b", "x>"]
+    for query in queries:
+        await client.recipes(search=query)
+    assert asked == queries
+
+
+async def test_literal_recipe_search_logs_when_it_stops_at_the_page_cap(caplog):
+    pages = []
+
+    class Client(MealieClient):
+        async def request(self, method, path, **kwargs):
+            pages.append(kwargs["params"]["page"])
+            return {"items": [{"name": "Salat%"}], "total_pages": 500}
+
+    client = Client(object(), "http://mealie.test:9000", "token")
+    page = await client.recipes(search="%")
+
+    assert len(pages) == 50
+    assert page["total"] == 50
+    assert [
+        record.levelname
+        for record in caplog.records
+        if "stopped after 3000 recipes" in record.message
+    ] == ["WARNING"]

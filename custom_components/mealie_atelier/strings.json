@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Connect Mealie Atelier Bridge",
-        "description": "Your API token stays in Home Assistant. This complements, not replaces, the built-in Mealie integration.",
+        "description": "Your API token stays in Home Assistant. This extension complements the built-in Mealie integration and does not replace it.",
         "data": {
           "url": "Mealie server URL",
           "api_token": "Mealie API token",

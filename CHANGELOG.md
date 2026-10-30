@@ -4,6 +4,34 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
+### Added
+
+- New error codes `entry_reauth` (Mealie rejected the saved token) and `entry_unavailable` (Mealie cannot be reached and Home Assistant is retrying), so cards tell these entries apart from a missing setup (`not_configured`). A command without `entry_id` gets them too when exactly one entry exists.
+- New error codes `sync_source_gone` and `sync_source_checked`: Send again is refused for a Smart Shopping Sync item that no longer exists in Mealie or is ticked off there. The item stays under review, and an edited item shows its new text in the waiting list.
+- A sync rule whose source list was deleted in Mealie reports the outcome `source_missing` instead of looking like a healthy empty rule.
+- `mealie_atelier/recipe_backups` entries carry `ingredient_count` and `step_count` (null for old backups), so cards can localise the backup summary. `summary` stays an English fallback.
+- `recipe_update` accepts step objects and merges them by step id.
+- `docs/WEBSOCKET_API.md` lists every allowlisted command with its access level.
+
+### Changed
+
+- Generated entry titles are shorter (`user@host`), which supersedes the `Mealie Atelier Bridge · user@host` title of 0.11.0. The server host is lower-cased.
+- The setup connection check gives up after 10 seconds instead of 25.
+- `recipe_update` skips the backup and the write when nothing changed.
+- Resuming a paused sync rule catches up items that were added during the pause.
+- Items sent under Copy stay open in Mealie when the rule later switches to Move.
+- Sync run results count only delivered items, not skipped duplicates.
+- The re-authentication form names the account, and the read-only mode help lists everything it blocks.
+- `notify.persistent_notification` is refused as the timer notification service.
+- German texts use "Schlüssel" for credentials, and the setup intro reads the same in both languages. The backup failure wording matches the cards.
+- The install docs name Settings, Marketplace and its route.
+
+### Fixed
+
+- A recipe search without letters or digits (such as `%`) is matched literally instead of listing every recipe. Mealie turns every punctuation character into a space, so searches with letters and characters such as `_`, `<`, `>` or `%` go to Mealie unchanged. The literal search reads at most 3000 recipes (50 pages) and logs a warning when it stops there.
+- The studio and timer stores are removed together with the entry.
+- A token with a line break is reported as an authentication error.
+
 ## [0.11.0] - 2026-10-30
 
 ### Added

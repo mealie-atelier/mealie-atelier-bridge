@@ -41,7 +41,12 @@ def structured_editor_required() -> AtelierError:
 
 def missing_entry_code(hass: HomeAssistant, entry_id: str | None) -> str:
     """Why no loaded entry answers: not set up at all, token rejected or Mealie unreachable."""
-    entry = hass.config_entries.async_get_entry(entry_id) if entry_id else None
+    if entry_id:
+        entry = hass.config_entries.async_get_entry(entry_id)
+    else:
+        # A card not bound to an entry means the only one, when there is exactly one.
+        entries = hass.config_entries.async_entries(DOMAIN)
+        entry = entries[0] if len(entries) == 1 else None
     if entry is None or entry.domain != DOMAIN:
         return "not_configured"
     if entry.state is ConfigEntryState.SETUP_ERROR and list(
