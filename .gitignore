@@ -25,4 +25,4 @@ CLAUDE.local.md
 AGENTS.md
 
 # Live test rig state (tokens, generated HA config)
-tests/live/state/
+tests/live/state
