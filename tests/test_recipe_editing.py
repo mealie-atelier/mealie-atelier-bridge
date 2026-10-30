@@ -525,6 +525,8 @@ async def test_restore_writes_fields_after_a_restore_snapshot(
         "user_name",
         "kind",
         "summary",
+        "ingredient_count",
+        "step_count",
         "has_image",
     }
 

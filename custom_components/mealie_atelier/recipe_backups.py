@@ -114,6 +114,10 @@ class RecipeBackupStore:
                 "user_name": snap["user_name"],
                 "kind": snap["kind"],
                 "summary": snap["summary"],
+                # Counts let a card word the entry in the UI language, with singular and
+                # plural. Backups stored before they existed report None.
+                "ingredient_count": snap.get("ingredient_count"),
+                "step_count": snap.get("step_count"),
                 "has_image": bool(snap.get("image_file")),
             }
             for snap in self._data["recipes"].get(recipe_id, [])
@@ -152,6 +156,8 @@ class RecipeBackupStore:
             "kind": kind,
             "slug": recipe.get("slug"),
             "summary": _summary(kind, recipe),
+            "ingredient_count": len(recipe.get("recipeIngredient") or []),
+            "step_count": len(recipe.get("recipeInstructions") or []),
             "fields": {key: copy.deepcopy(recipe.get(key)) for key in FIELDS},
             "image_file": None,
         }

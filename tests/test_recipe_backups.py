@@ -169,3 +169,25 @@ async def test_removing_the_entry_deletes_store_and_photos(hass: HomeAssistant, 
     assert photo_files(hass) == []
     assert not Path(hass.config.path("mealie_atelier", "backups", "e1")).exists()
     assert "mealie_atelier_recipe_backups_e1" not in hass_storage
+
+
+async def test_listing_carries_counts_for_a_localised_summary(hass: HomeAssistant):
+    store = await RecipeBackupStore.async_load(hass, "e1")
+    await store.async_snapshot(
+        client(),
+        recipe(recipeIngredient=[{}, {}], recipeInstructions=[{}]),
+        "ingredients",
+        USER,
+    )
+    [entry] = store.list("r1")
+    assert (entry["ingredient_count"], entry["step_count"]) == (2, 1)
+
+
+async def test_listing_reports_no_counts_for_a_backup_stored_before_them(hass: HomeAssistant):
+    store = await RecipeBackupStore.async_load(hass, "e1")
+    await store.async_snapshot(client(), recipe(), "basics", USER)
+    for snap in store._data["recipes"]["r1"]:
+        del snap["ingredient_count"], snap["step_count"]
+    [entry] = store.list("r1")
+    assert entry["ingredient_count"] is None
+    assert entry["step_count"] is None
