@@ -107,8 +107,56 @@ async def abort_flows() -> None:
             await ws({"type": "config_entries/flow/abort", "flow_id": flow["flow_id"]})
 
 
-def shoot(page: Page, name: str) -> None:
+# The status dialog stacks the add button directly on the "Recent runs" card without a gap
+# (cards: no margin after .form-actions). Until the cards repo fixes that, the shot adds the gap.
+GAP_STYLE = ".atelier .sync-panel .form-actions + .editor-card { margin-block-start: var(--ds-space-3, 12px); }"
+
+
+def add_gap(page: Page) -> None:
+    page.locator(".sync-panel").first.evaluate(
+        """(el, css) => {
+            const style = document.createElement('style');
+            style.textContent = css;
+            el.getRootNode().appendChild(style);
+        }""",
+        GAP_STYLE,
+    )
+
+
+def drop_focus(page: Page) -> None:
+    """Blur the autofocused control (through shadow roots) so no focus ring shows."""
+    page.locator(".sync-panel").first.evaluate(
+        """el => {
+            let node = el.getRootNode().activeElement;
+            if (node && node.blur) node.blur();
+            if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+        }"""
+    )
+
+
+def fit_dialog(page: Page) -> None:
+    """Lift the dialog's height cap and size the viewport to it, so nothing is cut off."""
+    page.locator(".sync-panel").first.evaluate(
+        """(el, css) => {
+            const style = document.createElement('style');
+            style.textContent = css;
+            el.getRootNode().appendChild(style);
+        }""",
+        ".atelier .modal.sync-modal { max-height: none !important; overflow: visible !important; }",
+    )
+    page.wait_for_timeout(500)
+    height = page.locator(".modal.sync-modal").first.evaluate(
+        "el => el.getBoundingClientRect().height"
+    )
+    page.set_viewport_size({"width": 1440, "height": int(height) + 160})
+    page.wait_for_timeout(500)
+
+
+def shoot(page: Page, name: str, blur: bool = False) -> None:
     page.wait_for_timeout(700)
+    if blur:
+        drop_focus(page)
+        page.wait_for_timeout(200)
     page.screenshot(path=str(OUT / f"{name}.png"))
     print(f"ok   {name}")
 
@@ -170,10 +218,12 @@ def main() -> None:
                 settle(page)
                 page.locator("[data-action='sync-open'] >> visible=true").click()
                 page.locator("[data-action='sync-setup-open'] >> visible=true").first.wait_for()
+                add_gap(page)
                 shoot(page, "bridge-sync-status")
                 page.locator(f"[data-action='sync-setup-open'][data-value='{rule_id}']").click()
                 page.wait_for_load_state("networkidle")
-                shoot(page, "bridge-sync-setup")
+                fit_dialog(page)
+                shoot(page, "bridge-sync-setup", blur=True)
                 context.close()
             finally:
                 browser.close()

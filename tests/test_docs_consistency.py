@@ -62,13 +62,18 @@ def test_bridge_capture_pins_the_card_language_and_uses_a_throwaway_list() -> No
 
 
 def test_sync_screenshots_keep_their_size() -> None:
+    """The editor shot is taller than the viewport so the whole dialog, down to Save, fits."""
     for name in ("sync-setup.webp", "sync-status.webp"):
         data = (ROOT / "assets" / "screens" / name).read_bytes()
         assert data[:4] == b"RIFF" and data[8:12] == b"WEBP"
         assert data[12:16] == b"VP8 "
         width = int.from_bytes(data[26:28], "little") & 0x3FFF
         height = int.from_bytes(data[28:30], "little") & 0x3FFF
-        assert (width, height) == (1440, 960), name
+        assert width == 1440, name
+        if name == "sync-status.webp":
+            assert height == 960, name
+        else:
+            assert height > 1800, name
 
 
 def test_websocket_doc_does_not_claim_fallback_codes_never_carry_a_translation_key() -> None:
