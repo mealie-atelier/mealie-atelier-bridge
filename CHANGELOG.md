@@ -4,7 +4,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
-## [0.10.1] - 2026-10-29
+## [0.11.0] - 2026-10-30
 
 ### Added
 
@@ -15,6 +15,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ### Fixed
 
+- The README screenshots (setup, integration page, Smart Shopping Sync status and the complete rule editor) are recaptured from the current release with fictional data; the capture scripts live in `tests/live/`.
 - Install docs match Home Assistant 2026.11 (Marketplace "Add from link" with GitHub login, manual resource under Dashboards, "By card" tab, editor wording), name Mealie 3.x as recommended and gain an uninstall section. The Smart Shopping Sync doc uses the UI policy names. The comparison table no longer claims the built-in integration cannot write. README screenshot pairs fit GitHub's column width.
 - Consistent German and English copy: "das Token", "Benachrichtigungsdienst", the Mealie page name "API-Token" and "die Mealie Atelier Bridge".
 - Cancelling a kitchen timer that already finished or is being delivered succeeds instead of failing, so the card can remove it. The error code `timer_dispatched` is therefore never raised.
@@ -84,6 +85,6 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 Before 0.10.0 the repository was an unreleased developer preview with no tagged versions. It contained the initial import of the Bridge source (secure server-side Mealie access, WebSocket commands for recipes, meal plans, shopping lists, nutrition, cooking sessions and timers, optional read-only mode, German and English setup translations), the pasta and tomatoes brand artwork, security and support links, and the first FAQ.
 
-[Unreleased]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.10.1...HEAD
-[0.10.1]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.10.0...v0.10.1
+[Unreleased]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/mealie-atelier/mealie-atelier-bridge/releases/tag/v0.10.0
