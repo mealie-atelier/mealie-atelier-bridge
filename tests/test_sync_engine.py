@@ -623,6 +623,28 @@ async def test_paused_or_unconfirmed_rules_ignore_automatic_triggers(
     assert bring.calls[-1] == "1 Eier"
 
 
+async def test_resume_catches_up_items_added_while_paused(
+    hass: HomeAssistant,
+    sync: SyncManager,
+    mealie: FakeMealie,
+    bring: FakeTodo,
+    freezer: FrozenDateTimeFactory,
+):
+    mealie.add(mealie_item("a", note="Milch"))
+    rule_id, _ = await activate(sync)
+    await sync.async_set_paused(rule_id, True)
+    mealie.add(mealie_item("b", note="Brot"))
+    sync.notify_source_changed("list-weekly", "after_atelier_add")
+    assert sync.rule_status(sync.rules[rule_id])["next_run_at"] is None
+
+    await sync.async_set_paused(rule_id, False)
+    assert sync.rule_status(sync.rules[rule_id])["next_run_at"] is not None
+    freezer.tick(timedelta(seconds=31))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert bring.calls[-1] == "1 Brot"
+
+
 async def test_watcher_polls_only_active_watch_rules(
     hass: HomeAssistant,
     sync: SyncManager,

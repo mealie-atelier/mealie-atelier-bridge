@@ -48,6 +48,7 @@ FEATURE_UPDATE = 4
 FEATURE_DESCRIPTION = 64
 
 AUTOMATIC_TRIGGERS = frozenset({"after_atelier_add", "watch", "startup"})
+TRIGGERS_AUTOMATIC = ("after_atelier_add", "watch")
 _RESULT_COUNTS = (
     "sent",
     "skipped_duplicates",
@@ -969,6 +970,11 @@ class SyncManager:
         rule.update(paused=paused, revision=rule["revision"] + 1, updated_at=_now())
         if paused:
             self._cancel_scheduled(rule_id)
+        elif rule.get("activated") and any(
+            rule["triggers"].get(name) for name in TRIGGERS_AUTOMATIC
+        ):
+            # Items added during the pause scheduled nothing, so catch up once on Resume.
+            self._schedule_run(rule_id, "startup", rule["debounce_seconds"])
         await self.store.async_save()
         self._refresh_watchers()
         return self.rule_status(rule)
