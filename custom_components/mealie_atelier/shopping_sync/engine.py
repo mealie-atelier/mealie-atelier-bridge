@@ -488,6 +488,10 @@ class SyncManager:
             items = await self.client.shopping_items(rule["source_list_id"])
         except (MealieError, ValueError):
             return self._finish(rule, trigger, batch_id, "source_unavailable", counts)
+        # Mealie answers the items of a deleted list with an empty page, not an error.
+        rule["source_missing"] = not items and await self._source_list_is_gone(rule)
+        if rule["source_missing"]:
+            return self._finish(rule, trigger, batch_id, "source_missing", counts)
         by_id = {item["id"]: item for item in items if isinstance(item.get("id"), str)}
         language = (self.hass.config.language or "en").lower()
         options = {
@@ -531,6 +535,13 @@ class SyncManager:
         return self._finish(
             rule, trigger, batch_id, outcome, counts, confirm=confirm, present=set(by_id)
         )
+
+    async def _source_list_is_gone(self, rule: dict[str, Any]) -> bool:
+        try:
+            lists = await self.client.shopping_lists()
+        except (MealieError, ValueError):
+            return False
+        return all(row.get("id") != rule["source_list_id"] for row in lists)
 
     def _reconcile(self, rule_id: str, destination_items: list[dict[str, Any]]) -> tuple[int, int]:
         """Settle uncertain writes against what the destination really holds.

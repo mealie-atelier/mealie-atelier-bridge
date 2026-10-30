@@ -746,6 +746,29 @@ async def test_source_read_failure_is_reported(sync: SyncManager, mealie: FakeMe
     assert result["outcome"] == "source_unavailable"
 
 
+async def test_deleted_source_list_is_reported_and_keeps_the_records(
+    sync: SyncManager, mealie: FakeMealie
+):
+    mealie.add(mealie_item("a", note="Milch"))
+    rule_id, _ = await activate(sync)
+    weekly = mealie.lists[0]
+    mealie.lists.remove(weekly)
+    del mealie.items["a"]
+
+    result = await sync.async_run(rule_id, "manual")
+
+    assert result["outcome"] == "source_missing"
+    assert sync.rule_status(sync.rules[rule_id])["source_missing"] is True
+    assert states(sync, rule_id) == {"a": "sent"}
+
+    mealie.lists.append(weekly)
+    mealie.add(mealie_item("b", note="Brot"))
+    result = await sync.async_run(rule_id, "manual")
+
+    assert result["outcome"] == "sent"
+    assert sync.rule_status(sync.rules[rule_id])["source_missing"] is False
+
+
 async def test_corrupt_store_is_set_aside_and_setup_succeeds(
     hass: HomeAssistant,
     mock_config_entry: MockConfigEntry,

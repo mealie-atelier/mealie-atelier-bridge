@@ -45,6 +45,7 @@ OUTCOMES = (
     "failed",
     "destination_unavailable",
     "source_unavailable",
+    "source_missing",
     "nothing_to_send",
     "reconciled",
 )
