@@ -9,7 +9,7 @@ Every OG crop keeps the aspect ratio of its source box, so nothing is stretched.
 language and the browser locale. The clock is pinned to 09:00 local on the day of the run.
 
 The script sets up everything it shows over the Home Assistant websocket, like a household would:
-the Lovelace resource, the dashboards, a throwaway Local To-do list as sync target and the German
+the Lovelace resource, the dashboards, Home Assistant's built-in shopping list as sync target and the German
 demo data in Mealie (the catalog of the cards repository). It then starts the standalone web app
 with Node against the rig Mealie (throwaway data folder and password) and stops it again. The
 cards bundle is served through route interception, so the mounted rig files stay untouched.
@@ -117,12 +117,12 @@ SIZES: dict[str, tuple[int, int]] = {
 # never stretched. A source can also be "phone": the portrait screenshot centred on a canvas of its own edge colour.
 OG_SIZE = (1200, 630)
 OG_CROPS: dict[str, tuple[str, float, float, float]] = {
-    "dashboard": ("dashboard-dunkel", 0.325, 0.058, 1.0),
+    "dashboard": ("dashboard-dunkel", 0.325, 0.3664, 1.0),
     "web-app": ("web-app-wochenplan", 0.0208, 0.0933, 0.9896),
     "web-app-phone": ("web-app-handy", 0.0, 0.0, 1.0),
     "mealie-token": ("mealie-api-token", 0.3125, 0.4124, 0.8625),
-    "recipe-hero": ("dashboard-dunkel", 0.325, 0.4956, 0.995),
-    "sync-status": ("einkaufs-sync-status", 0.2104, 0.3969, 0.7896),
+    "recipe-hero": ("dashboard-dunkel", 0.325, 0.4875, 0.995),
+    "sync-status": ("einkaufs-sync-status", 0.1771, 0.1133, 0.8229),
     "bridge-options": ("bridge-optionen", 0.29375, 0.739, 0.70625),
 }
 
@@ -142,8 +142,10 @@ WEEK_PLAN = [  # (days after Monday, German recipe title)
 SOURCE_LIST = "Wochenmarkt"
 SYNC_ITEMS = ["Tomaten", "Basilikum", "Mozzarella"]
 RULE_NAME = "Wochenmarkt zur To-do-Liste"
-TODO_NAME = "Mealie Atelier"
-TODO_ENTITY = "todo.mealie_atelier"
+# The sync target is Home Assistant's built-in shopping list: no account, and the card shows it with a German
+# name ("Einkaufsliste"). A Local To-do list would read "<name> · Local todo" in the German card, an English
+# platform label that the card builds from the integration id (shopping-sync.js _syncPlatformLabel).
+TODO_ENTITY = "todo.shopping_list"
 
 
 # Decode a photo, but never wait longer than three seconds for one that will not load.
@@ -243,6 +245,70 @@ def fit_modal_height(
     raise RuntimeError(f"{name}: the dialog height did not settle on {target}")
 
 
+# Lowest y (relative to the dialog's top edge, not above `lo`, not below `hi`) at which the dialog can end without
+# cutting anything: no text line, icon, input, button or card (box with a fill or a full border) straddles it, and
+# the last thing above it ends at least 12 px higher. Returns null when there is none.
+GAP_JS = """
+(modal, [lo, hi]) => {
+  const top = modal.getBoundingClientRect().top;
+  const rects = [];
+  const alive = (el) => {
+    for (let n = el; n && n !== modal; n = n.parentElement) {
+      const css = getComputedStyle(n);
+      if (css.display === 'none' || css.visibility === 'hidden' || Number(css.opacity) === 0) return false;
+    }
+    return true;
+  };
+  const walker = document.createTreeWalker(modal, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (!node.textContent.trim() || !alive(node.parentElement)) continue;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    for (const r of range.getClientRects()) rects.push([r.top - top, r.bottom - top]);
+  }
+  for (const el of modal.querySelectorAll('*')) {
+    if (!alive(el)) continue;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) continue;
+    const css = getComputedStyle(el);
+    const full = ['Top', 'Right', 'Bottom', 'Left'].every((side) => parseFloat(css['border' + side + 'Width']) > 0 && css['border' + side + 'Style'] !== 'none');
+    const alpha = css.backgroundColor.match(/rgba\\(.*,\\s*([\\d.]+)\\)$/);
+    const fill = css.backgroundColor !== 'rgba(0, 0, 0, 0)' && css.backgroundColor !== 'transparent' && (!alpha || Number(alpha[1]) > 0.04);
+    const object = ['svg', 'IMG', 'INPUT', 'BUTTON', 'SELECT', 'TEXTAREA'].includes(el.tagName);
+    if (((fill || full) && r.height < 600 && r.width < modal.clientWidth - 4) || (object && r.height < 300)) rects.push([r.top - top, r.bottom - top]);
+  }
+  let best = null;
+  for (const [, bottom] of rects) {
+    const y = Math.ceil(bottom + 12);
+    if (y < lo || y > hi) continue;
+    if (rects.some(([a, b]) => a < y && b > y)) continue;
+    if (best === null || y > best) best = y;
+  }
+  return best;
+}
+"""
+
+
+def fit_dialog_gap(page: Page, name: str, lo: float, before: str) -> None:
+    """Let the dialog end in the last gap above the element `before` (a selector inside the dialog).
+
+    The product dialog never gets taller than 1040 px and scrolls, so a recipe cannot be shown whole. The window
+    height decides where the dialog ends; nothing is injected. Ending above the two columns (not under their
+    headings) keeps every line whole and no heading hangs without its list.
+    """
+    modal = page.locator(".modal[role='dialog'] >> visible=true").first
+    page.set_viewport_size({"width": page.viewport_size["width"], "height": 1300})
+    page.wait_for_timeout(400)
+    hi = modal.evaluate(
+        "(m, sel) => m.querySelector(sel).getBoundingClientRect().top - m.getBoundingClientRect().top - 6",
+        before,
+    )
+    edge = modal.evaluate(GAP_JS, [lo, hi])
+    if edge is None:
+        raise RuntimeError(f"{name}: no gap between {lo} and {hi} px to end the dialog in")
+    fit_modal_height(page, name, edge)
+
+
 def og_image(name: str, image: Image.Image, left: float, top: float, right: float) -> Image.Image:
     """A 1200x630 crop: the box keeps the 1200:630 ratio of the output, so there is no stretching."""
     w, h = image.size
@@ -261,7 +327,7 @@ def og_phone(handy: Image.Image, install: Image.Image) -> Image.Image:
     trimmed). Each phone is about 30 percent of the width, so the screen text stays readable in a small card.
     """
     height = OG_SIZE[1]
-    left = handy.crop((0, 0, handy.width, round(handy.width * 1170 / 680)))
+    left = handy.crop((0, 0, handy.width, round(handy.width * 1125 / 680)))
     right = install.crop((0, round(install.height * 480 / 1688), install.width, install.height))
     shots = [
         shot.resize((round(shot.width * height / shot.height), height), Image.Resampling.LANCZOS)
@@ -430,7 +496,7 @@ SHOT_TABS = ["Küche", "Rezepte", "Wochenplan", "Einkaufsliste", "Kochinspo"]
 
 
 async def prepare_ha() -> None:
-    """Resource, user language, country (no repair badge), to-do list and every dashboard."""
+    """Resource, user language, country (no repair badge), shopping list and every dashboard."""
     first = await ha_all(
         [
             {"type": "lovelace/resources"},
@@ -445,16 +511,14 @@ async def prepare_ha() -> None:
     )
     if not any(str(r["url"]).split("?")[0] == RESOURCE for r in resources):
         await ha_all([{"type": "lovelace/resources/create", "res_type": "module", "url": RESOURCE}])
-    if not any(e["domain"] == "local_todo" and e["title"] == TODO_NAME for e in entries):
-        flow = ha_rest("POST", "/api/config/config_entries/flow", {"handler": "local_todo"})
-        result = ha_rest(
-            "POST",
-            f"/api/config/config_entries/flow/{flow['flow_id']}",
-            {"todo_list_name": TODO_NAME},
-        )
-        if result.get("type") == "form":  # older forms ask for the name and an icon-less step
-            result = ha_rest("POST", f"/api/config/config_entries/flow/{flow['flow_id']}", {})
-        print("ok   To-do list", TODO_NAME, result.get("type"))
+    for entry in entries:  # a Local To-do list of an earlier run of this script
+        if entry["domain"] == "local_todo" and entry["title"] == "Mealie Atelier":
+            ha_rest("DELETE", f"/api/config/config_entries/entry/{entry['entry_id']}")
+    if not any(e["domain"] == "shopping_list" for e in entries):
+        flow = ha_rest("POST", "/api/config/config_entries/flow", {"handler": "shopping_list"})
+        if flow.get("type") == "form":
+            flow = ha_rest("POST", f"/api/config/config_entries/flow/{flow['flow_id']}", {})
+        print("ok   shopping list", flow.get("type"))
     existing = {d["url_path"] for d in dashboards}
     wanted_dashboards = {
         "atelier-shots-light": ("Atelier", False),
@@ -516,21 +580,9 @@ async def prepare_ha() -> None:
     configs.append(
         {"type": "lovelace/config/save", "url_path": "atelier-cards", "config": {"views": views}}
     )
-    edit = {
-        "views": [
-            {
-                "title": "Küche",
-                "path": "kitchen",
-                "type": "sections",
-                "sections": [
-                    {
-                        "type": "grid",
-                        "cards": [{"type": "heading", "heading": "Mealie"}, card("today", "light")],
-                    }
-                ],
-            }
-        ]
-    }
+    # A masonry view: the sections view puts a "Fußzeile hinzufügen" button at the bottom edge of the window, where the
+    # card editor dialog cuts it in half. The masonry view has no such button.
+    edit = {"views": [{"title": "Küche", "path": "kitchen", "cards": [card("today", "light")]}]}
     configs.append({"type": "lovelace/config/save", "url_path": "atelier-edit", "config": edit})
     # One view only: Home Assistant then shows a title instead of a scrolling tab bar on a phone.
     phone = {
@@ -604,6 +656,82 @@ async def start_session() -> None:
             }
         ]
     )
+
+
+async def family_demo(prepare: bool) -> None:
+    """The Gemeinsam-kochen card with a running session: two helpers and a child, tasks and a shared timer.
+
+    `prepare` True sets it up, False removes the people again (tasks go with the session).
+    """
+    studio = (await ha_all([{"type": "mealie_atelier/studio_state"}]))[0] or {}
+    family = studio.get("family") or {}
+    session = family.get("session")
+    if session:
+        await ha_all(
+            [
+                {
+                    "type": "mealie_atelier/studio_update",
+                    "action": "session_end",
+                    "payload": {"session_id": session["id"]},
+                }
+            ]
+        )
+    for member in family.get("members", []):
+        await ha_all(
+            [
+                {
+                    "type": "mealie_atelier/studio_update",
+                    "action": "family_member",
+                    "payload": {"id": member["id"], "remove": True},
+                }
+            ]
+        )
+    if not prepare:
+        return
+    people = {"Mia": False, "Jonas": False, "Lena": True}
+    ids = {name: f"guide-{name.lower()}" for name in people}
+    for name, child in people.items():
+        await ha_all(
+            [
+                {
+                    "type": "mealie_atelier/studio_update",
+                    "action": "family_member",
+                    "payload": {"id": ids[name], "name": name, "child": child},
+                }
+            ]
+        )
+    await start_session()
+    studio = (await ha_all([{"type": "mealie_atelier/studio_state"}]))[0]
+    session_id = studio["family"]["session"]["id"]
+    tasks = [
+        ("Mehl und Backpulver abwiegen", "Mia", False, False),
+        ("Eier trennen", "Jonas", False, True),
+        ("Beeren waschen", "Lena", True, False),
+    ]
+    steps = [
+        {"action": "session_step", "payload": {"session_id": session_id, "step": 1}},
+        {
+            "action": "session_timer",
+            "payload": {"session_id": session_id, "name": "Pfanne vorheizen", "minutes": 12},
+        },
+    ]
+    for text, name, approved, done in tasks:
+        steps.append(
+            {
+                "action": "session_task",
+                "payload": {
+                    "session_id": session_id,
+                    "text": text,
+                    "memberId": ids[name],
+                    "adultApproved": approved,
+                    "done": done,
+                },
+            }
+        )
+    for step in steps:
+        result = (await ha_all([{"type": "mealie_atelier/studio_update", **step}]))[0]
+        if isinstance(result, dict) and "error" in result:
+            raise RuntimeError(f"family demo: {result['error']}")
 
 
 # ---------------------------------------------------------------------------------------------
@@ -691,6 +819,21 @@ def snap(page: Page, name: str) -> None:
     finish(name, page.screenshot())
 
 
+def snap_below_sticky_bar(page: Page, name: str) -> None:
+    """Screenshot of the window from just above the fifth editor card down, below the sticky close bar."""
+    blur_all(page)
+    top = round(
+        sync_modal(page).evaluate(
+            "m => m.querySelectorAll('.editor-card')[4].getBoundingClientRect().top"
+        )
+        - 10
+    )
+    view = page.viewport_size
+    SIZES[name] = (SIZES[name][0], round((view["height"] - top) * SIZES[name][0] / view["width"]))
+    clip = {"x": 0, "y": top, "width": view["width"], "height": view["height"] - top}
+    finish(name, page.screenshot(clip=clip))
+
+
 def open_dashboard(page: Page, path: str) -> None:
     page.goto(f"{BASE}/{path}")
     settle_ha(page)
@@ -721,9 +864,27 @@ def shot_dashboard(browser: Browser, name: str, theme: str) -> None:
 
 def shot_card(browser: Browser, name: str, kind: str) -> None:
     context, page = ha_page(browser, name, "light")
-    open_dashboard(page, f"atelier-cards/{kind}")
-    snap(page, name)
-    context.close()
+    if kind == "family":
+        # A session with people, tasks and a timer; the timer deadline is moved onto the pinned clock.
+        arun(family_demo(True))
+        context.route_web_socket("**/api/websocket", shift_run_stamps)
+    try:
+        open_dashboard(page, f"atelier-cards/{kind}")
+        if kind == "family":
+            # The session is longer than the shipped window: grow it until the card ends whole.
+            bottom = page.evaluate(
+                "([deepSrc]) => { const deep = new Function(deepSrc + 'return deep;')(); "
+                "const host = deep('mealie-atelier-family'); "
+                "return deep('.atelier', host.shadowRoot).scrollHeight + host.getBoundingClientRect().top; }",
+                [DEEP],
+            )
+            set_height(page, name, round(bottom) + 48)
+        snap(page, name)
+    finally:
+        context.close()
+        if kind == "family":
+            arun(family_demo(False))
+            arun(start_session())
 
 
 def shot_wochenplan_hell(browser: Browser) -> None:
@@ -739,16 +900,9 @@ def shot_recipe(browser: Browser) -> None:
     page.locator(".recipe-tile >> visible=true").first.click()
     page.locator("[data-action='cook-start'] >> visible=true").wait_for()
     settle_ha(page)
-    # End the dialog in the gap above the ingredient columns, after the recipe check, so no row is cut at its edge.
-    page.locator(".modal[role='dialog'] >> visible=true").first.evaluate(
-        """modal => {
-            const cols = modal.querySelector('.detail-cols');
-            const bottom = cols.getBoundingClientRect().top - modal.getBoundingClientRect().top - 6;
-            const style = document.createElement('style');
-            modal.getRootNode().appendChild(style);
-            style.textContent = `.atelier .modal[role='dialog']{max-height:${Math.ceil(bottom)}px!important}`;
-        }"""
-    )
+    # The dialog is as the product renders it, as tall as the window allows. Its own scrolling ends it, so the
+    # window height is chosen that the dialog ends in a gap between rows instead of through a line of text.
+    fit_dialog_gap(page, "rezept-hell", 500, ".detail-cols")
     page.wait_for_timeout(500)
     snap(page, "rezept-hell")
     context.close()
@@ -836,14 +990,23 @@ def shot_bridge_pages(browser: Browser) -> None:
         page.keyboard.press("Escape")
         page.wait_for_timeout(500)
     if wanted("bridge-verbinden"):
+        # As step 4 of the guide: Integrations list, "Integration hinzufügen", search, the Bridge, then its form.
         page.set_viewport_size(viewport("bridge-verbinden"))
-        page.goto(f"{BASE}/config/integrations/integration/mealie_atelier")
+        page.goto(f"{BASE}/config/integrations/dashboard")
         page.wait_for_load_state("networkidle")
-        page.get_by_role("button", name=re.compile("Dienst hinzufügen|Add service")).click()
+        page.get_by_role(
+            "button", name=re.compile("Integration hinzufügen|Add integration")
+        ).click()
+        search = page.get_by_placeholder(re.compile("Markennamen|brand name")).first
+        search.wait_for(timeout=30_000)
+        search.fill("Mealie")
+        page.locator("dialog-add-integration").get_by_text(
+            "Mealie Atelier Bridge", exact=True
+        ).first.click()
         first = page.locator("ha-form input >> visible=true").first
         first.wait_for(timeout=30_000)
-        # An empty required field shows "Erforderlich" once it loses focus; a fictional address avoids it.
-        first.fill("http://192.168.1.20:9000")
+        # An empty required field shows "Erforderlich" once it loses focus; the address of the rig avoids it.
+        first.fill("http://mealie:9000")
         page.wait_for_load_state("networkidle")
         page.wait_for_timeout(800)
         snap(page, "bridge-verbinden")
@@ -973,23 +1136,31 @@ def shift_run_stamps(socket) -> None:
     """Show the server's run times on the pinned clock.
 
     The sync run is stamped by the server on the real clock, but every shot has the page clock fixed at 09:00.
-    Without this the dialog would read "in 6 Stunden" instead of "gerade eben". Every `at` stamp of the last
-    hour in a websocket message from Home Assistant moves to two seconds before the pinned time.
+    Without this the dialog would read "in 6 Stunden" instead of "vor 5 Minuten". Every `at` stamp of the last
+    hour in a websocket message from Home Assistant moves to five minutes before the pinned time. A timer
+    `deadline` (milliseconds) keeps its remaining time but counts from the pinned time.
     """
     import json
 
     server = socket.connect_to_server()
-    shown = (CLOCK - timedelta(seconds=2)).astimezone().isoformat()
+    shown = (CLOCK - timedelta(minutes=5)).astimezone().isoformat()
 
     def shift(node: object) -> object:
         if isinstance(node, dict):
             return {
-                key: shown if key == "at" and recent(value) else shift(value)
+                key: shown
+                if key == "at" and recent(value)
+                else moved(value)
+                if key == "deadline" and isinstance(value, int | float)
+                else shift(value)
                 for key, value in node.items()
             }
         if isinstance(node, list):
             return [shift(item) for item in node]
         return node
+
+    def moved(deadline: float) -> int:
+        return round(CLOCK.timestamp() * 1000 + deadline - time.time() * 1000)
 
     def recent(value: object) -> bool:
         try:
@@ -1001,7 +1172,7 @@ def shift_run_stamps(socket) -> None:
         return abs(datetime.now().astimezone() - stamp) < timedelta(hours=1)
 
     def from_server(message: str | bytes) -> None:
-        if isinstance(message, str) and '"at"' in message:
+        if isinstance(message, str) and ('"at"' in message or '"deadline"' in message):
             message = json.dumps(shift(json.loads(message)))
         socket.send(message)
 
@@ -1042,7 +1213,9 @@ def shots_sync(browser: Browser) -> None:
             page.wait_for_timeout(800)
             if wanted("einkaufs-sync-vorschau"):
                 sync_window(page, "einkaufs-sync-vorschau", 4, 6)
-                snap(page, "einkaufs-sync-vorschau")
+                # The sections 05 to 07 only show when the dialog is scrolled, and then its sticky bar holds just
+                # the close button (the title scrolled away). The shot starts under that bar: no empty band.
+                snap_below_sticky_bar(page, "einkaufs-sync-vorschau")
             page.set_viewport_size({"width": 1440, "height": 960})
             page.locator("[data-action='sync-save'][data-value='send']").click()
             page.get_by_text(re.compile("Letzter Lauf")).first.wait_for(timeout=60_000)
@@ -1155,56 +1328,100 @@ def web_nav(page: Page, label: str) -> None:
     web_settle(page)
 
 
-def cap_modal(page: Page, find_bottom: str) -> None:
-    """Cap the dialog height just below an element (a JS expression over `modal`), cut nothing half."""
-    page.locator(".modal[role='dialog'] >> visible=true").first.evaluate(
-        """(modal, body) => {
-            const edge = new Function('modal', body)(modal);
-            const bottom = edge - modal.getBoundingClientRect().top;
-            const style = document.createElement('style');
-            modal.getRootNode().appendChild(style);
-            style.textContent = `.atelier .modal[role='dialog']{max-height:${Math.ceil(bottom)}px!important}`;
-        }""",
-        find_bottom,
-    )
-    page.wait_for_timeout(500)
-
-
-ABOVE_COLUMNS = "return modal.querySelector('.detail-cols').getBoundingClientRect().top - 6;"
-
-
 def show_checked_item(page: Page) -> None:
     """Shopping list with the checked item and the add row whole (taller image, no scrolling)."""
     web_nav(page, "Einkaufsliste")
 
 
-def open_status_bar(page: Page) -> None:
-    """Open the status bar; the window ends in the gap under the first sidebar entry that follows the sub line.
+DEEP_ALL = """
+const all = (sel, root = document) => {
+  let out = [...root.querySelectorAll(sel)];
+  for (const el of root.querySelectorAll('*')) if (el.shadowRoot) out = out.concat(all(sel, el.shadowRoot));
+  return out;
+};
+const textRects = (el) => {
+  const rects = [];
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (!node.textContent.trim()) continue;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    for (const r of range.getClientRects()) rects.push(r);
+  }
+  return rects;
+};
+"""
 
-    Both the text row "Deine Küche, neu gedacht." and the sidebar entries are then whole at the bottom edge.
+
+def page_eval(page: Page, body: str) -> object:
+    """Run a function body with the helpers `all` (selector through shadow roots) and `textRects` in scope."""
+    return page.evaluate("() => { " + DEEP_ALL + body + " }")
+
+
+def assert_window_gap(page: Page, name: str) -> None:
+    """The bottom edge of the window must not cut a text line, an icon or a button (anything in any shadow root)."""
+    cut = page_eval(
+        page,
+        """
+        const edge = window.innerHeight;
+        const hits = [];
+        for (const el of all('*')) {
+          if (el.shadowRoot && el.children.length === 0) continue;
+          const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+          const object = ['svg', 'IMG', 'INPUT'].includes(el.tagName);
+          if (!own && !object) continue;
+          const rects = own ? textRects(el) : [el.getBoundingClientRect()];
+          for (const r of rects) if (r.top < edge - 0.5 && r.bottom > edge + 0.5 && r.width > 0) hits.push(el.tagName + ':' + (el.textContent || '').trim().slice(0, 30));
+        }
+        return hits;
+        """,
+    )
+    if cut:
+        raise RuntimeError(f"{name}: the bottom edge cuts {cut[:4]}")
+
+
+def open_status_bar(page: Page) -> None:
+    """Open the status bar; the window ends in the gap under the line "Deine Küche, neu gedacht.".
+
+    Nothing is cut there: the next sidebar entry (an icon and a label, no box) starts a few pixels lower,
+    and the hero card starts further down. The edge sits half way between the line and that icon.
     """
     page.locator("details.atelier-connectivity summary").click()
     page.wait_for_timeout(600)
-    bottom = page.evaluate(
-        """() => {
-            const all = (sel, root = document) => {
-                let out = [...root.querySelectorAll(sel)];
-                for (const el of root.querySelectorAll('*')) if (el.shadowRoot) out = out.concat(all(sel, el.shadowRoot));
-                return out;
-            };
-            const line = all('*').find((el) => el.children.length === 0 && /deine küche, neu gedacht/i.test(el.textContent));
-            const need = line.getBoundingClientRect().bottom + 8;
-            const edges = all('[data-action=nav]').map((el) => el.getBoundingClientRect().bottom).filter((y) => y > need);
-            return Math.min(...edges) + 4;
-        }"""
+    bottom = page_eval(
+        page,
+        """
+        const line = all('*').find((el) => el.children.length === 0 && /deine küche, neu gedacht/i.test(el.textContent));
+        const end = Math.max(...textRects(line).map((r) => r.bottom));
+        const below = [];
+        for (const el of all('*')) {
+          const boxes = el.tagName === 'svg' ? [el.getBoundingClientRect()] : [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) ? textRects(el) : [];
+          for (const r of boxes) if (r.top > end + 0.5 && r.width > 0) below.push(r.top);
+        }
+        return (end + Math.min(...below)) / 2;
+        """,
     )
     set_height(page, "web-app-statusleiste", round(bottom))
+    assert_window_gap(page, "web-app-statusleiste")
+
+
+def end_below_hero(page: Page) -> None:
+    """Window ends in the gap under the "Heute auf dem Teller" photo card, before the next block starts."""
+    bottom = page_eval(
+        page,
+        """
+        const kicker = all('*').find((el) => el.children.length === 0 && /heute auf dem teller/i.test(el.textContent));
+        return kicker.closest("section").getBoundingClientRect().bottom + 18;
+        """,
+    )
+    set_height(page, "web-app", round(bottom))
+    assert_window_gap(page, "web-app")
 
 
 def shots_web(browser: Browser) -> None:
     with WebApp() as app:
         names = {
-            "web-app": lambda page: None,
+            "web-app": end_below_hero,
             "web-app-statusleiste": open_status_bar,
             "web-app-wochenplan": lambda page: (
                 web_nav(page, "Wochenplan"),
@@ -1226,21 +1443,26 @@ def shots_web(browser: Browser) -> None:
             finally:
                 context.close()
 
-        def open_recipe(page: Page) -> None:
+        def open_recipe(page: Page, title: str = "Gnocchi") -> None:
             web_nav(page, "Rezepte")
-            page.locator(".recipe-tile >> visible=true", has_text="Gnocchi").first.click()
+            page.locator(".recipe-tile >> visible=true", has_text=title).first.click()
             page.locator("[data-action='cook-start'] >> visible=true").wait_for()
             web_settle(page)
 
         def recipe(page: Page) -> None:
             open_recipe(page)
-            cap_modal(page, ABOVE_COLUMNS)
+            fit_dialog_gap(page, "web-app-rezept", 500, ".detail-cols")
 
         def cook(page: Page) -> None:
-            open_recipe(page)
+            # Same recipe as the Home Assistant cook mode shot: its first step fits the dialog without scrolling.
+            open_recipe(page, "Buttermilch")
             page.locator("[data-action='cook-start'] >> visible=true").click()
             page.locator("[data-action='cook-next'] >> visible=true").wait_for()
             web_settle(page)
+            # As in the Home Assistant shot: a window tall enough for the dialog at its full height (1040 px).
+            # In a 900 px window the dialog is squeezed to 828 px and its header rows nearly touch.
+            set_height(page, "web-app-kochmodus", 1160)
+            grow_to_fit(page, "web-app-kochmodus", ".modal[role='dialog']")
 
         def sync(page: Page) -> None:
             web_nav(page, "Einkaufsliste")
@@ -1281,20 +1503,36 @@ def shots_web(browser: Browser) -> None:
                 context.close()
         if wanted("web-app-handy"):
             context, page = web_page(browser, app, "web-app-handy", mobile=True)
-            # The window is as wide as the first four tabs of the scrolling tab row, so no tab label is cut at the
-            # right edge, and ends just above the "Heute auf dem Teller" card instead of in the middle of it.
-            edge = page.evaluate(
-                """() => {
-                    const all = (sel, root = document) => {
-                        let out = [...root.querySelectorAll(sel)];
-                        for (const el of root.querySelectorAll('*')) if (el.shadowRoot) out = out.concat(all(sel, el.shadowRoot));
-                        return out;
-                    };
-                    const kicker = all('*').find((el) => el.children.length === 0 && /heute auf dem teller/i.test(el.textContent));
-                    let card = kicker;
-                    while (card.getBoundingClientRect().top > kicker.getBoundingClientRect().top - 10) card = card.parentElement || card.getRootNode().host;
-                    return card.getBoundingClientRect().top + window.scrollY;
-                }"""
+            # The tab row scrolls and fades out over its last 12 px. The window is as wide as the first four tabs
+            # plus that fade, so the label of the fourth tab ends before the fade and the fifth starts after it.
+            # The window ends just above the "Heute auf dem Teller" card instead of in the middle of it.
+            fade = 12
+            span = page_eval(
+                page,
+                """
+                const tabs = all('[data-action=nav]').filter((el) => el.getBoundingClientRect().top < 200 && el.getBoundingClientRect().width > 0);
+                const label = (el) => { const r = textRects(el); return [Math.min(...r.map((x) => x.left)), Math.max(...r.map((x) => x.right))]; };
+                const row = tabs[0].parentElement.getBoundingClientRect();
+                return { fourth: label(tabs[3])[1], fifth: label(tabs[4])[0], margin: window.innerWidth - row.right };
+                """,
+            )
+            row_right = span["fourth"] + fade + 6
+            if row_right > span["fifth"] - 4:
+                raise RuntimeError(f"web-app-handy: no room between the tab labels {span}")
+            set_height(
+                page,
+                "web-app-handy",
+                page.viewport_size["height"],
+                css_width=round(row_right + span["margin"]),
+            )
+            edge = page_eval(
+                page,
+                """
+                const kicker = all('*').find((el) => el.children.length === 0 && /heute auf dem teller/i.test(el.textContent));
+                let card = kicker;
+                while (card.getBoundingClientRect().top > kicker.getBoundingClientRect().top - 10) card = card.parentElement || card.getRootNode().host;
+                return card.getBoundingClientRect().top + window.scrollY;
+                """,
             )
             set_height(page, "web-app-handy", round(edge) - 10)
             snap(page, "web-app-handy")
