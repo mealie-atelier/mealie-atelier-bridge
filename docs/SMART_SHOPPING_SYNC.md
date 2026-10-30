@@ -26,7 +26,7 @@ It uses Home Assistant's generic to-do entity, so any integration whose to-do li
 | Policy | Behavior |
 |---|---|
 | Skip identical items (default) | A line whose title, amount included, matches an open destination item or another line of the batch is not sent again. Case and spacing are ignored. |
-| Skip identical items and combine the same unit | Like above, and lines of the same food and unit in one batch are added up into one line. |
+| Skip identical items and merge matching units | Like above, and lines of the same food and unit in one batch are added up into one line. |
 | Send everything | Every Mealie item is sent, even if the destination already has it. |
 
 ## Guarantees

@@ -152,7 +152,7 @@
       "message": "Structured ingredient editing is switched off in the Mealie Atelier Bridge options."
     },
     "sync_rule_not_found": {
-      "message": "This shopping sync rule no longer exists. Reload the sync settings."
+      "message": "This sync rule no longer exists. Reload the shopping sync."
     },
     "sync_destination_unsupported": {
       "message": "Choose a to-do list that can add items. Mealie's own lists cannot be a destination."

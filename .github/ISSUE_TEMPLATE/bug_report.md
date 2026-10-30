@@ -4,7 +4,7 @@ about: Report a reproducible issue in Mealie Atelier
 labels: bug
 ---
 
-<!-- Remove recipe names, hostnames, tokens, personal data and unredacted logs before submitting. Check the current preview and release status first. -->
+<!-- Remove recipe names, hostnames, tokens, personal data and unredacted logs before submitting. -->
 <!-- Sections marked (required) must be filled in. Markdown templates cannot enforce this, so issues with empty required sections may be closed. -->
 
 ## Package (required)

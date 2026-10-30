@@ -152,7 +152,7 @@
       "message": "Die strukturierte Zutatenbearbeitung ist in den Optionen der Mealie Atelier Bridge ausgeschaltet."
     },
     "sync_rule_not_found": {
-      "message": "Diese Sync-Regel gibt es nicht mehr. Lade die Sync-Einstellungen neu."
+      "message": "Diese Sync-Regel gibt es nicht mehr. Öffne den Einkaufs-Sync neu."
     },
     "sync_destination_unsupported": {
       "message": "Wähle eine To-do-Liste, die Einträge hinzufügen kann. Listen von Mealie selbst sind als Ziel nicht möglich."
@@ -164,7 +164,7 @@
       "message": "Du kannst höchstens 5 Sync-Regeln anlegen. Lösche eine, bevor du eine neue hinzufügst."
     },
     "sync_not_activated": {
-      "message": "Bestätige zuerst die erste Übertragung, bevor diese Regel selbstständig synchronisiert."
+      "message": "Bestätige zuerst den ersten Stapel, bevor diese Regel selbstständig synchronisiert."
     },
     "offline_op_reused": {
       "message": "Diese Offline-Änderungs-ID wurde schon für eine andere Änderung verwendet. Lade die Karte neu und versuche es erneut."
@@ -188,7 +188,7 @@
       "message": "Mealie hat das API-Token abgelehnt. Erstelle in Mealie ein neues Token und authentifiziere die Integration neu."
     },
     "mealie_error": {
-      "message": "Mealie ist nicht erreichbar oder hat einen Fehler gemeldet. Prüfe, ob Mealie läuft, und versuche es erneut."
+      "message": "Mealie ist nicht erreichbar oder hat einen Fehler gemeldet. Prüfe, ob Mealie läuft. Versuche es dann erneut."
     },
     "ai_error": {
       "message": "Der KI-Anbieter hat nicht geantwortet oder eine unbrauchbare Antwort geliefert. Prüfe den API-Key und versuche es erneut."
