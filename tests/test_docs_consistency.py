@@ -111,3 +111,16 @@ def test_websocket_doc_lists_every_registered_command() -> None:
         registered |= set(re.findall(r'"mealie_atelier/([a-z_]+)"', source.read_text("utf-8")))
     documented = set(re.findall(r"`mealie_atelier/([a-z_]+)`", doc))
     assert registered - documented == set()
+
+
+def test_docs_name_the_marketplace_location_and_route() -> None:
+    for name in ("README.md", "docs/INSTALLATION.md"):
+        text = (ROOT / name).read_text(encoding="utf-8")
+        assert "Settings → Marketplace" in text, name
+        assert "/marketplace/browse" in text, name
+
+
+def test_websocket_doc_says_cards_localize_the_backup_summary() -> None:
+    doc = (ROOT / "docs" / "WEBSOCKET_API.md").read_text(encoding="utf-8")
+    assert "ingredient_count" in doc
+    assert "English fallback" in doc

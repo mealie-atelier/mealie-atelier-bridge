@@ -23,7 +23,7 @@ Choose one route.
 
 **Custom repository (until the catalog listing is live).**
 
-- **Marketplace (Home Assistant 2026.11 and newer):** Open the Marketplace and choose **Add from link**. Paste `https://github.com/mealie-atelier/mealie-atelier-bridge`. Adding a repository needs a GitHub connection, so complete the one-time **Connect GitHub** login (a free GitHub account is enough). Then download **Mealie Atelier Bridge**. For the cards, add `https://github.com/mealie-atelier/mealie-atelier-cards` the same way and download it too.
+- **Marketplace (Home Assistant 2026.11 and newer):** Open **Settings → Marketplace** (`/marketplace/browse`) and choose **Add from link**. Paste `https://github.com/mealie-atelier/mealie-atelier-bridge`. Adding a repository needs a GitHub connection, so complete the one-time **Connect GitHub** login (a free GitHub account is enough). Then download **Mealie Atelier Bridge**. For the cards, add `https://github.com/mealie-atelier/mealie-atelier-cards` the same way and download it too.
 - **Classic HACS:** Open the HACS menu, choose **Custom repositories** and add the Bridge repository with the type **Integration**. Add the cards repository with the type **Dashboard**. Download both.
 
 Manual installation also works: copy the `custom_components/mealie_atelier` folder into the `custom_components` folder of your Home Assistant configuration.

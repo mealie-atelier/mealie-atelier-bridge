@@ -11,7 +11,7 @@ Every command below is registered by the Bridge and nothing else is reachable. A
 | `mealie_atelier/status` | Loaded entries, permissions, limits and features. | read |
 | `mealie_atelier/recipes` | Page and search of recipes. | read |
 | `mealie_atelier/recipe` | One recipe by slug. | read |
-| `mealie_atelier/recipe_backups` | List the backups kept for a recipe. | read |
+| `mealie_atelier/recipe_backups` | List the backups kept for a recipe. Each entry carries `ingredient_count` and `step_count` (null for old backups); cards build the localized summary from them. `summary` is an English fallback only. | read |
 | `mealie_atelier/recipe_restore` | Restore a recipe from one of its backups. | admin |
 | `mealie_atelier/recipe_image_set` | Replace the main recipe photo from an upload. | admin |
 | `mealie_atelier/recipe_image_delete` | Remove the main recipe photo. | admin |
