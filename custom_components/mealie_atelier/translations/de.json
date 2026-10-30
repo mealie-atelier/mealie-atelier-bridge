@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Mealie Atelier Bridge verbinden",
-        "description": "Dein API-Token bleibt in Home Assistant. Diese Erweiterung ergänzt die offizielle Mealie-Integration.",
+        "description": "Dein API-Token bleibt in Home Assistant. Diese Erweiterung ergänzt die in Home Assistant eingebaute Mealie-Integration.",
         "data": {
           "url": "Mealie-Server-URL",
           "api_token": "Mealie-API-Token",
@@ -62,20 +62,20 @@
           "read_only": "Nur-Lesen-Modus",
           "write_users": "Nutzer mit Schreibrecht",
           "experimental_ingredient_edits": "Strukturierte Zutatenbearbeitung",
-          "usda_fdc_api_key": "USDA-FoodData-Central-API-Key",
-          "clear_fdc_key": "Gespeicherten USDA-Key löschen",
-          "openai_api_key": "KI-API-Key (OpenAI oder Anthropic)",
-          "clear_ai_key": "Gespeicherten KI-Key löschen",
+          "usda_fdc_api_key": "USDA-FoodData-Central-API-Schlüssel",
+          "clear_fdc_key": "Gespeicherten USDA-Schlüssel löschen",
+          "openai_api_key": "KI-API-Schlüssel (OpenAI oder Anthropic)",
+          "clear_ai_key": "Gespeicherten KI-Schlüssel löschen",
           "timer_notify_service": "Benachrichtigungsdienst für Timer"
         },
         "data_description": {
           "read_only": "Verhindert alle Änderungen an Rezepten, Wochenplan und Einkaufslisten. Praktisch für gemeinsam genutzte Tablets.",
           "write_users": "Leer lassen, damit alle Home-Assistant-Nutzer Einkaufslisten und Wochenpläne ändern dürfen. Wählst du mindestens einen Nutzer aus, dürfen nur die Ausgewählten und Administratoren schreiben. Administratoren dürfen immer schreiben. Wähle nur Administratoren aus, damit ausschließlich Administratoren schreiben dürfen. Rezepte bearbeiten bleibt Administratoren vorbehalten.",
           "experimental_ingredient_edits": "Erlaubt Administratoren, Zutaten mit verknüpften Lebensmitteln und Einheiten zu bearbeiten. Vor jeder Änderung wird ein Backup gespeichert.",
-          "usda_fdc_api_key": "Optional. Nur für das Nährwertlabor: Die Bridge sucht damit Zutaten in der freien US-Lebensmitteldatenbank FoodData Central und rechnet Nährwerte pro Portion aus. Aus Sicherheitsgründen zeigt das Feld einen gespeicherten Key nicht an: Leer lassen behält ihn. Ohne Key bleibt nur die Nährwertsuche aus. Den Key gibt es kostenlos mit Name und E-Mail unter [fdc.nal.usda.gov/api-key-signup]({usda_signup_url}).",
-          "clear_fdc_key": "Aktiviere das und speichere, um den Key zu löschen.",
-          "openai_api_key": "Optional und pro Anfrage kostenpflichtig. Schaltet drei KI-Hilfen frei, die du jeweils selbst startest: englische Suchbegriffe im Nährwertlabor, Ersatzvorschläge für eine Zutat und die Rezeptprüfung. Dafür gehen Zutaten und je nach Hilfe auch Rezeptname, Mengen und Kochschritte an OpenAI oder Anthropic, je nach Key. Nährwerte kommen immer aus FoodData Central, Rezepte ändert die KI nie selbst. Aus Sicherheitsgründen zeigt das Feld einen gespeicherten Key nicht an: Leer lassen behält ihn, zum Löschen nutze die Option darunter. Key für OpenAI unter [platform.openai.com/api-keys]({openai_keys_url}), für Anthropic unter [platform.claude.com/settings/keys]({anthropic_keys_url}). Keys von Anthropic beginnen mit sk-ant-.",
-          "clear_ai_key": "Aktiviere das und speichere, um den Key zu löschen. Die KI ist danach ausgeschaltet.",
+          "usda_fdc_api_key": "Optional. Nur für das Nährwertlabor: Die Bridge sucht damit Zutaten in der freien US-Lebensmitteldatenbank FoodData Central und rechnet Nährwerte pro Portion aus. Aus Sicherheitsgründen zeigt das Feld einen gespeicherten Schlüssel nicht an: Leer lassen behält ihn. Ohne Schlüssel bleibt nur die Nährwertsuche aus. Den Schlüssel gibt es kostenlos mit Name und E-Mail unter [fdc.nal.usda.gov/api-key-signup]({usda_signup_url}).",
+          "clear_fdc_key": "Aktiviere das und speichere, um den Schlüssel zu löschen.",
+          "openai_api_key": "Optional und pro Anfrage kostenpflichtig. Schaltet drei KI-Hilfen frei, die du jeweils selbst startest: englische Suchbegriffe im Nährwertlabor, Ersatzvorschläge für eine Zutat und die Rezeptprüfung. Dafür gehen Zutaten und je nach Hilfe auch Rezeptname, Mengen und Kochschritte an OpenAI oder Anthropic, je nach Schlüssel. Nährwerte kommen immer aus FoodData Central, Rezepte ändert die KI nie selbst. Aus Sicherheitsgründen zeigt das Feld einen gespeicherten Schlüssel nicht an: Leer lassen behält ihn, zum Löschen nutze die Option darunter. Schlüssel für OpenAI unter [platform.openai.com/api-keys]({openai_keys_url}), für Anthropic unter [platform.claude.com/settings/keys]({anthropic_keys_url}). Schlüssel von Anthropic beginnen mit sk-ant-.",
+          "clear_ai_key": "Aktiviere das und speichere, um den Schlüssel zu löschen. Die KI ist danach ausgeschaltet.",
           "timer_notify_service": "Optional. Ein Benachrichtigungsdienst wie notify.mobile_app_dein_handy, der eine Push-Nachricht erhält, wenn ein Küchentimer abläuft. Leer lassen, um nur Hinweise in der App zu bekommen."
         }
       }
@@ -191,7 +191,7 @@
       "message": "Mealie ist nicht erreichbar oder hat einen Fehler gemeldet. Prüfe, ob Mealie läuft. Versuche es dann erneut."
     },
     "ai_error": {
-      "message": "Der KI-Anbieter hat nicht geantwortet oder eine unbrauchbare Antwort geliefert. Prüfe den API-Key und versuche es erneut."
+      "message": "Der KI-Anbieter hat nicht geantwortet oder eine unbrauchbare Antwort geliefert. Prüfe den API-Schlüssel und versuche es erneut."
     },
     "conflict": {
       "message": "Jemand anderes hat das inzwischen geändert. Lade neu und versuche es erneut."
