@@ -416,8 +416,13 @@ class MealieClient:
             "orderBy": "name",
             "orderDirection": "asc",
         }
-        if search.strip():
-            params["search"] = search.strip()[:100]
+        query = search.strip()[:100]
+        if query and not any(char.isalnum() for char in query):
+            # Mealie reads a query without letters or digits (such as "%") as no filter and lists
+            # every recipe, so answer here with the empty page the field asks for.
+            return {"page": page, "per_page": per_page, "total": 0, "total_pages": 0, "items": []}
+        if query:
+            params["search"] = query
         result = await self.request("GET", "/api/recipes", params=params)
         if not isinstance(result, dict):
             raise MealieError("Unexpected recipe listing")

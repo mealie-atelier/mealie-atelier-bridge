@@ -412,3 +412,14 @@ async def test_connection_check_gives_up_sooner_than_a_normal_request():
         await client.request("GET", "/api/users/self")
     assert seen[0].total <= 10
     assert seen[1].total == 25
+
+
+async def test_recipe_search_without_letters_or_digits_is_an_empty_page_not_every_recipe():
+    class NoSession:
+        def request(self, *args, **kwargs):
+            raise AssertionError("Mealie must not be asked, it would list every recipe")
+
+    client = MealieClient(NoSession(), "http://mealie.test:9000", "token")
+    for query in ("%", "_", " %% ", "<>"):
+        page = await client.recipes(search=query)
+        assert page["items"] == [] and page["total"] == 0, query
