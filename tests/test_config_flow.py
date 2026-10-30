@@ -76,7 +76,7 @@ async def test_user_step_success_strips_trailing_slash(hass):
     assert result["data"]["url"] == URL
     assert result["data"][CONF_API_TOKEN] == "secret"
     assert result["result"].unique_id == "user-1"
-    assert result["title"] == "Mealie Atelier Bridge · chef@mealie.test:9000"
+    assert result["title"] == "chef@mealie.test:9000"
 
 
 @pytest.mark.parametrize(
@@ -167,7 +167,7 @@ async def test_reconfigure_retitles_a_generated_title_only(hass):
         data={CONF_API_TOKEN: "old", CONF_VERIFY_SSL: True, "url": URL},
     )
     renamed.add_to_hass(hass)
-    generated_title = f"Mealie Atelier Bridge · {ACCOUNT['username']}@{'mealie.test:9000'}"
+    generated_title = f"{ACCOUNT['username']}@mealie.test:9000"
     hass.config_entries.async_update_entry(generated, title=generated_title)
     for entry, account in ((generated, ACCOUNT), (renamed, {**ACCOUNT, "id": "user-2"})):
         result = await entry.start_reconfigure_flow(hass)
@@ -175,7 +175,7 @@ async def test_reconfigure_retitles_a_generated_title_only(hass):
             await hass.config_entries.flow.async_configure(
                 result["flow_id"], _input(url="https://moved.example.test", token="t")
             )
-    assert generated.title == f"Mealie Atelier Bridge · {ACCOUNT['username']}@moved.example.test"
+    assert generated.title == f"{ACCOUNT['username']}@moved.example.test"
     assert renamed.title == "My kitchen"
 
 
@@ -386,7 +386,7 @@ async def test_entry_title_names_the_server(hass):
             )
         titles.append(result["title"])
     assert len(set(titles)) == 2
-    assert titles[0] == "Mealie Atelier Bridge · admin@one.test:9925"
+    assert titles[0] == "admin@one.test:9925"
 
 
 @pytest.mark.parametrize(
@@ -534,3 +534,40 @@ async def test_options_flow_does_not_offer_services_that_cannot_notify(hass):
     schema = result["data_schema"].schema
     field = next(key for key in schema if key == CONF_TIMER_NOTIFY_SERVICE)
     assert schema[field].config["options"] == ["notify.mobile_app_phone"]
+
+
+async def test_token_with_a_line_break_is_an_auth_error_not_a_url_error(hass):
+    result = await _start_user(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], _input(token="abc\ndef")
+    )
+    assert result["errors"] == {"base": "invalid_auth"}
+
+
+async def test_reauth_and_reconfigure_reject_a_token_with_a_line_break(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    result = await entry.start_reauth_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_API_TOKEN: "a b\nc"}
+    )
+    assert result["errors"] == {"base": "invalid_auth"}
+    result = await entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], _input(token="a b\nc")
+    )
+    assert result["errors"] == {"base": "invalid_auth"}
+
+
+async def test_reconfigure_also_retitles_the_old_prefixed_title(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        entry, title=f"Mealie Atelier Bridge · {ACCOUNT['username']}@mealie.test:9000"
+    )
+    result = await entry.start_reconfigure_flow(hass)
+    with patch(CHECK, return_value=ACCOUNT):
+        await hass.config_entries.flow.async_configure(
+            result["flow_id"], _input(url="https://moved.example.test", token="newer")
+        )
+    assert entry.title == f"{ACCOUNT['username']}@moved.example.test"

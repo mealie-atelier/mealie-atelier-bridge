@@ -44,7 +44,12 @@ async def _validate(
     hass: HomeAssistant, url: str, token: str, verify_ssl: bool
 ) -> tuple[MealieClient, dict[str, Any]]:
     """Connect to Mealie and return the normalized client plus the account it belongs to."""
-    client = MealieClient(async_get_clientsession(hass), _clean_url(url), token.strip(), verify_ssl)
+    token = token.strip()
+    # aiohttp rejects a control character in the Authorization header with a ValueError, which
+    # would be shown as a URL problem. A pasted token with a line break is a token problem.
+    if not token.isprintable():
+        raise MealieAuthError("The token contains a line break or another control character")
+    client = MealieClient(async_get_clientsession(hass), _clean_url(url), token, verify_ssl)
     return client, await client.check_connection()
 
 
@@ -89,8 +94,16 @@ def account_id_of(unique_id: str | None) -> str:
 
 
 def entry_title(url: str, username: str) -> str:
-    """Name the user and the server, since every default Mealie user is called admin."""
-    return f"Mealie Atelier Bridge · {username}@{urlsplit(url).netloc}"
+    """Name the user and the server, since every default Mealie user is called admin.
+
+    The integration page already says "Mealie Atelier Bridge", and a phone cuts a long row.
+    """
+    return f"{username}@{urlsplit(url).netloc}"
+
+
+def legacy_entry_title(url: str, username: str) -> str:
+    """The title entries carried in earlier versions, with the product name in front."""
+    return f"Mealie Atelier Bridge · {entry_title(url, username)}"
 
 
 def _entry_title(client: MealieClient, account: Mapping[str, Any]) -> str:
@@ -211,7 +224,10 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     return self.async_abort(reason="wrong_account")
                 # Follow the new host in the title, unless the user renamed the entry.
                 username = account.get("username", "Kitchen")
-                generated = entry.title == entry_title(entry.data[CONF_URL], username)
+                generated = entry.title in (
+                    entry_title(entry.data[CONF_URL], username),
+                    legacy_entry_title(entry.data[CONF_URL], username),
+                )
                 return self.async_update_reload_and_abort(
                     entry,
                     title=entry_title(client.url, username) if generated else entry.title,

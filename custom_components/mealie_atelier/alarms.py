@@ -15,7 +15,7 @@ from uuid import UUID
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.storage import Store
 
-from .const import DOMAIN
+from .const import ALARMS_STORE_KEY, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ def _uuid(value):
 class TimerManager:
     def __init__(self, hass, entry_id, notify_service=""):
         self.hass = hass
-        self.store = Store(hass, 1, f"mealie_atelier_alarms_{entry_id}")
+        self.store = Store(hass, 1, ALARMS_STORE_KEY.format(entry_id))
         self.notify_service = (
             notify_service
             if isinstance(notify_service, str)

@@ -351,12 +351,17 @@ async def test_invalid_recipe_update_takes_no_backup(
     snapshot.assert_not_awaited()
 
 
-async def test_removing_the_entry_deletes_sync_and_backup_stores(
+async def test_removing_the_entry_deletes_every_store(
     hass: HomeAssistant, setup_integration, hass_storage: dict
 ) -> None:
     """The sync outbox holds shopping item titles; nothing of a removed entry may stay."""
     entry_id = setup_integration.entry_id
-    keys = (f"mealie_atelier_sync_{entry_id}", f"mealie_atelier_recipe_backups_{entry_id}")
+    keys = (
+        f"mealie_atelier_sync_{entry_id}",
+        f"mealie_atelier_recipe_backups_{entry_id}",
+        f"mealie_atelier_studio_{entry_id}",
+        f"mealie_atelier_alarms_{entry_id}",
+    )
     for key in keys:
         hass_storage[key] = {"version": 1, "minor_version": 1, "key": key, "data": {}}
     assert await hass.config_entries.async_remove(entry_id)

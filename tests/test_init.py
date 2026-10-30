@@ -124,7 +124,7 @@ async def test_setup_retitles_only_the_exact_generated_legacy_title(
 ):
     host = MEALIE_URL.split("://", 1)[1]
     cases = {
-        "Mealie Atelier · demo": f"Mealie Atelier Bridge · demo@{host}",
+        "Mealie Atelier · demo": f"demo@{host}",
         "Mealie Atelier · Kitchen": "Mealie Atelier · Kitchen",
         "Mealie Atelier · Family": "Mealie Atelier · Family",
         "Family kitchen": "Family kitchen",
@@ -141,6 +141,21 @@ async def test_setup_retitles_only_the_exact_generated_legacy_title(
     for title, expected in cases.items():
         assert entries[title].title == expected
         assert "retitle_legacy_title" not in entries[title].data
+
+
+async def test_setup_shortens_the_old_prefixed_title_only(
+    hass: HomeAssistant, mock_mealie: AiohttpClientMocker
+):
+    host = MEALIE_URL.split("://", 1)[1]
+    prefixed = _legacy_entry(unique_id="x:1", title=f"Mealie Atelier Bridge · demo@{host}")
+    custom = _legacy_entry(unique_id="x:2", title="Mealie Atelier Bridge · my own name")
+    for entry in (prefixed, custom):
+        entry.add_to_hass(hass)
+        await async_migrate_entry(hass, entry)
+    assert await hass.config_entries.async_setup(prefixed.entry_id)
+    await hass.async_block_till_done()
+    assert prefixed.title == f"demo@{host}"
+    assert custom.title == "Mealie Atelier Bridge · my own name"
 
 
 async def test_later_renames_are_never_reverted(

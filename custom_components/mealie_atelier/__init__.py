@@ -15,12 +15,14 @@ from homeassistant.helpers.storage import Store
 
 from .alarms import TimerManager
 from .api import MealieAuthError, MealieClient, MealieError
-from .config_flow import entry_title
+from .config_flow import entry_title, legacy_entry_title
 from .const import (
+    ALARMS_STORE_KEY,
     CONF_API_TOKEN,
     CONF_TIMER_NOTIFY_SERVICE,
     CONF_VERIFY_SSL,
     DOMAIN,
+    STUDIO_STORE_KEY,
 )
 from .http import MealieAtelierImageView, MealieAtelierRecipeAssetView
 from .offline_ledger import OfflineLedger
@@ -94,6 +96,13 @@ def _retitle_legacy_entry(hass: HomeAssistant, entry: ConfigEntry, username: str
     returned no username (the legacy fallback). Any other title, including a custom one of the
     same shape, stays. The marker is removed afterwards, so later renames are never reverted.
     """
+    username_now = username or "Kitchen"
+    if entry.title == legacy_entry_title(entry.data[CONF_URL], username_now):
+        # The generated title of earlier versions repeated the product name and was cut off on
+        # a phone. Only the exact generated form is replaced, a renamed entry stays.
+        hass.config_entries.async_update_entry(
+            entry, title=entry_title(entry.data[CONF_URL], username_now)
+        )
     if not entry.data.get(_RETITLE_PENDING):
         return
     username = username or "Kitchen"
@@ -128,7 +137,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry
     # leaves no timer or sync task running.
     backups = await RecipeBackupStore.async_load(hass, entry.entry_id)
     offline = await OfflineLedger.async_load(hass, entry.entry_id, client)
-    store = Store(hass, 1, f"mealie_atelier_studio_{entry.entry_id}")
+    store = Store(hass, 1, STUDIO_STORE_KEY.format(entry.entry_id))
     state = await store.async_load() or studio_initial()
     manager = TimerManager(hass, entry.entry_id, entry.options.get(CONF_TIMER_NOTIFY_SERVICE, ""))
     await manager.async_start()
@@ -158,10 +167,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntr
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry) -> None:
-    """Delete recipe backups (store and photo files) and the sync outbox with the entry."""
+    """Delete everything stored for the entry: backups, sync outbox, ledger, studio and timers."""
     store = await RecipeBackupStore.async_load(hass, entry.entry_id)
     await store.async_remove()
     # The outbox holds shopping item titles; nothing of a removed entry may stay behind.
     await SyncStore(hass, entry.entry_id).async_remove()
     # The ledger keeps shopping notes and item ids of queued edits.
     await Store(hass, 1, f"mealie_atelier_offline_{entry.entry_id}").async_remove()
+    # The studio store holds family names, pantry and journal, the timer store the timers.
+    await Store(hass, 1, STUDIO_STORE_KEY.format(entry.entry_id)).async_remove()
+    await Store(hass, 1, ALARMS_STORE_KEY.format(entry.entry_id)).async_remove()
