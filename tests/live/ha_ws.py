@@ -73,6 +73,11 @@ class HaSocket:
                 return ok, reply.get("result") if ok else reply.get("error")
 
 
+def state_dir(here: str) -> str:
+    """Folder with the rig's tokens: LIVE_STATE when set (a worktree has no state), else ./state."""
+    return os.environ.get("LIVE_STATE") or os.path.join(here, "state")
+
+
 def read_token(path: str) -> str:
     with open(path, encoding="utf-8") as handle:
         return handle.read().strip()

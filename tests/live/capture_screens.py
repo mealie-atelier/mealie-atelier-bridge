@@ -14,7 +14,7 @@ import asyncio
 import sys
 from pathlib import Path
 
-from ha_ws import HaSocket, read_token
+from ha_ws import HaSocket, read_token, state_dir
 from playwright.sync_api import Page, sync_playwright
 
 HERE = Path(__file__).parent
@@ -38,7 +38,7 @@ DEVICES = {
 async def prepare() -> None:
     """Idempotently create one screenshot dashboard per theme with a panel view per mode."""
     titles = TITLES.get(LANGUAGE, TITLES["en"])
-    async with HaSocket(BASE, read_token(str(HERE / "state" / "ha-token"))) as socket:
+    async with HaSocket(BASE, read_token(str(Path(state_dir(str(HERE))) / "ha-token"))) as socket:
         _, dashboards = await socket.call({"type": "lovelace/dashboards/list"})
         existing = {item["url_path"] for item in dashboards or []}
         for theme in ("light", "dark"):

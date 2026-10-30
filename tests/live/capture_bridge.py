@@ -22,13 +22,13 @@ import urllib.request
 from pathlib import Path
 
 from capture_screens import BASE, DASHBOARD, settle, sign_in
-from ha_ws import HaSocket, read_token
+from ha_ws import HaSocket, read_token, state_dir
 from playwright.sync_api import Page, sync_playwright
 
 HERE = Path(__file__).parent
 OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "state" / "shots"
 LANGUAGE = sys.argv[2] if len(sys.argv) > 2 else "de"
-TOKEN = str(HERE / "state" / "ha-token")
+TOKEN = str(Path(state_dir(str(HERE))) / "ha-token")
 CARDS_BUNDLE = os.environ.get("CARDS_BUNDLE")
 
 
@@ -41,7 +41,7 @@ def mealie(method: str, path: str, body: object = None) -> object:
         method=method,
         data=None if body is None else json.dumps(body).encode(),
         headers={
-            "Authorization": f"Bearer {read_token(str(HERE / 'state' / 'mealie-token'))}",
+            "Authorization": f"Bearer {read_token(str(Path(state_dir(str(HERE))) / 'mealie-token'))}",
             "Content-Type": "application/json",
         },
     )

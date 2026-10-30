@@ -31,6 +31,13 @@ Fictional demo recipes only; never point these scripts at a real household insta
 - Product screenshots (desktop and phone, light and dark, every mode plus a recipe and cooking
   mode): `uv run --with playwright python tests/live/capture_screens.py [out-dir] [de|en]`, after
   `ui_smoke.py`. Default out-dir is `state/shots/`.
+- The whole German guide screenshot set for the site (webp, same names and sizes as the guides, plus the
+  OG crops in `<out>/og/`): `LIVE_STATE=<path to state> uv run --with playwright --with pillow python
+  tests/live/capture_guides.py <out-dir>`. It sets up its own dashboards, Lovelace resource, a Local
+  To-do sync target and the German demo data, starts the standalone web app with Node against the rig
+  Mealie, pins the clock to 09:00 and serves the cards bundle (`CARDS_BUNDLE`, default the sibling
+  repository's `dist`) through route interception. `GUIDE_ONLY=name,name` redoes single images.
+  Bring! shots and the Mealie token page are not part of it unless asked for by name.
 - Language: `SEED_LANGUAGE=en ./rig.sh up` seeds English recipes and an English Home Assistant user
   (default `de`). The seed is idempotent, adds a short fictional shopping list and removes items the
   smoke test left behind.
