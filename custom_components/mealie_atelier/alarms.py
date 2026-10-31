@@ -125,6 +125,7 @@ class TimerManager:
                 or sum(1 for a in active if a["owner"] == owner) >= MAX_ACTIVE_TIMERS_PER_USER
             ):
                 raise _invalid("too_many_timers")
+            locale = str(timer.get("locale") or "").lower()[:2]
             entry = {
                 "id": uid,
                 "label": label.strip(),
@@ -136,6 +137,8 @@ class TimerManager:
                 "createdAt": now,
                 "nextAttemptAt": due,
             }
+            if locale in _TEXTS:
+                entry["locale"] = locale
             self.alarms.append(entry)
             await self._save()
             return deepcopy(entry)
@@ -160,9 +163,10 @@ class TimerManager:
         return {"alarms": deepcopy([a for a in self.alarms if admin or a["owner"] == actor])}
 
     async def _deliver(self, entry):
-        title, template = _TEXTS[
-            "de" if str(self.hass.config.language or "").lower().startswith("de") else "en"
-        ]
+        locale = entry.get("locale")
+        if locale not in _TEXTS:
+            locale = "de" if str(self.hass.config.language or "").lower().startswith("de") else "en"
+        title, template = _TEXTS[locale]
         message = template.format(label=entry["label"])
         channels = []
         # HA always receives an internal persistent notification (visible after reopening HA).

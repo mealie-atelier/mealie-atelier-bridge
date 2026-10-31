@@ -81,6 +81,28 @@ def public_record(record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+RULE_NAME_MAX = 60
+
+
+def _shorten(text: str, limit: int) -> str:
+    text = text.strip()
+    if len(text) <= limit:
+        return text
+    return text[: max(limit - 1, 0)].rstrip() + "…"
+
+
+def _default_rule_name(source: str, destination: str) -> str:
+    """Join both list names, shortening each one separately so the destination stays visible."""
+    separator = " → "
+    source, destination = source.strip(), destination.strip()
+    budget = RULE_NAME_MAX - len(separator)
+    if len(source) + len(destination) > budget:
+        destination_budget = min(len(destination), max(budget - len(source), budget // 2))
+        source = _shorten(source, budget - destination_budget)
+        destination = _shorten(destination, destination_budget)
+    return f"{source}{separator}{destination}"
+
+
 class SyncManager:
     """Owns rules, the outbox and every trigger of one config entry."""
 
@@ -333,7 +355,9 @@ class SyncManager:
         features = int(state.attributes.get("supported_features", 0) or 0) if state else 0
         return {
             "entity_id": entity_id,
-            "name": state.name if state else entity_id,
+            "name": state.name
+            if state
+            else (entry and (entry.name or entry.original_name)) or entity_id,
             "platform": entry.platform if entry else None,
             "available": state is not None and state.state != STATE_UNAVAILABLE,
             "supports": {
@@ -991,7 +1015,7 @@ class SyncManager:
             raise ValueError("Unknown source shopping list")
         source_name = str(source.get("name") or "")[:100]
         now = _now()
-        name = fields.pop("name") or f"{source_name} → {destination['name']}"[:60].strip()
+        name = fields.pop("name") or _default_rule_name(source_name, destination["name"])
         if existing is None:
             rule_id = str(uuid4())
             rule = {

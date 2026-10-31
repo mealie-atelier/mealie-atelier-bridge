@@ -1040,3 +1040,44 @@ async def test_read_only_mode_blocks_automatic_runs(
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
     assert bring.calls == ["1 Milch"]
+
+
+def test_default_rule_name_keeps_both_names_whole_when_short():
+    assert engine._default_rule_name("Groceries", "Bring") == "Groceries → Bring"
+
+
+@pytest.mark.parametrize(
+    ("source", "destination"),
+    [
+        ("S" * 100, "Bring"),
+        ("Wocheneinkauf für die ganze Familie " * 3, "Bring Einkaufsliste Zuhause"),
+        ("Source", "D" * 100),
+        ("S" * 100, "D" * 100),
+    ],
+)
+def test_default_rule_name_is_short_and_ends_with_the_destination(source: str, destination: str):
+    name = engine._default_rule_name(source, destination)
+
+    assert len(name) <= 60
+    assert " → " in name
+    tail = name.split(" → ", 1)[1]
+    assert tail == destination or (tail.endswith("…") and destination.startswith(tail[:-1]))
+    if len(destination) <= 28:
+        assert tail == destination
+
+
+async def test_destination_name_falls_back_to_the_registry_entry(
+    hass: HomeAssistant, sync: SyncManager
+):
+    registry = er.async_get(hass)
+    registry.async_get_or_create(
+        "todo", "test", "uid-1", original_name="Wocheneinkauf", suggested_object_id="wocheneinkauf"
+    )
+    registry.async_get_or_create(
+        "todo", "test", "uid-2", original_name="Alt", suggested_object_id="b"
+    )
+    registry.async_update_entity("todo.b", name="Eigener Name")
+
+    assert sync.destination("todo.wocheneinkauf")["name"] == "Wocheneinkauf"
+    assert sync.destination("todo.b")["name"] == "Eigener Name"
+    assert sync.destination("todo.unknown")["name"] == "todo.unknown"

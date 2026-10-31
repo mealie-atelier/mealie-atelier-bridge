@@ -394,3 +394,34 @@ async def test_notify_persistent_notification_does_not_duplicate(hass: HomeAssis
 
 def test_notify_send_message_is_ignored(hass: HomeAssistant):
     assert TimerManager(hass, "e1", "notify.send_message").notify_service == ""
+
+
+@pytest.mark.parametrize(
+    ("language", "locale", "title", "message"),
+    [
+        ("en", "de", "Mealie Atelier Bridge · Küchentimer", "Pasta ist fertig!"),
+        ("de", "en", "Mealie Atelier Bridge · Kitchen timer", "Pasta is ready!"),
+        ("de", "xx", "Mealie Atelier Bridge · Küchentimer", "Pasta ist fertig!"),
+    ],
+)
+async def test_delivery_text_prefers_the_locale_stored_with_the_timer(
+    hass: HomeAssistant,
+    manager: TimerManager,
+    language: str,
+    locale: str,
+    title: str,
+    message: str,
+):
+    hass.config.language = language
+    persistent = async_mock_service(hass, "persistent_notification", "create")
+    manager.alarms = [stored_alarm(**({"locale": locale} if locale in ("de", "en") else {}))]
+
+    assert await manager.async_tick() is True
+    assert persistent[0].data["title"] == title
+    assert persistent[0].data["message"] == message
+
+
+async def test_create_stores_only_a_valid_locale(manager: TimerManager):
+    assert (await manager.async_create("user-1", timer(locale="de-CH")))["locale"] == "de"
+    assert "locale" not in await manager.async_create("user-1", timer(locale="<b>"))
+    assert "locale" not in await manager.async_create("user-1", timer(locale=5))
