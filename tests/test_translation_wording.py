@@ -57,3 +57,15 @@ def test_german_read_only_help_keeps_the_english_limitation():
 def test_german_setup_description_says_it_does_not_replace_the_core_integration():
     de = json.loads(DE.read_text())["config"]["step"]["user"]["description"]
     assert de.endswith("Mealie-Integration und ersetzt sie nicht.")
+
+
+def test_dialog_titles_are_short_enough_for_one_line() -> None:
+    expected = {
+        EN: {"reconfigure": "Reconfigure Bridge", "reauth_confirm": "Re-authenticate Bridge"},
+        DE: {"reconfigure": "Bridge neu konfigurieren", "reauth_confirm": "Bridge neu anmelden"},
+    }
+    for path, titles in expected.items():
+        steps = json.loads(path.read_text(encoding="utf-8"))["config"]["step"]
+        assert {key: steps[key]["title"] for key in titles} == titles
+    strings = EN.parent.parent / "strings.json"
+    assert strings.read_bytes() == EN.read_bytes()

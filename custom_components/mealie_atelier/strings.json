@@ -16,7 +16,7 @@
         }
       },
       "reauth_confirm": {
-        "title": "Re-authenticate Mealie Atelier Bridge",
+        "title": "Re-authenticate Bridge",
         "description": "Mealie rejected the saved API token of {account}. Create a new token in Mealie for this account under User profile > API Tokens and enter it here.",
         "data": {
           "api_token": "New Mealie API token"
@@ -26,7 +26,7 @@
         }
       },
       "reconfigure": {
-        "title": "Reconfigure Mealie Atelier Bridge",
+        "title": "Reconfigure Bridge",
         "description": "Change the Mealie address or token. Home Assistant checks the connection before saving.",
         "data": {
           "url": "Mealie server URL",

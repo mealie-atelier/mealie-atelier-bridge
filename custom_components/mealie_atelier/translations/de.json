@@ -16,7 +16,7 @@
         }
       },
       "reauth_confirm": {
-        "title": "Mealie Atelier Bridge neu anmelden",
+        "title": "Bridge neu anmelden",
         "description": "Mealie hat das gespeicherte API-Token von {account} abgelehnt. Erstelle in Mealie für dieses Konto unter Benutzerprofil > API-Token ein neues Token und gib es hier ein.",
         "data": {
           "api_token": "Neues Mealie-API-Token"
@@ -26,7 +26,7 @@
         }
       },
       "reconfigure": {
-        "title": "Mealie Atelier Bridge neu konfigurieren",
+        "title": "Bridge neu konfigurieren",
         "description": "Ändere die Mealie-Adresse oder das Token. Home Assistant prüft die Verbindung vor dem Speichern.",
         "data": {
           "url": "Mealie-Server-URL",
