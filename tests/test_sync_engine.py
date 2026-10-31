@@ -891,3 +891,112 @@ async def test_core_shopping_list_as_real_destination(
 def er_platform(hass: HomeAssistant, entity_id: str) -> str | None:
     entry = er.async_get(hass).async_get(entity_id)
     return entry.platform if entry else None
+
+
+async def test_resend_starts_a_run_without_other_triggers(
+    hass: HomeAssistant,
+    sync: SyncManager,
+    mealie: FakeMealie,
+    bring: FakeTodo,
+    freezer: FrozenDateTimeFactory,
+):
+    mealie.add(mealie_item("a", note="Milch"))
+    rule_id, _ = await activate(sync)
+    mealie.items["a"]["quantity"] = 3
+    await sync.async_run(rule_id, "manual")
+
+    await sync.async_resolve(rule_id, f"{rule_id}:a", "resend")
+    freezer.tick(timedelta(seconds=31))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+
+    assert bring.calls[-1] == "3 Milch"
+    assert states(sync, rule_id) == {"a": "sent"}
+
+
+async def test_run_with_only_skipped_duplicates_has_nothing_to_send(
+    sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
+):
+    mealie.add(mealie_item("a", note="Milch"))
+    rule_id, _ = await activate(sync)
+    mealie.add(mealie_item("b", note="Milch"))
+
+    result = await sync.async_run(rule_id, "manual")
+
+    assert result["skipped_duplicates"] == 1
+    assert result["sent"] == 0
+    assert result["outcome"] == "nothing_to_send"
+
+
+async def test_unavailable_destination_counts_open_items(
+    sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
+):
+    mealie.add(mealie_item("a", note="Milch"))
+    rule_id, _ = await activate(sync)
+    mealie.add(mealie_item("b", note="Brot"))
+    bring.set_available(False)
+
+    result = await sync.async_run(rule_id, "manual")
+
+    assert result["outcome"] == "destination_unavailable"
+    assert result["pending_left"] == 1
+    assert sync.rules[rule_id]["last_run"]["count"] == 1
+
+
+async def test_removed_destination_reports_destination_missing(
+    hass: HomeAssistant, sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
+):
+    mealie.add(mealie_item("a", note="Milch"))
+    rule_id, _ = await activate(sync)
+    mealie.add(mealie_item("b", note="Brot"))
+    hass.states.async_remove("todo.einkauf")
+    er.async_get(hass).async_remove("todo.einkauf")
+
+    result = await sync.async_run(rule_id, "manual")
+
+    assert result["outcome"] == "destination_missing"
+    assert result["pending_left"] == 1
+
+
+async def test_items_beyond_one_batch_are_sent_by_follow_up_passes(
+    hass: HomeAssistant,
+    sync: SyncManager,
+    mealie: FakeMealie,
+    bring: FakeTodo,
+    freezer: FrozenDateTimeFactory,
+):
+    mealie.add(*(mealie_item(f"i{n:02d}", note=f"Artikel {n:02d}") for n in range(60)))
+
+    rule_id, result = await activate(sync)
+
+    assert result["sent"] == 50
+    assert result["pending_left"] == 10
+    freezer.tick(timedelta(seconds=31))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+
+    assert len(bring.calls) == 60
+    assert sync.rules[rule_id]["last_run"]["count"] == 10
+
+
+async def test_read_only_mode_blocks_automatic_runs(
+    hass: HomeAssistant,
+    sync: SyncManager,
+    mealie: FakeMealie,
+    bring: FakeTodo,
+    freezer: FrozenDateTimeFactory,
+):
+    mealie.add(mealie_item("a", note="Milch"))
+    rule_id, _ = await activate(sync)
+    mealie.add(mealie_item("b", note="Brot"))
+    sync._read_only = lambda: True
+
+    result = await sync.async_run(rule_id, "watch")
+    assert result["outcome"] == "read_only"
+    assert bring.calls == ["1 Milch"]
+
+    sync.notify_source_changed("list-weekly", "after_atelier_add")
+    freezer.tick(timedelta(seconds=31))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert bring.calls == ["1 Milch"]

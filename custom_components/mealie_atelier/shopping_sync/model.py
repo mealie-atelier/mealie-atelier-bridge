@@ -44,6 +44,8 @@ OUTCOMES = (
     "partial",
     "failed",
     "destination_unavailable",
+    "destination_missing",
+    "read_only",
     "source_unavailable",
     "source_missing",
     "nothing_to_send",

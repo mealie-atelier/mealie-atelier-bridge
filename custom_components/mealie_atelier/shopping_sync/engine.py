@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
-from collections.abc import Coroutine
+from collections.abc import Callable, Coroutine
 from copy import deepcopy
 from datetime import datetime, timedelta
 from functools import partial
@@ -78,8 +78,16 @@ def public_record(record: dict[str, Any]) -> dict[str, Any]:
 class SyncManager:
     """Owns rules, the outbox and every trigger of one config entry."""
 
-    def __init__(self, hass: HomeAssistant, entry_id: str, client: MealieClient) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry_id: str,
+        client: MealieClient,
+        read_only: Callable[[], bool] | None = None,
+    ) -> None:
         self.hass = hass
+        # Read-only mode blocks every automatic write, not only the manual commands.
+        self._read_only = read_only or (lambda: False)
         self.entry_id = entry_id
         self.client = client
         self.store = SyncStore(hass, entry_id)
@@ -404,7 +412,24 @@ class SyncManager:
         again = self._rerun.pop(rule_id, None)
         if again is not None and rule_id in self.rules and not self._stopped:
             self._spawn(self._run_quietly(rule_id, again), f"mealie_atelier_sync_{again}")
+        elif self._wants_follow_up(rule_id, result):
+            # More lines than one batch holds: send the rest in follow-up passes.
+            self._schedule_run(rule_id, "retry", self.rules[rule_id]["debounce_seconds"])
         return result
+
+    def _wants_follow_up(self, rule_id: str, result: dict[str, Any]) -> bool:
+        rule = self.rules.get(rule_id)
+        return bool(
+            rule is not None
+            and not self._stopped
+            and rule_id not in self._scheduled
+            and rule.get("activated")
+            and not rule.get("paused")
+            and result.get("outcome") in ("sent", "partial")
+            and result.get("pending_left")
+            # Only a pass that made progress continues, so a stuck line cannot loop.
+            and result.get("sent")
+        )
 
     def _result(self, rule_id: str, batch_id: str, outcome: str, counts: dict) -> dict[str, Any]:
         pending = sum(
@@ -452,7 +477,11 @@ class SyncManager:
         count = (
             items
             or counts["completed_in_source"]
-            or (result["pending_left"] if outcome == "destination_unavailable" else 0)
+            or (
+                result["pending_left"]
+                if outcome in ("destination_unavailable", "destination_missing")
+                else 0
+            )
         )
         if rule_id in self.rules:
             rule["last_run"] = {
@@ -462,7 +491,12 @@ class SyncManager:
                 "count": count,
             }
             self._audit(rule_id, trigger, count, outcome)
-            if confirm and outcome in ("sent", "partial") and not rule.get("activated"):
+            # A first batch of only duplicates (or nothing) is still a confirmed batch.
+            if (
+                confirm
+                and outcome in ("sent", "partial", "nothing_to_send")
+                and not rule.get("activated")
+            ):
                 rule["activated"] = True
                 rule["updated_at"] = _now()
                 self._refresh_watchers()
@@ -481,14 +515,26 @@ class SyncManager:
         if trigger in AUTOMATIC_TRIGGERS and (rule.get("paused") or not rule.get("activated")):
             outcome = "paused" if rule.get("paused") else "not_activated"
             return self._result(rule_id, batch_id, outcome, counts)
+        if (trigger in AUTOMATIC_TRIGGERS or trigger == "retry") and self._read_only():
+            return self._result(rule_id, batch_id, "read_only", counts)
         entity_id = rule["destination_entity_id"]
         destination = self.destination(entity_id)
-        if not destination["available"] or not self._usable(destination):
-            return self._finish(rule, trigger, batch_id, "destination_unavailable", counts)
         try:
             items = await self.client.shopping_items(rule["source_list_id"])
         except (MealieError, ValueError):
             return self._finish(rule, trigger, batch_id, "source_unavailable", counts)
+        if not destination["available"] or not self._usable(destination):
+            # Still queue what is open in Mealie, so the open count is right.
+            gone = (
+                self.hass.states.get(entity_id) is None
+                and er.async_get(self.hass).async_get(entity_id) is None
+            )
+            by_id = {item["id"]: item for item in items if isinstance(item.get("id"), str)}
+            options = self._map_options(destination)
+            self._detect_changes(rule_id, by_id, options)
+            self._enqueue(rule_id, items, options)
+            outcome = "destination_missing" if gone else "destination_unavailable"
+            return self._finish(rule, trigger, batch_id, outcome, counts, present=set(by_id))
         # Mealie answers the items of a deleted list with an empty page, not an error.
         rule["source_missing"] = not items and await self._source_list_is_gone(rule)
         if rule["source_missing"]:
@@ -524,7 +570,8 @@ class SyncManager:
         elif not delivered and not problems:
             outcome = "partial" if completion_failed else "nothing_to_send"
         elif not problems and not lost and not completion_failed:
-            outcome = "sent"
+            # A run that only skipped duplicates sent nothing.
+            outcome = "sent" if counts["sent"] else "nothing_to_send"
         elif delivered:
             outcome = "partial"
         else:
@@ -1081,6 +1128,10 @@ class SyncManager:
                     last_error=None,
                 )
         await self.store.async_save()
+        rule = self.rules[rule_id]
+        if action == "resend" and rule.get("activated") and not rule.get("paused"):
+            # The button promises delivery, so start a run instead of only queueing the line.
+            self._schedule_run(rule_id, "retry", rule["debounce_seconds"])
         result: dict[str, Any] = {"record": public_record(record)}
         if deleted:
             result["deleted"] = True

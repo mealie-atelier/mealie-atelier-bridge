@@ -26,6 +26,7 @@ from .const import (
 )
 from .http import MealieAtelierImageView, MealieAtelierRecipeAssetView
 from .offline_ledger import OfflineLedger
+from .permissions import is_read_only
 from .offline_ledger import async_register_commands as async_register_offline_commands
 from .models import MealieAtelierConfigEntry, MealieAtelierData, StudioContext
 from .recipe_backups import RecipeBackupStore
@@ -141,7 +142,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry
     state = await store.async_load() or studio_initial()
     manager = TimerManager(hass, entry.entry_id, entry.options.get(CONF_TIMER_NOTIFY_SERVICE, ""))
     await manager.async_start()
-    sync = SyncManager(hass, entry.entry_id, client)
+    sync = SyncManager(hass, entry.entry_id, client, read_only=lambda: is_read_only(entry))
     try:
         await sync.async_start()
     except Exception:
