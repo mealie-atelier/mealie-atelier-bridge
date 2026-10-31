@@ -4,6 +4,16 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-10-31
+
+### Fixed
+
+- A Mealie token revoked while Home Assistant runs starts re-authentication from any rejected call, including the background sync, and a periodic check catches it even when nobody opens a card.
+- Smart Shopping Sync: "Send again" starts a run, a run that only skipped duplicates reports "nothing to send", items beyond the first 50 are sent in follow-up passes, an empty first batch activates the rule, read-only mode stops automatic runs, an unavailable or removed destination keeps counting the waiting items and names the problem, and changed items carry their current Mealie text.
+- Setup and options: a pasted address drops its query and fragment, credentials or spaces in the address get a clear error, an unknown connection reports "entry not found", the options name the connection they configure and show whether a USDA or AI key is saved, and the version history records combined edits of basics and steps.
+- German texts: the read-only help says "aber", and the setup description keeps its "replaces nothing" half sentence without a comma before "und".
+- Docs: the shopping sync guide points to Bring! in the standalone web app, the tested destinations list no longer carries test notes, the manual install says where the folder comes from, Advanced mode is only needed on Home Assistant 2026.10 and older, the restart note matches the Marketplace, and American spelling.
+
 ## [0.12.0] - 2026-10-31
 
 ### Added
@@ -115,7 +125,8 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 Before 0.10.0 the repository was an unreleased developer preview with no tagged versions. It contained the initial import of the Bridge source (secure server-side Mealie access, WebSocket commands for recipes, meal plans, shopping lists, nutrition, cooking sessions and timers, optional read-only mode, German and English setup translations), the pasta and tomatoes brand artwork, security and support links, and the first FAQ.
 
-[Unreleased]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.1...HEAD
+[0.12.1]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/mealie-atelier/mealie-atelier-bridge/releases/tag/v0.10.0
