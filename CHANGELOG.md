@@ -8,6 +8,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ### Fixed
 
+- Smart Shopping Sync: items left waiting while the destination list was unavailable go out on their own once it is reachable again, with a few timed retries as a fallback.
 - Recipe editor: saving other servings also updates a yield text that starts with the old number, so "1,5 Portionen" becomes "2,5 Portionen". Other yield texts stay as they are.
 - Setup: an address without `http://` or `https://` gets an error that names the scheme instead of talking about spaces. Spaces in the address keep their own error.
 - The help link in every setup, options and re-authentication dialog opens the setup guide instead of the GitHub readme.

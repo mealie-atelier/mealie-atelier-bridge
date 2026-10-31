@@ -18,11 +18,18 @@ from typing import Any
 from uuid import uuid4
 
 import probatio
-from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.core import (
+    CALLBACK_TYPE,
+    Event,
+    EventStateChangedData,
+    HassJob,
+    HomeAssistant,
+    callback,
+)
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 from homeassistant.helpers.start import async_at_started
 from homeassistant.util import dt as dt_util
 
@@ -57,6 +64,8 @@ _RESULT_COUNTS = (
     "needs_reconciliation",
     "completed_in_source",
 )
+# Fallback delays (seconds) for retrying a destination that stayed unavailable, then stop.
+DESTINATION_RETRY_BACKOFF = (60, 300, 900)
 _PUBLIC_HIDDEN = ("fingerprint", "sent_fingerprint")
 
 
@@ -126,6 +135,10 @@ class SyncManager:
         self._scheduled: dict[str, tuple[CALLBACK_TYPE, datetime]] = {}
         self._watchers: dict[str, Any] = {}
         self._baseline: dict[str, str] = {}
+        # Per rule: one state listener and one fallback timer while the destination is unavailable.
+        self._dest_listeners: dict[str, CALLBACK_TYPE] = {}
+        self._dest_timers: dict[str, CALLBACK_TYPE] = {}
+        self._dest_attempts: dict[str, int] = {}
         self._tasks: set[asyncio.Task] = set()
         self._active: set[asyncio.Task] = set()
         self._unsub_started: CALLBACK_TYPE | None = None
@@ -226,6 +239,8 @@ class SyncManager:
         self._scheduled.clear()
         for rule_id in list(self._watchers):
             self._stop_watcher(rule_id)
+        for rule_id in {*self._dest_listeners, *self._dest_timers, *self._dest_attempts}:
+            self._disarm_destination_retry(rule_id)
         current = asyncio.current_task()
         running = [task for task in self._active | self._tasks if task is not current]
         if running:
@@ -287,6 +302,61 @@ class SyncManager:
             pass
         except Exception:
             _LOGGER.exception("Shopping sync run failed")
+
+    @callback
+    def _disarm_destination_retry(self, rule_id: str) -> None:
+        if unsub := self._dest_listeners.pop(rule_id, None):
+            unsub()
+        if cancel := self._dest_timers.pop(rule_id, None):
+            cancel()
+        self._dest_attempts.pop(rule_id, None)
+
+    @callback
+    def _arm_destination_retry(self, rule_id: str) -> None:
+        """Retry once the destination is reachable again: state event first, backoff as fallback."""
+        rule = self.rules.get(rule_id)
+        if rule is None or self._stopped or not rule.get("activated") or rule.get("paused"):
+            self._disarm_destination_retry(rule_id)
+            return
+        if rule_id not in self._dest_listeners:
+            self._dest_listeners[rule_id] = async_track_state_change_event(
+                self.hass,
+                [rule["destination_entity_id"]],
+                partial(self._destination_state_changed, rule_id),
+            )
+        if cancel := self._dest_timers.pop(rule_id, None):
+            cancel()
+        attempt = self._dest_attempts.get(rule_id, 0)
+        if attempt < len(DESTINATION_RETRY_BACKOFF):
+            self._dest_attempts[rule_id] = attempt + 1
+            self._dest_timers[rule_id] = async_call_later(
+                self.hass,
+                DESTINATION_RETRY_BACKOFF[attempt],
+                HassJob(partial(self._destination_retry_due, rule_id), cancel_on_shutdown=True),
+            )
+
+    @callback
+    def _destination_state_changed(self, rule_id: str, event: Event[EventStateChangedData]) -> None:
+        new_state = event.data["new_state"]
+        if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            return
+        rule = self.rules.get(rule_id)
+        if rule is None or self._stopped:
+            return
+        # One run is enough: the listener and the fallback timer end here, a failing run re-arms.
+        if unsub := self._dest_listeners.pop(rule_id, None):
+            unsub()
+        if cancel := self._dest_timers.pop(rule_id, None):
+            cancel()
+        self._schedule_run(rule_id, "retry", rule["debounce_seconds"])
+
+    @callback
+    def _destination_retry_due(self, rule_id: str, _now: datetime) -> None:
+        self._dest_timers.pop(rule_id, None)
+        rule = self.rules.get(rule_id)
+        if self._stopped or rule is None or rule_id in self._scheduled:
+            return
+        self._spawn(self._run_quietly(rule_id, "retry"), "mealie_atelier_sync_retry")
 
     def _wants_watch(self, rule: dict[str, Any]) -> bool:
         return bool(rule.get("activated") and not rule.get("paused") and rule["triggers"]["watch"])
@@ -451,6 +521,11 @@ class SyncManager:
         finally:
             if task is not None:
                 self._active.discard(task)
+        if not result.get("queued"):
+            if result.get("outcome") == "destination_unavailable":
+                self._arm_destination_retry(rule_id)
+            else:
+                self._disarm_destination_retry(rule_id)
         again = self._rerun.pop(rule_id, None)
         if again is not None and rule_id in self.rules and not self._stopped:
             self._spawn(self._run_quietly(rule_id, again), f"mealie_atelier_sync_{again}")
@@ -1052,6 +1127,7 @@ class SyncManager:
                 updated_at=now,
             )
         await self.store.async_save()
+        self._disarm_destination_retry(rule["id"])
         self._stop_watcher(rule["id"])
         self._refresh_watchers()
         return self.rule_status(rule)
@@ -1067,6 +1143,7 @@ class SyncManager:
         ]
         self._cancel_scheduled(rule_id)
         self._stop_watcher(rule_id)
+        self._disarm_destination_retry(rule_id)
         self._rerun.pop(rule_id, None)
         await self.store.async_save()
 
@@ -1075,6 +1152,7 @@ class SyncManager:
         rule.update(paused=paused, revision=rule["revision"] + 1, updated_at=_now())
         if paused:
             self._cancel_scheduled(rule_id)
+            self._disarm_destination_retry(rule_id)
         elif rule.get("activated") and any(
             rule["triggers"].get(name) for name in TRIGGERS_AUTOMATIC
         ):
