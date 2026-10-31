@@ -52,6 +52,7 @@ def _entry(**data) -> MockConfigEntry:
     return MockConfigEntry(
         domain=DOMAIN,
         unique_id="user-1",
+        title="admin@mealie.test:9000",
         data={CONF_API_TOKEN: "old", CONF_VERIFY_SSL: True, "url": URL, **data},
     )
 
@@ -653,11 +654,11 @@ async def test_options_form_names_the_entry(hass):
     entry.add_to_hass(hass)
     result = await hass.config_entries.options.async_init(entry.entry_id)
     assert result["description_placeholders"]["account"] == entry.title
-    assert result["description_placeholders"]["url"] == "mealie.test:9000"
+    assert "url" not in result["description_placeholders"]
     for locale in ("en", "de"):
         strings = json.loads((INTEGRATION / "translations" / f"{locale}.json").read_text())
         description = strings["options"]["step"]["init"]["description"]
-        assert "{account}" in description and "{url}" in description
+        assert "{account}" in description and "{url}" not in description
 
 
 async def test_options_form_shows_clear_checkbox_and_status_only_with_a_saved_key(hass):
@@ -697,13 +698,33 @@ def test_display_address_has_no_scheme(url, shown):
     assert display_address(url) == shown
 
 
-async def test_description_placeholders_show_address_without_scheme(hass):
-    entry = _entry()
+async def _account_placeholders(hass, entry):
     entry.add_to_hass(hass)
     reauth = await entry.start_reauth_flow(hass)
-    assert "://" not in reauth["description_placeholders"]["url"]
     options = await hass.config_entries.options.async_init(entry.entry_id)
-    assert "://" not in options["description_placeholders"]["url"]
+    return reauth["description_placeholders"], options["description_placeholders"]
+
+
+async def test_account_placeholder_keeps_title_that_contains_the_host(hass):
+    entry = _entry()
+    object.__setattr__(entry, "title", "admin@mealie.test:9000")
+    for placeholders in await _account_placeholders(hass, entry):
+        assert placeholders["account"] == "admin@mealie.test:9000"
+        assert "url" not in placeholders
+
+
+async def test_account_placeholder_adds_address_to_renamed_title(hass):
+    entry = _entry()
+    object.__setattr__(entry, "title", "Family kitchen")
+    for placeholders in await _account_placeholders(hass, entry):
+        assert placeholders["account"] == "Family kitchen (mealie.test:9000)"
+        assert "url" not in placeholders
+
+
+def test_descriptions_use_only_the_account_placeholder():
+    for path in [INTEGRATION / "strings.json", *(INTEGRATION / "translations").glob("*.json")]:
+        text = path.read_text(encoding="utf-8")
+        assert "({url})" not in text and "{account} (" not in text, path.name
 
 
 def test_url_placeholder_is_not_wrapped_in_backticks():

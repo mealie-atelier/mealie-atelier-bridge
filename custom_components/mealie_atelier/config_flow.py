@@ -121,6 +121,14 @@ def display_address(url: str) -> str:
     return f"{parts.netloc.rpartition('@')[2]}{parts.path}".rstrip("/")
 
 
+def account_label(title: str, url: str) -> str:
+    """Account name for descriptions: the title, plus the address when the title lacks it."""
+    address = display_address(url)
+    if address in title or urlsplit(url).netloc in title:
+        return title
+    return f"{title} ({address})"
+
+
 def entry_title(url: str, username: str) -> str:
     """Name the user and the server, since every default Mealie user is called admin.
 
@@ -225,10 +233,7 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="reauth_confirm",
             data_schema=vol.Schema({vol.Required(CONF_API_TOKEN): SECRET_SELECTOR}),
-            description_placeholders={
-                "url": display_address(entry.data[CONF_URL]),
-                "account": entry.title,
-            },
+            description_placeholders={"account": account_label(entry.title, entry.data[CONF_URL])},
             errors=errors,
         )
 
@@ -386,8 +391,7 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
             errors=errors,
             # Hassfest rejects URLs inside translations, so the sign-up links are placeholders.
             description_placeholders={
-                "account": self.config_entry.title,
-                "url": display_address(self.config_entry.data[CONF_URL]),
+                "account": account_label(self.config_entry.title, self.config_entry.data[CONF_URL]),
                 "fdc_status": "✓" if saved[CONF_FDC_KEY] else "✗",
                 "ai_status": "✓" if saved[CONF_AI_KEY] else "✗",
                 "openai_keys_url": OPENAI_KEYS_URL,

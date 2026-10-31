@@ -17,7 +17,7 @@
       },
       "reauth_confirm": {
         "title": "Mealie Atelier Bridge neu anmelden",
-        "description": "Mealie hat das gespeicherte API-Token von {account} ({url}) abgelehnt. Erstelle in Mealie für dieses Konto unter Benutzerprofil > API-Token ein neues Token und gib es hier ein.",
+        "description": "Mealie hat das gespeicherte API-Token von {account} abgelehnt. Erstelle in Mealie für dieses Konto unter Benutzerprofil > API-Token ein neues Token und gib es hier ein.",
         "data": {
           "api_token": "Neues Mealie-API-Token"
         },
@@ -58,7 +58,7 @@
     "step": {
       "init": {
         "title": "Sicherheit und Bedienung",
-        "description": "Einstellungen für {account} ({url}). Lege fest, was das Dashboard ändern darf und welche optionalen Dienste es nutzen kann.",
+        "description": "Einstellungen für {account}. Lege fest, was das Dashboard ändern darf und welche optionalen Dienste es nutzen kann.",
         "data": {
           "read_only": "Nur-Lesen-Modus",
           "write_users": "Nutzer mit Schreibrecht",
