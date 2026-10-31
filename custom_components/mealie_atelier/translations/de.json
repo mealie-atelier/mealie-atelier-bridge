@@ -42,7 +42,8 @@
     },
     "error": {
       "invalid_auth": "Authentifizierung fehlgeschlagen. Prüfe das Token.",
-      "invalid_url": "Gib eine gültige http(s)-Adresse für Mealie ohne Leerzeichen ein, zum Beispiel http://192.168.1.20:9925.",
+      "invalid_url": "Gib eine gültige Mealie-Adresse ein, die mit http:// oder https:// beginnt, zum Beispiel http://192.168.1.20:9925.",
+      "invalid_url_whitespace": "Gib eine gültige http(s)-Adresse für Mealie ohne Leerzeichen ein, zum Beispiel http://192.168.1.20:9925.",
       "invalid_url_credentials": "Entferne Benutzername und Passwort aus der Adresse. Die Mealie Atelier Bridge braucht stattdessen ein API-Token.",
       "cannot_connect": "Mealie ist nicht erreichbar oder antwortet mit einem Fehler.",
       "unknown": "Ein unerwarteter Fehler ist aufgetreten."

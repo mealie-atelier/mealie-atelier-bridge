@@ -105,6 +105,14 @@ async def test_user_step_invalid_url(hass):
     assert result["errors"] == {"base": "invalid_url"}
 
 
+async def test_user_step_scheme_less_url_is_invalid_url(hass):
+    result = await _start_user(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], _input(url="mealie:9000")
+    )
+    assert result["errors"] == {"base": "invalid_url"}
+
+
 async def test_user_step_already_configured(hass):
     _entry().add_to_hass(hass)
     result = await _start_user(hass)
@@ -642,11 +650,11 @@ async def test_user_step_names_credentials_in_the_address(hass):
         assert errors["invalid_url_credentials"]
 
 
-async def test_user_step_rejects_whitespace_in_the_host_as_invalid_url(hass):
+async def test_user_step_rejects_whitespace_in_the_host_with_its_own_error(hass):
     result = await hass.config_entries.flow.async_configure(
         (await _start_user(hass))["flow_id"], _input(url="http://mealie :9000")
     )
-    assert result["errors"] == {"base": "invalid_url"}
+    assert result["errors"] == {"base": "invalid_url_whitespace"}
 
 
 async def test_options_form_names_the_entry(hass):

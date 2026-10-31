@@ -844,6 +844,50 @@ def _merge_steps(lines: list, current: list) -> list[dict]:
     return merged
 
 
+_YIELD_LEAD = re.compile(r"^(\s*)(\d+\s*/\s*\d+|\d+(?:[.,]\d+)?)(?!\d)(.*)$", re.DOTALL)
+# A range such as "2-3 Portionen" or "4 to 6 servings" has no single number to follow.
+_YIELD_RANGE = re.compile(r"^\s*(?:[-–]|bis\b|to\b)\s*\d", re.IGNORECASE)
+
+
+def _yield_number(text: str) -> float | None:
+    """Value of a yield number written as 4, 1,5, 1.5 or 1/2, or None."""
+    try:
+        if "/" in text:
+            top, bottom = (float(part) for part in text.split("/"))
+            return top / bottom
+        return float(text.replace(",", "."))
+    except (ValueError, ZeroDivisionError):
+        return None
+
+
+def _follow_yield_text(changes: dict, recipe: dict, servings: float) -> None:
+    """Keep the yield text in step when it starts with the old servings number.
+
+    Only that leading number is replaced, so "1,5 Portionen" becomes "2,5 Portionen". An empty
+    yield or one that starts with another number stays as it is.
+    """
+    old = recipe.get("recipeServings")
+    text = recipe.get("recipeYield")
+    if isinstance(old, bool) or not isinstance(old, (int, float)) or not isinstance(text, str):
+        return
+    if math.isclose(old, servings):
+        return
+    match = _YIELD_LEAD.match(text)
+    if not match:
+        return
+    lead, number, rest = match.groups()
+    if _YIELD_RANGE.match(rest):
+        return
+    value = _yield_number(number)
+    if value is None or not math.isclose(value, old, abs_tol=1e-9):
+        return
+    shown = f"{round(servings, 4):.4f}".rstrip("0").rstrip(".")
+    if "," in number:
+        shown = shown.replace(".", ",")
+    changes["recipeYield"] = f"{lead}{shown}{rest}"
+    changes["recipeYieldQuantity"] = servings
+
+
 def recipe_update_changes(payload: dict, recipe: dict | None = None) -> tuple[str, dict]:
     """Validate a recipe_update payload and return the slug and the Mealie PATCH body.
 
@@ -868,6 +912,8 @@ def recipe_update_changes(payload: dict, recipe: dict | None = None) -> tuple[st
         ):
             raise ValueError("Servings must be a number above 0 and up to 100")
         changes["recipeServings"] = servings
+        if recipe is not None:
+            _follow_yield_text(changes, recipe, servings)
     if "instructions" in payload:
         lines = payload["instructions"]
         if not isinstance(lines, list) or len(lines) > 60:

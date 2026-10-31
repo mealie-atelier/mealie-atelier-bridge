@@ -63,6 +63,10 @@ def _lower_host(netloc: str) -> str:
     return f"{userinfo}{at}{hostport.lower()}"
 
 
+class UrlWhitespaceError(ValueError):
+    """The pasted address contains whitespace."""
+
+
 class UrlCredentialsError(ValueError):
     """The pasted address embeds user:password, which Mealie never needs (an API token does)."""
 
@@ -71,7 +75,7 @@ def _clean_url(url: str) -> str:
     """Cut a pasted browser address (/login, /g/home, /api/docs) back to the server base."""
     url = url.strip()
     if re.search(r"\s", url):
-        raise ValueError("The address contains whitespace")
+        raise UrlWhitespaceError("The address contains whitespace")
     parts = urlsplit(url)
     if parts.username is not None or parts.password is not None:
         raise UrlCredentialsError("The address carries a user name or password")
@@ -95,6 +99,8 @@ def _error_key(error: Exception) -> str:
         return "cannot_connect"
     if isinstance(error, UrlCredentialsError):
         return "invalid_url_credentials"
+    if isinstance(error, UrlWhitespaceError):
+        return "invalid_url_whitespace"
     if isinstance(error, (ValueError, TypeError)):
         return "invalid_url"
     return "unknown"

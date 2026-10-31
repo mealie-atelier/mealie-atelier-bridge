@@ -8,6 +8,8 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ### Fixed
 
+- Recipe editor: saving other servings also updates a yield text that starts with the old number, so "1,5 Portionen" becomes "2,5 Portionen". Other yield texts stay as they are.
+- Setup: an address without `http://` or `https://` gets an error that names the scheme instead of talking about spaces. Spaces in the address keep their own error.
 - The help link in every setup, options and re-authentication dialog opens the setup guide instead of the GitHub readme.
 - The connection address in the options and re-authentication text is plain text without `http://` or `https://`, so it wraps cleanly and Home Assistant no longer turns it into a link.
 - Recipe editor: fractional servings such as 2.5 save again. A shopping sync destination that does not exist reports "not found" instead of "unsupported", and the AI key help no longer points to a remove option that only appears once a key is saved.
