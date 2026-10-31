@@ -27,12 +27,22 @@ def guides(tmp_path_factory):
         sys.path.remove(str(LIVE))
 
 
+# Sizes of the shipped guide images the OG cards are cut from (site src/lib/content-image-sizes.json).
+SOURCE_SIZES = {
+    "dashboard-dunkel": (1600, 1130),
+    "web-app-wochenplan": (1920, 1949),
+    "mealie-api-token": (1600, 1067),
+    "einkaufs-sync-status": (1920, 1760),
+    "bridge-optionen": (1600, 1556),
+}
+
+
 def test_every_crop_is_1200_by_630(guides) -> None:
     assert guides.OG_SIZE == (1200, 630)
-    image = Image.new("RGB", (3200, 2400), "white")
-    for name, (_, left, top, right) in guides.OG_CROPS.items():
+    for name, (source, left, top, right) in guides.OG_CROPS.items():
         if name == "web-app-phone":
             continue
+        image = Image.new("RGB", SOURCE_SIZES[source], "white")
         assert guides.og_image(name, image, left, top, right).size == (1200, 630), name
 
 
@@ -52,8 +62,10 @@ def test_crop_below_the_source_image_fails_loudly(guides) -> None:
         guides.og_image("low", image, 0.0, 0.5, 1.0)
 
 
-def test_phone_crop_shows_the_whole_screen_on_a_1200_by_630_canvas(guides) -> None:
+def test_phone_crop_puts_both_phones_on_a_1200_by_630_canvas(guides) -> None:
     phone = Image.new("RGB", (780, 1688), (10, 20, 15))
-    out = guides.og_phone(phone)
+    install = Image.new("RGB", (780, 1688), (200, 40, 40))
+    out = guides.og_phone(phone, install)
     assert out.size == (1200, 630)
     assert out.getpixel((2, 300)) == (10, 20, 15)
+    assert (200, 40, 40) in {out.getpixel((x, 300)) for x in range(600, 1200, 10)}
