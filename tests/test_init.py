@@ -324,7 +324,7 @@ async def test_unbound_card_is_told_about_the_only_entry_being_unavailable(
     assert (await client.receive_json())["error"]["code"] == "entry_unavailable"
 
 
-async def test_unknown_entry_is_still_not_configured(
+async def test_unknown_entry_id_is_entry_not_found(
     hass: HomeAssistant, setup_integration: MockConfigEntry, hass_ws_client
 ):
-    assert await _recipes_error(hass, hass_ws_client, "missing") == "not_configured"
+    assert await _recipes_error(hass, hass_ws_client, "missing") == "entry_not_found"

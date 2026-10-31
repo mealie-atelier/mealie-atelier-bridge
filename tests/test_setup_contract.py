@@ -70,6 +70,7 @@ def test_config_schema_is_config_entry_only(caplog: pytest.LogCaptureFixture) ->
 # Contract 0.3: every code the Bridge sends; sync_not_supported only exists in the web app.
 CONTRACT_ERROR_CODES = {
     "not_configured",
+    "entry_not_found",
     "invalid_request",
     "mealie_auth",
     "mealie_error",

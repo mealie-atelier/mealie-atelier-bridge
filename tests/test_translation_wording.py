@@ -46,3 +46,14 @@ def test_read_only_option_text_names_timers_and_journal() -> None:
         data = json.loads(path.read_text(encoding="utf-8"))
         text = data["options"]["step"]["init"]["data_description"]["read_only"]
         assert all(word in text.lower() for word in words), path.name
+
+
+def test_german_read_only_help_keeps_the_english_limitation():
+    de = json.loads(DE.read_text())["options"]["step"]["init"]["data_description"]["read_only"]
+    assert "aber die Timer" in de
+    assert "denn die Timer" not in de
+
+
+def test_german_setup_description_says_it_does_not_replace_the_core_integration():
+    de = json.loads(DE.read_text())["config"]["step"]["user"]["description"]
+    assert de.endswith("Mealie-Integration und ersetzt sie nicht.")

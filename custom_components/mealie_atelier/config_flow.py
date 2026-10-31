@@ -63,11 +63,20 @@ def _lower_host(netloc: str) -> str:
     return f"{userinfo}{at}{hostport.lower()}"
 
 
+class UrlCredentialsError(ValueError):
+    """The pasted address embeds user:password, which Mealie never needs (an API token does)."""
+
+
 def _clean_url(url: str) -> str:
     """Cut a pasted browser address (/login, /g/home, /api/docs) back to the server base."""
     url = url.strip()
+    if re.search(r"\s", url):
+        raise ValueError("The address contains whitespace")
     parts = urlsplit(url)
-    parts = parts._replace(netloc=_lower_host(parts.netloc))
+    if parts.username is not None or parts.password is not None:
+        raise UrlCredentialsError("The address carries a user name or password")
+    # Query and fragment belong to the pasted browser page, never to the API base.
+    parts = parts._replace(netloc=_lower_host(parts.netloc), query="", fragment="")
     segments = parts.path.split("/")
     for index, segment in enumerate(segments):
         if segment.casefold() in _NON_BASE_SEGMENTS:
@@ -75,8 +84,7 @@ def _clean_url(url: str) -> str:
             break
     else:
         return urlunsplit(parts)
-    # Query and fragment belong to the cut browser page, so they go too.
-    return urlunsplit((parts.scheme, parts.netloc, "/".join(segments), "", ""))
+    return urlunsplit(parts._replace(path="/".join(segments)))
 
 
 def _error_key(error: Exception) -> str:
@@ -85,6 +93,8 @@ def _error_key(error: Exception) -> str:
         return "invalid_auth"
     if isinstance(error, (MealieError, aiohttp.ClientError)):
         return "cannot_connect"
+    if isinstance(error, UrlCredentialsError):
+        return "invalid_url_credentials"
     if isinstance(error, (ValueError, TypeError)):
         return "invalid_url"
     return "unknown"
@@ -308,6 +318,10 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
             for name in services
             if name not in ("send_message", "persistent_notification")
         )
+        saved = {
+            key: bool(str(self.config_entry.options.get(key) or "").strip())
+            for key, _clear in _CLEARABLE_KEYS
+        }
         schema = vol.Schema(
             {
                 vol.Required(CONF_READ_ONLY, default=False): bool,
@@ -323,9 +337,18 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
                 ),
                 vol.Required(CONF_EXPERIMENTAL_INGREDIENTS, default=False): bool,
                 vol.Optional(CONF_FDC_KEY, default=""): SECRET_SELECTOR,
-                vol.Optional(CONF_CLEAR_FDC_KEY, default=False): bool,
+                # A remove checkbox only makes sense while a key is saved.
+                **(
+                    {vol.Optional(CONF_CLEAR_FDC_KEY, default=False): bool}
+                    if saved[CONF_FDC_KEY]
+                    else {}
+                ),
                 vol.Optional(CONF_AI_KEY, default=""): SECRET_SELECTOR,
-                vol.Optional(CONF_CLEAR_AI_KEY, default=False): bool,
+                **(
+                    {vol.Optional(CONF_CLEAR_AI_KEY, default=False): bool}
+                    if saved[CONF_AI_KEY]
+                    else {}
+                ),
                 vol.Optional(CONF_TIMER_NOTIFY_SERVICE, default=""): SelectSelector(
                     SelectSelectorConfig(
                         options=notify_options,
@@ -349,6 +372,10 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
             errors=errors,
             # Hassfest rejects URLs inside translations, so the sign-up links are placeholders.
             description_placeholders={
+                "account": self.config_entry.title,
+                "url": self.config_entry.data[CONF_URL],
+                "fdc_status": "✓" if saved[CONF_FDC_KEY] else "✗",
+                "ai_status": "✓" if saved[CONF_AI_KEY] else "✗",
                 "openai_keys_url": OPENAI_KEYS_URL,
                 "anthropic_keys_url": ANTHROPIC_KEYS_URL,
                 "usda_signup_url": USDA_SIGNUP_URL,

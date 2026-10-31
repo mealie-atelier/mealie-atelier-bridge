@@ -230,9 +230,11 @@ async def test_options_form_fills_every_link_placeholder(hass):
         strings = json.loads((INTEGRATION / "translations" / f"{locale}.json").read_text())
         help_texts = strings["options"]["step"]["init"]["data_description"].values()
         used = {name for text in help_texts for name in re.findall(r"\{(\w+)\}", text)}
-        assert used == {"openai_keys_url", "anthropic_keys_url", "usda_signup_url"}
+        links = {"openai_keys_url", "anthropic_keys_url", "usda_signup_url"}
+        assert used - links == {"fdc_status", "ai_status"}
+        assert links <= used
         assert used <= set(placeholders)
-    assert all(url.startswith("https://") for url in placeholders.values())
+    assert all(placeholders[name].startswith("https://") for name in links)
 
 
 async def test_options_flow_rejects_bad_notify_service(hass):
@@ -613,3 +615,69 @@ async def test_reconfigure_also_retitles_the_old_prefixed_title(hass):
             result["flow_id"], _input(url="https://moved.example.test", token="newer")
         )
     assert entry.title == f"{ACCOUNT['username']}@moved.example.test"
+
+
+@pytest.mark.parametrize(
+    "pasted",
+    ["http://mealie:9000/#/login", "http://mealie:9000?x=1", "http://mealie:9000/?a=b#c"],
+)
+async def test_user_step_drops_query_and_fragment_of_a_pasted_address(hass, pasted):
+    with patch(CHECK, return_value=ACCOUNT):
+        result = await hass.config_entries.flow.async_configure(
+            (await _start_user(hass))["flow_id"], _input(url=pasted)
+        )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_URL] == "http://mealie:9000"
+
+
+async def test_user_step_names_credentials_in_the_address(hass):
+    result = await hass.config_entries.flow.async_configure(
+        (await _start_user(hass))["flow_id"], _input(url="http://user:pw@mealie:9000")
+    )
+    assert result["errors"] == {"base": "invalid_url_credentials"}
+    for locale in ("en", "de", "../strings"):
+        path = INTEGRATION / "translations" / f"{locale}.json"
+        errors = json.loads(path.read_text())["config"]["error"]
+        assert errors["invalid_url_credentials"]
+
+
+async def test_user_step_rejects_whitespace_in_the_host_as_invalid_url(hass):
+    result = await hass.config_entries.flow.async_configure(
+        (await _start_user(hass))["flow_id"], _input(url="http://mealie :9000")
+    )
+    assert result["errors"] == {"base": "invalid_url"}
+
+
+async def test_options_form_names_the_entry(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["description_placeholders"]["account"] == entry.title
+    assert result["description_placeholders"]["url"] == URL
+    for locale in ("en", "de"):
+        strings = json.loads((INTEGRATION / "translations" / f"{locale}.json").read_text())
+        description = strings["options"]["step"]["init"]["description"]
+        assert "{account}" in description and "{url}" in description
+
+
+async def test_options_form_shows_clear_checkbox_and_status_only_with_a_saved_key(hass):
+    bare = _entry()
+    bare.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(bare.entry_id)
+    names = {str(key) for key in result["data_schema"].schema}
+    assert {"clear_fdc_key", "clear_ai_key"}.isdisjoint(names)
+    assert result["description_placeholders"]["ai_status"] == "✗"
+
+    keyed = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="user-2",
+        data={CONF_API_TOKEN: "old", CONF_VERIFY_SSL: True, "url": URL},
+        options={CONF_AI_KEY: "sk-test"},
+    )
+    keyed.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(keyed.entry_id)
+    names = {str(key) for key in result["data_schema"].schema}
+    assert "clear_ai_key" in names
+    assert "clear_fdc_key" not in names
+    placeholders = result["description_placeholders"]
+    assert (placeholders["ai_status"], placeholders["fdc_status"]) == ("✓", "✗")

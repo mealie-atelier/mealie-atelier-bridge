@@ -265,7 +265,7 @@ async def test_entry_id_selects_between_multiple_entries(
     unknown = await send(
         client, {"type": "mealie_atelier/recipe", "slug": "soup", "entry_id": "missing"}
     )
-    assert unknown["error"]["code"] == "not_configured"
+    assert unknown["error"]["code"] == "entry_not_found"
 
     await hass.config_entries.async_unload(second.entry_id)
     await hass.async_block_till_done()
@@ -284,8 +284,8 @@ async def test_translated_errors_reach_the_websocket_client(
     response = await send(
         client, {"type": "mealie_atelier/nutrition_prepare", "slug": "soup", "entry_id": "missing"}
     )
-    assert response["error"]["code"] == "not_configured"
-    assert response["error"]["message"].startswith("Configure Mealie Atelier Bridge first")
+    assert response["error"]["code"] == "entry_not_found"
+    assert response["error"]["message"].startswith("The configured Mealie connection was not found")
 
     mock_mealie.get(
         f"{MEALIE_URL}/api/recipes/soup",

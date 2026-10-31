@@ -485,6 +485,26 @@ async def test_mutate_instruction_change_is_an_instructions_snapshot(
     assert server.snapshots()[0]["kind"] == "instructions"
 
 
+async def test_mutate_basics_with_instructions_is_a_combined_snapshot(
+    setup_integration: MockConfigEntry,
+    server: FakeRecipeServer,
+    hass_ws_client: WebSocketGenerator,
+):
+    client = await hass_ws_client()
+
+    response = await send(
+        client,
+        {
+            "type": "mealie_atelier/mutate",
+            "action": "recipe_update",
+            "payload": {"slug": SLUG, "name": "Potato gnocchi", "instructions": ["Boil"]},
+        },
+    )
+
+    assert response["success"], response
+    assert server.snapshots()[0]["kind"] == "basics_instructions"
+
+
 # Restore
 
 

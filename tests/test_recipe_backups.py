@@ -191,3 +191,10 @@ async def test_listing_reports_no_counts_for_a_backup_stored_before_them(hass: H
     [entry] = store.list("r1")
     assert entry["ingredient_count"] is None
     assert entry["step_count"] is None
+
+
+def test_combined_basics_and_steps_kind_has_its_own_summary():
+    from custom_components.mealie_atelier.recipe_backups import KINDS, _summary
+
+    assert "basics_instructions" in KINDS
+    assert _summary("basics_instructions", {}) == "Name, description, servings and steps"

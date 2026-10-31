@@ -12,7 +12,7 @@ from homeassistant.exceptions import HomeAssistantError
 
 from ..api import MealieAuthError, MealieError
 from ..const import DOMAIN
-from ..errors import send_missing_entry
+from ..errors import request_reauth, send_missing_entry
 from ..models import get_loaded_entry
 from ..permissions import check
 from .engine import SyncManager
@@ -64,7 +64,8 @@ async def _handle(
         _error(connection, msg, exc.code, str(exc))
     except (ValueError, TypeError) as exc:
         _error(connection, msg, "invalid_request", str(exc))
-    except MealieAuthError:
+    except MealieAuthError as exc:
+        request_reauth(hass, msg.get("entry_id"), exc)
         _error(connection, msg, "mealie_auth", "Mealie refused access: verify API token")
     except (MealieError, HomeAssistantError):
         _error(connection, msg, "mealie_error", "Mealie is unreachable or returned an error")

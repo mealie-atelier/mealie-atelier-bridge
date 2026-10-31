@@ -46,6 +46,8 @@ from .nutrition import (
 from .errors import (
     AtelierError,
     missing_entry_code,
+    reauth_pending,
+    request_reauth,
     send_atelier_error,
     send_missing_entry,
     structured_editor_required,
@@ -131,6 +133,7 @@ def _fail(connection, msg: dict, exc: Exception) -> None:
         code = "ai_error"
     elif isinstance(exc, MealieAuthError):
         code = "mealie_auth"
+        request_reauth(getattr(connection, "hass", None), msg.get("entry_id"), exc)
     else:
         code = "mealie_error"
     connection.send_error(msg["id"], code, str(exc)[:220])
@@ -168,7 +171,7 @@ async def ws_status(hass, connection, msg):
             {
                 "entry_id": entry.entry_id,
                 "name": entry.title,
-                "connected": True,
+                "connected": not reauth_pending(hass, entry),
                 "read_only": read_only,
                 "permissions": {"can_read": True, "can_write": writer, "can_admin": admin},
                 "features": {
@@ -325,7 +328,12 @@ async def ws_mutation(hass, connection, msg):
             if recipe_update_is_noop(changes, recipe):
                 # Nothing differs: no restore point and no Mealie write.
                 return {**recipe, "unchanged": True}
-            kind = "instructions" if set(payload) <= {"slug", "instructions"} else "basics"
+            if set(payload) <= {"slug", "instructions"}:
+                kind = "instructions"
+            elif "instructions" in payload:
+                kind = "basics_instructions"
+            else:
+                kind = "basics"
             await entry.runtime_data.backups.async_snapshot(client, recipe, kind, connection.user)
         result = await client.mutate(action, msg["payload"])
         if action in SYNC_SOURCE_ACTIONS:

@@ -15,7 +15,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from .api import MealieAuthError, MealieClient, MealieError, safe_id, safe_slug
 from .const import CONF_EXPERIMENTAL_INGREDIENTS, DOMAIN
-from .errors import AtelierError, send_atelier_error, send_missing_entry
+from .errors import AtelierError, request_reauth, send_atelier_error, send_missing_entry
 from .models import MealieAtelierConfigEntry, get_loaded_entry
 from .permissions import check
 from .recipe_safety import fingerprint, merge, preview, verified
@@ -54,6 +54,7 @@ def _send_failure(connection, msg: dict, exc: Exception) -> None:
         code = "invalid_request"
     elif isinstance(exc, MealieAuthError):
         code = "mealie_auth"
+        request_reauth(getattr(connection, "hass", None), msg.get("entry_id"), exc)
     else:
         code = "mealie_error"
     connection.send_error(

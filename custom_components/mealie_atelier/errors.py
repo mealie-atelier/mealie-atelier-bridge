@@ -48,7 +48,8 @@ def missing_entry_code(hass: HomeAssistant, entry_id: str | None) -> str:
         entries = hass.config_entries.async_entries(DOMAIN)
         entry = entries[0] if len(entries) == 1 else None
     if entry is None or entry.domain != DOMAIN:
-        return "not_configured"
+        # An explicit entry_id that matches nothing is a wrong card setting, not a missing setup.
+        return "entry_not_found" if entry_id else "not_configured"
     if entry.state is ConfigEntryState.SETUP_ERROR and list(
         entry.async_get_active_flows(hass, {SOURCE_REAUTH})
     ):
@@ -56,6 +57,31 @@ def missing_entry_code(hass: HomeAssistant, entry_id: str | None) -> str:
     if entry.state in (ConfigEntryState.SETUP_ERROR, ConfigEntryState.SETUP_RETRY):
         return "entry_unavailable"
     return "not_configured"
+
+
+def reauth_pending(hass: HomeAssistant, entry) -> bool:
+    """Whether a re-authentication flow is open for the entry."""
+    return bool(list(entry.async_get_active_flows(hass, {SOURCE_REAUTH})))
+
+
+def request_reauth(hass: HomeAssistant, entry_id: str | None, exc: Exception | None = None) -> None:
+    """Mealie rejected the token while running: ask Home Assistant to re-authenticate.
+
+    Only an HTTP 401 means the token is rejected. A 403 on a valid token is a Mealie permission
+    limit for one endpoint, so it must not open a reauth flow.
+
+    Starting a flow is a no-op while one is already open, so every failing request may call this.
+    """
+    if hass is None or getattr(exc, "status", None) != 401:
+        return
+    if entry_id:
+        entry = hass.config_entries.async_get_entry(entry_id)
+    else:
+        entries = hass.config_entries.async_entries(DOMAIN)
+        entry = entries[0] if len(entries) == 1 else None
+    if entry is None or entry.domain != DOMAIN or entry.state is not ConfigEntryState.LOADED:
+        return
+    entry.async_start_reauth(hass)
 
 
 def send_missing_entry(hass: HomeAssistant, connection, msg: dict, message: str) -> None:
@@ -71,6 +97,7 @@ def send_missing_entry(hass: HomeAssistant, connection, msg: dict, message: str)
 
 
 EXTRA_MESSAGES = {
+    "entry_not_found": "The configured Mealie connection was not found",
     "entry_reauth": "The Mealie token was rejected. Re-authenticate in Settings, Devices & services",
     "entry_unavailable": "Mealie Atelier Bridge cannot reach Mealie right now",
 }

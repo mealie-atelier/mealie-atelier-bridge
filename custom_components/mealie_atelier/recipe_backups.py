@@ -22,7 +22,17 @@ from .errors import AtelierError
 STORE_VERSION = 1
 STORE_MINOR_VERSION = 1
 MAX_SNAPSHOT_BYTES = 512 * 1024
-KINDS = frozenset({"ingredients", "basics", "instructions", "image", "step_image", "restore"})
+KINDS = frozenset(
+    {
+        "ingredients",
+        "basics",
+        "basics_instructions",
+        "instructions",
+        "image",
+        "step_image",
+        "restore",
+    }
+)
 FIELDS = (
     "name",
     "description",
@@ -48,6 +58,7 @@ def _summary(kind: str, recipe: dict) -> str:
         "step_image": f"{steps} steps",
         "image": "Cover photo",
         "basics": "Name, description and servings",
+        "basics_instructions": "Name, description, servings and steps",
     }.get(kind, f"{ingredients} ingredients, {steps} steps")
 
 
