@@ -6,6 +6,7 @@ import asyncio
 import logging
 import math
 import re
+from collections.abc import Callable
 from typing import Any
 from urllib.parse import quote, urlsplit
 
@@ -199,6 +200,8 @@ class MealieClient:
         self._slots = asyncio.Semaphore(MAX_PARALLEL_REQUESTS)
         self._token = token
         self._verify_ssl = verify_ssl
+        # Called for every rejected request, whoever made it (card, sync engine, ledger).
+        self.on_auth_rejected: Callable[[MealieAuthError], None] | None = None
 
     async def request(
         self,
@@ -234,10 +237,13 @@ class MealieClient:
                 ) as response,
             ):
                 if response.status in (401, 403):
-                    raise MealieAuthError(
+                    auth_error = MealieAuthError(
                         "Mealie refused access: verify API token and permissions",
                         status=response.status,
                     )
+                    if self.on_auth_rejected is not None:
+                        self.on_auth_rejected(auth_error)
+                    raise auth_error
                 if response.status >= 300:
                     raise MealieError(
                         f"Mealie returned HTTP {response.status}", status=response.status

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_URL
@@ -11,6 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.storage import Store
 
 from .alarms import TimerManager
@@ -24,6 +26,7 @@ from .const import (
     DOMAIN,
     STUDIO_STORE_KEY,
 )
+from .errors import request_reauth
 from .http import MealieAtelierImageView, MealieAtelierRecipeAssetView
 from .offline_ledger import OfflineLedger
 from .permissions import is_read_only
@@ -39,6 +42,9 @@ from .shopping_sync import async_register_commands as async_register_sync_comman
 from .websocket import async_register_commands
 
 _LOGGER = logging.getLogger(__name__)
+
+# How often an idle Bridge checks that Mealie still accepts its token.
+AUTH_CHECK_INTERVAL = timedelta(minutes=15)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -133,6 +139,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry
             translation_key="cannot_connect",
             translation_placeholders={"error": _failure_detail(exc)},
         ) from exc
+    # Any caller of the client (cards, shopping sync, ledger) that hits a revoked token starts
+    # the reauth flow, not only the websocket commands.
+    client.on_auth_rejected = lambda exc: request_reauth(hass, entry.entry_id, exc)
+
+    async def _check_token(_now) -> None:
+        try:
+            await client.check_connection()
+        except MealieError:
+            # Auth errors start reauth through the client hook; outages are not our concern here.
+            pass
+
+    # Without any traffic a revoked token would go unnoticed until someone opens a card.
+    stop_auth_check = async_track_time_interval(hass, _check_token, AUTH_CHECK_INTERVAL)
     _retitle_legacy_entry(hass, entry, account.get("username"))
     # Load everything that can fail before starting background work, so a failed setup
     # leaves no timer or sync task running.
@@ -156,12 +175,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry
         uploads=UploadSessions(),
         sync=sync,
         offline=offline,
+        stop_auth_check=stop_auth_check,
     )
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry) -> bool:
     """Stop the timer scheduler and shopping sync on unload; do not remove core Mealie."""
+    if entry.runtime_data.stop_auth_check is not None:
+        entry.runtime_data.stop_auth_check()
     await entry.runtime_data.alarms.async_stop()
     await entry.runtime_data.sync.async_stop()
     return True

@@ -359,6 +359,46 @@ async def test_item_edited_between_send_and_completion_is_not_completed(
     assert mealie.puts == []
 
 
+async def test_changed_after_send_record_carries_the_current_title(
+    sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
+):
+    mealie.add(mealie_item("a", note="Kartoffeln", quantity=None))
+    rule_id, _ = await activate(sync)
+    mealie.items["a"] = {**mealie.items["a"], "note": "Süßkartoffeln"}
+
+    await sync.async_run(rule_id, "manual")
+
+    records = sync.list_records(rule_id, None, 50)
+    assert [r["state"] for r in records] == ["changed_after_send"]
+    assert records[0]["title"] == "Kartoffeln"
+    assert records[0]["current_title"] == "Süßkartoffeln"
+
+
+async def test_current_title_is_set_when_move_completion_finds_an_edit(
+    sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
+):
+    mealie.add(mealie_item("a", note="Milch", quantity=None))
+
+    def edit_in_mealie(_summary: str) -> None:
+        mealie.items["a"] = {**mealie.items["a"], "note": "Hafermilch"}
+
+    bring.on_create = edit_in_mealie
+    rule_id, _ = await activate(sync, mode="move")
+
+    records = sync.list_records(rule_id, None, 50)
+    assert records[0]["state"] == "changed_after_send"
+    assert records[0]["current_title"] == "Hafermilch"
+
+
+async def test_current_title_is_not_public_for_unchanged_records(
+    sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
+):
+    mealie.add(mealie_item("a", note="Milch"))
+    rule_id, _ = await activate(sync)
+
+    assert "current_title" not in sync.list_records(rule_id, None, 50)[0]
+
+
 async def test_unavailable_destination_keeps_items_pending(
     sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
 ):

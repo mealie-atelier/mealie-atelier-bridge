@@ -2,16 +2,21 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+from freezegun.api import FrozenDateTimeFactory
 
 from homeassistant.config_entries import SOURCE_REAUTH
 from homeassistant.core import HomeAssistant
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
+from custom_components.mealie_atelier import AUTH_CHECK_INTERVAL
 from custom_components.mealie_atelier.api import MealieAuthError
 
-from .conftest import ENTRY_ID
+from .conftest import ENTRY_ID, MEALIE_URL
 
 
 async def _call(client, message):
@@ -77,6 +82,7 @@ async def test_sync_path_starts_reauth(
     hass_ws_client: WebSocketGenerator,
 ):
     sync = MagicMock()
+    sync.async_stop = AsyncMock()
     sync.state = MagicMock(side_effect=MealieAuthError("no", status=401))
     setup_integration.runtime_data.sync = sync
     client = await hass_ws_client()
@@ -105,3 +111,37 @@ async def test_forbidden_endpoint_does_not_start_reauth(
     assert not _reauth_flows(hass)
     status = await _call(client, {"type": "mealie_atelier/status"})
     assert status["result"]["entries"][0]["connected"] is True
+
+
+async def test_rejected_request_from_any_client_caller_starts_reauth(
+    hass: HomeAssistant,
+    setup_integration: MockConfigEntry,
+    aioclient_mock,
+):
+    """The sync engine and other background callers use the client, not a websocket command."""
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(f"{MEALIE_URL}/api/households/shopping/items/abc", status=401)
+    assert not _reauth_flows(hass)
+
+    with pytest.raises(MealieAuthError):
+        await setup_integration.runtime_data.sync.client.shopping_item("abc")
+    await hass.async_block_till_done()
+
+    assert len(_reauth_flows(hass)) == 1
+
+
+async def test_idle_bridge_notices_a_revoked_token_within_one_check_interval(
+    hass: HomeAssistant,
+    setup_integration: MockConfigEntry,
+    aioclient_mock,
+    freezer: FrozenDateTimeFactory,
+):
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(f"{MEALIE_URL}/api/users/self", status=401)
+    assert not _reauth_flows(hass)
+
+    freezer.tick(AUTH_CHECK_INTERVAL + timedelta(seconds=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+
+    assert len(_reauth_flows(hass)) == 1

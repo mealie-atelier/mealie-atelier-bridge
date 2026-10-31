@@ -72,7 +72,13 @@ def _snapshot(items: list[dict[str, Any]]) -> str:
 
 
 def public_record(record: dict[str, Any]) -> dict[str, Any]:
-    return {key: value for key, value in record.items() if key not in _PUBLIC_HIDDEN}
+    """The record as the cards see it. `current_title` only matters for a changed item."""
+    keep_current = record.get("state") == RecordState.CHANGED_AFTER_SEND.value
+    return {
+        key: value
+        for key, value in record.items()
+        if key not in _PUBLIC_HIDDEN and (key != "current_title" or keep_current)
+    }
 
 
 class SyncManager:
@@ -643,6 +649,12 @@ class SyncManager:
             confirmed += 1
         return settled, confirmed
 
+    @staticmethod
+    def _text_now(item: dict[str, Any], options: dict[str, bool]) -> str | None:
+        """The text Mealie holds now, for the review row 'old to current'."""
+        mapped = map_item(item, **options)
+        return mapped["title"] if mapped else None
+
     def _detect_changes(
         self, rule_id: str, by_id: dict[str, dict[str, Any]], options: dict[str, bool]
     ) -> None:
@@ -655,11 +667,21 @@ class SyncManager:
                 if item is None:
                     self._set(record, RecordState.REMOVED_AFTER_SEND)
                 elif (current := fingerprint(item)) != record["sent_fingerprint"]:
-                    self._set(record, RecordState.CHANGED_AFTER_SEND, fingerprint=current)
+                    self._set(
+                        record,
+                        RecordState.CHANGED_AFTER_SEND,
+                        fingerprint=current,
+                        current_title=self._text_now(item, options),
+                    )
             elif state == RecordState.SOURCE_COMPLETED:
                 # A deleted completed item is normal; the record becomes prunable.
                 if item is not None and (current := fingerprint(item)) != record["fingerprint"]:
-                    self._set(record, RecordState.CHANGED_AFTER_SEND, fingerprint=current)
+                    self._set(
+                        record,
+                        RecordState.CHANGED_AFTER_SEND,
+                        fingerprint=current,
+                        current_title=self._text_now(item, options),
+                    )
             elif state in (RecordState.PENDING, RecordState.FAILED):
                 mapped = map_item(item, **options) if item and not item.get("checked") else None
                 if mapped is None:
@@ -840,6 +862,12 @@ class SyncManager:
                     RecordState.CHANGED_AFTER_SEND,
                     fingerprint=current_fp,
                     completion_pending=False,
+                    current_title=self._text_now(
+                        current,
+                        self._map_options(
+                            self.destination(self._rule(rule_id)["destination_entity_id"])
+                        ),
+                    ),
                 )
                 by_id[item_id] = current
                 continue

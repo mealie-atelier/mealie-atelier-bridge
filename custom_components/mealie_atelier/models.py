@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -41,6 +42,8 @@ class MealieAtelierData:
     uploads: UploadSessions
     sync: SyncManager
     offline: OfflineLedger
+    # Cancels the periodic token check; called first on unload so it never outlives the entry.
+    stop_auth_check: Callable[[], None] | None = None
 
 
 type MealieAtelierConfigEntry = ConfigEntry[MealieAtelierData]
