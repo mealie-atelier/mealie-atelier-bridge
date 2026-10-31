@@ -337,8 +337,11 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["recipeServings"], 4)
         self.assertEqual(result["recipeInstructions"], [{"text": "Preheat oven"}, {"text": "Bake"}])
         self.assertNotIn("password", self.calls[-1]["body"])
-        with self.assertRaises(ValueError):
-            await self.client.mutate("recipe_update", {"slug": "lasagna", "servings": 0})
+        fractional = await self.client.mutate("recipe_update", {"slug": "lasagna", "servings": 2.5})
+        self.assertEqual(fractional["recipeServings"], 2.5)
+        for bad in (0, -1, 100.5, True, float("nan"), float("inf"), "4"):
+            with self.assertRaises(ValueError):
+                await self.client.mutate("recipe_update", {"slug": "lasagna", "servings": bad})
         with self.assertRaises(ValueError):
             await self.client.mutate("recipe_update", {"slug": "lasagna", "instructions": [""]})
         with self.assertRaises(AtelierError) as caught:

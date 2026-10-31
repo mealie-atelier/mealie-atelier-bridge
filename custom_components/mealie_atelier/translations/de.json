@@ -75,7 +75,7 @@
           "experimental_ingredient_edits": "Erlaubt Administratoren, Zutaten mit verknüpften Lebensmitteln und Einheiten zu bearbeiten. Vor jeder Änderung wird ein Backup gespeichert.",
           "usda_fdc_api_key": "Schlüssel gespeichert: {fdc_status} Optional. Nur für das Nährwertlabor: Die Bridge sucht damit Zutaten in der freien US-Lebensmitteldatenbank FoodData Central und rechnet Nährwerte pro Portion aus. Aus Sicherheitsgründen zeigt das Feld einen gespeicherten Schlüssel nicht an: Leer lassen behält ihn. Ohne Schlüssel bleibt nur die Nährwertsuche aus. Den Schlüssel gibt es kostenlos mit Name und E-Mail unter [fdc.nal.usda.gov/api-key-signup]({usda_signup_url}).",
           "clear_fdc_key": "Aktiviere das und speichere, um den Schlüssel zu löschen.",
-          "openai_api_key": "Schlüssel gespeichert: {ai_status} Optional und pro Anfrage kostenpflichtig. Schaltet drei KI-Hilfen frei, die du jeweils selbst startest: englische Suchbegriffe im Nährwertlabor, Ersatzvorschläge für eine Zutat und die Rezeptprüfung. Dafür gehen Zutaten und je nach Hilfe auch Rezeptname, Mengen und Kochschritte an OpenAI oder Anthropic, je nach Schlüssel. Nährwerte kommen immer aus FoodData Central, Rezepte ändert die KI nie selbst. Aus Sicherheitsgründen zeigt das Feld einen gespeicherten Schlüssel nicht an: Leer lassen behält ihn, zum Löschen nutze die Option darunter. Schlüssel für OpenAI unter [platform.openai.com/api-keys]({openai_keys_url}), für Anthropic unter [platform.claude.com/settings/keys]({anthropic_keys_url}). Schlüssel von Anthropic beginnen mit sk-ant-.",
+          "openai_api_key": "Schlüssel gespeichert: {ai_status} Optional und pro Anfrage kostenpflichtig. Schaltet drei KI-Hilfen frei, die du jeweils selbst startest: englische Suchbegriffe im Nährwertlabor, Ersatzvorschläge für eine Zutat und die Rezeptprüfung. Dafür gehen Zutaten und je nach Hilfe auch Rezeptname, Mengen und Kochschritte an OpenAI oder Anthropic, je nach Schlüssel. Nährwerte kommen immer aus FoodData Central, Rezepte ändert die KI nie selbst. Aus Sicherheitsgründen zeigt das Feld einen gespeicherten Schlüssel nicht an: Leer lassen behält ihn. Sobald ein Schlüssel gespeichert ist, erscheint darunter eine Option zum Löschen. Schlüssel für OpenAI unter [platform.openai.com/api-keys]({openai_keys_url}), für Anthropic unter [platform.claude.com/settings/keys]({anthropic_keys_url}). Schlüssel von Anthropic beginnen mit sk-ant-.",
           "clear_ai_key": "Aktiviere das und speichere, um den Schlüssel zu löschen. Die KI ist danach ausgeschaltet.",
           "timer_notify_service": "Optional. Ein Benachrichtigungsdienst wie notify.mobile_app_dein_handy, der eine Push-Nachricht erhält, wenn ein Küchentimer abläuft. Leer lassen, um nur Hinweise in der App zu bekommen."
         }
@@ -163,6 +163,9 @@
     },
     "sync_rule_not_found": {
       "message": "Diese Sync-Regel gibt es nicht mehr. Öffne den Einkaufs-Sync neu."
+    },
+    "sync_destination_missing": {
+      "message": "Diese To-do-Liste wurde nicht gefunden. Wähle eine andere."
     },
     "sync_destination_unsupported": {
       "message": "Wähle eine To-do-Liste, die Einträge hinzufügen kann. Listen von Mealie selbst sind als Ziel nicht möglich."

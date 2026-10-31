@@ -214,7 +214,7 @@ async def test_rule_limits_and_validation(hass: HomeAssistant, admin, mealie: Fa
     response = await save(rule=draft("todo.mealie"))
     assert response["error"]["code"] == "sync_destination_unsupported"
     response = await save(rule=draft("todo.missing"))
-    assert response["error"]["code"] == "sync_destination_unsupported"
+    assert response["error"]["code"] == "sync_destination_missing"
     for bad in (
         {"debounce_seconds": 4},
         {"debounce_seconds": 601},

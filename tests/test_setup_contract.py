@@ -99,6 +99,7 @@ CONTRACT_ERROR_CODES = {
     "upload_busy",
     "step_not_found",
     "sync_rule_not_found",
+    "sync_destination_missing",
     "sync_destination_unsupported",
     "sync_source_taken",
     "sync_too_many_rules",

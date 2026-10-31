@@ -860,8 +860,13 @@ def recipe_update_changes(payload: dict, recipe: dict | None = None) -> tuple[st
         changes["description"] = payload["description"]
     if "servings" in payload:
         servings = payload["servings"]
-        if isinstance(servings, bool) or not isinstance(servings, int) or not 1 <= servings <= 100:
-            raise ValueError("Servings must be a whole number from 1 to 100")
+        if (
+            isinstance(servings, bool)
+            or not isinstance(servings, (int, float))
+            or not math.isfinite(servings)
+            or not 0 < servings <= 100
+        ):
+            raise ValueError("Servings must be a number above 0 and up to 100")
         changes["recipeServings"] = servings
     if "instructions" in payload:
         lines = payload["instructions"]

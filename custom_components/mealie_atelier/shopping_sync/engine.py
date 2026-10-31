@@ -348,6 +348,18 @@ class SyncManager:
         # The core Mealie integration's lists would feed the sync back into Mealie.
         return destination["supports"]["create"] and destination["platform"] != "mealie"
 
+    def _require_destination(self, entity_id: str, destination: dict[str, Any]) -> None:
+        if (
+            self.hass.states.get(entity_id) is None
+            and er.async_get(self.hass).async_get(entity_id) is None
+        ):
+            raise SyncError("sync_destination_missing", "That to-do list was not found")
+        if self.hass.states.get(entity_id) is None or not self._usable(destination):
+            raise SyncError(
+                "sync_destination_unsupported",
+                "Choose a to-do list that can add items. Mealie's own lists cannot be a destination.",
+            )
+
     def destinations(self) -> list[dict[str, Any]]:
         found = [self.destination(state.entity_id) for state in self.hass.states.async_all("todo")]
         return sorted(
@@ -953,13 +965,7 @@ class SyncManager:
         if existing is not None and expected_revision not in (None, existing["revision"]):
             raise SyncError("conflict", "The sync rule changed elsewhere. Refresh first")
         destination = self.destination(fields["destination_entity_id"])
-        if self.hass.states.get(fields["destination_entity_id"]) is None or not self._usable(
-            destination
-        ):
-            raise SyncError(
-                "sync_destination_unsupported",
-                "Choose a to-do list that can add items. Mealie's own lists cannot be a destination.",
-            )
+        self._require_destination(fields["destination_entity_id"], destination)
         if any(
             rule["source_list_id"] == fields["source_list_id"] and rule["id"] != rule_id
             for rule in self.rules.values()
@@ -1187,11 +1193,7 @@ class SyncManager:
             fields = validate_draft(draft)
         entity_id = fields["destination_entity_id"]
         destination = self.destination(entity_id)
-        if self.hass.states.get(entity_id) is None or not self._usable(destination):
-            raise SyncError(
-                "sync_destination_unsupported",
-                "Choose a to-do list that can add items. Mealie's own lists cannot be a destination.",
-            )
+        self._require_destination(entity_id, destination)
         language = (self.hass.config.language or "en").lower()
         options = {
             "decimal_comma": language.startswith("de"),

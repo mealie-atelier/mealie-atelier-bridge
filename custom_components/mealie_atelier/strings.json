@@ -75,7 +75,7 @@
           "experimental_ingredient_edits": "Lets administrators edit ingredients with linked foods and units. A backup is saved before every change.",
           "usda_fdc_api_key": "Key saved: {fdc_status} Optional. Only for the nutrition lab: the Bridge looks up ingredients in the free US food database FoodData Central and calculates nutrients per serving. For security the field never shows a saved key: leave it empty to keep it. Without a key only the nutrition lookup is off. Get a free key with your name and email at [fdc.nal.usda.gov/api-key-signup]({usda_signup_url}).",
           "clear_fdc_key": "Enable this and save to remove the key.",
-          "openai_api_key": "Key saved: {ai_status} Optional, billed per request. Unlocks three AI helpers you start yourself: English search terms in the nutrition lab, ingredient substitutions and the recipe check. They send ingredients and, depending on the helper, the recipe name, amounts and steps to OpenAI or Anthropic, depending on your key. Nutrients always come from FoodData Central and the AI never changes a recipe on its own. For security the field never shows a saved key: leave it empty to keep it, or use the option below to remove it. Get an OpenAI key at [platform.openai.com/api-keys]({openai_keys_url}) or an Anthropic key at [platform.claude.com/settings/keys]({anthropic_keys_url}). Anthropic keys start with sk-ant-.",
+          "openai_api_key": "Key saved: {ai_status} Optional, billed per request. Unlocks three AI helpers you start yourself: English search terms in the nutrition lab, ingredient substitutions and the recipe check. They send ingredients and, depending on the helper, the recipe name, amounts and steps to OpenAI or Anthropic, depending on your key. Nutrients always come from FoodData Central and the AI never changes a recipe on its own. For security the field never shows a saved key: leave it empty to keep it. Once a key is saved, a remove option appears below. Get an OpenAI key at [platform.openai.com/api-keys]({openai_keys_url}) or an Anthropic key at [platform.claude.com/settings/keys]({anthropic_keys_url}). Anthropic keys start with sk-ant-.",
           "clear_ai_key": "Enable this and save to remove the key. AI is off afterwards.",
           "timer_notify_service": "Optional. A notify service such as notify.mobile_app_your_phone that receives a push message when a kitchen timer ends. Leave empty for in-app notifications only."
         }
@@ -163,6 +163,9 @@
     },
     "sync_rule_not_found": {
       "message": "This sync rule no longer exists. Reload the shopping sync."
+    },
+    "sync_destination_missing": {
+      "message": "That to-do list was not found. Pick another one."
     },
     "sync_destination_unsupported": {
       "message": "Choose a to-do list that can add items. Mealie's own lists cannot be a destination."
