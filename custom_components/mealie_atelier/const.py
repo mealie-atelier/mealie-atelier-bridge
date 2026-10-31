@@ -4,7 +4,7 @@ from __future__ import annotations
 
 DOMAIN = "mealie_atelier"
 # Kept equal to manifest.json and pyproject.toml (tests/test_setup_contract.py).
-VERSION = "0.11.0"
+VERSION = "0.12.0"
 # Storage keys per config entry, formatted with the entry id. Removing the entry deletes them.
 STUDIO_STORE_KEY = "mealie_atelier_studio_{}"
 ALARMS_STORE_KEY = "mealie_atelier_alarms_{}"
