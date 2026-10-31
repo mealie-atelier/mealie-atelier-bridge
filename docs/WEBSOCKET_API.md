@@ -76,7 +76,7 @@ A failed command returns an error whose `code` is stable and whose message is En
 
 | Code | When |
 | --- | --- |
-| `timer_not_found` | No timer with that id. Cancelling it counts as success. |
+| `timer_not_found` | No timer with that id. Canceling it counts as success. |
 | `timer_not_permitted` | The timer belongs to another user. |
 | `timer_exists` | A timer with that id already exists. |
 | `too_many_timers` | The user reached the limit of 20 active timers, or the Bridge reached its global limit of 300 active timers. |

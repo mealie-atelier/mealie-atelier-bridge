@@ -19,18 +19,18 @@ You can try the cards against the public demo at https://mealie.alles-automatisc
 
 Choose one route.
 
-**Catalog (Marketplace or HACS).** The Bridge and the cards are submitted to the `hacs/default` catalog, which the Home Assistant Marketplace (Home Assistant 2026.11 and newer, where HACS moved into core) and HACS both read. Once listed, search for **Mealie Atelier Bridge**, download it and continue with the restart.
+**Catalog (Marketplace or HACS).** The Bridge and the cards are submitted to the `hacs/default` catalog, which the Home Assistant Marketplace (Home Assistant 2026.11 and newer, where HACS moved into core) and HACS both read. Once listed, search for **Mealie Atelier Bridge**, download it and continue with step 2 to see whether a restart is needed.
 
 **Custom repository (until the catalog listing is live).**
 
 - **Marketplace (Home Assistant 2026.11 and newer):** Open **Settings → Marketplace** (`/marketplace/browse`) and choose **Add from link**. Paste `https://github.com/mealie-atelier/mealie-atelier-bridge`. Adding a repository needs a GitHub connection, so complete the one-time **Connect GitHub** login (a free GitHub account is enough). Then download **Mealie Atelier Bridge**. For the cards, add `https://github.com/mealie-atelier/mealie-atelier-cards` the same way and download it too.
 - **Classic HACS:** Open the HACS menu, choose **Custom repositories** and add the Bridge repository with the type **Integration**. Add the cards repository with the type **Dashboard**. Download both.
 
-Manual installation also works: copy the `custom_components/mealie_atelier` folder into the `custom_components` folder of your Home Assistant configuration.
+Manual installation also works: download the source zip of the [latest release](https://github.com/mealie-atelier/mealie-atelier-bridge/releases/latest), unpack it and copy the `custom_components/mealie_atelier` folder into the `custom_components` folder of your Home Assistant configuration. For the cards, see the manual resource step under "Verify with a card" below.
 
 ## 2. Restart Home Assistant
 
-Restart Home Assistant so it loads the new integration.
+HACS (up to Home Assistant 2026.10) and manual installs need a restart so Home Assistant loads the new integration. The Marketplace (2026.11 and newer) usually does not. Restart only if Home Assistant shows a repair or the **Restart required** notice, or if the integration is not listed under **Add integration** in the next step.
 
 ## 3. Add the integration
 
@@ -60,7 +60,7 @@ Make a Mealie backup before you test recipe edits.
 
 ## 5. Verify with a card
 
-1. Make sure the Mealie Atelier Cards are installed and registered as a resource. The Marketplace and HACS do this for you on dashboards you manage in the UI. No YAML is needed for that. For a manual install, turn on **Advanced mode** in your user profile, open **Settings → Dashboards → ⋮ → Resources** and add `/local/community/mealie-atelier-cards/mealie-atelier-cards.js` as a **JavaScript module**, then reload the browser page. Only if you manage Lovelace resources in YAML, add the same URL with `type: module` under `lovelace: resources:`. See the [cards README](https://github.com/mealie-atelier/mealie-atelier-cards#yaml-resource).
+1. Make sure the Mealie Atelier Cards are installed and registered as a resource. The Marketplace and HACS do this for you on dashboards you manage in the UI. No YAML is needed for that. For a manual install, on Home Assistant 2026.10 and older turn on **Advanced mode** in your user profile first. Then open **Settings → Dashboards → ⋮ → Resources** and add `/local/community/mealie-atelier-cards/mealie-atelier-cards.js` as a **JavaScript module**, then reload the browser page. Only if you manage Lovelace resources in YAML, add the same URL with `type: module` under `lovelace: resources:`. See the [cards README](https://github.com/mealie-atelier/mealie-atelier-cards#yaml-resource).
 2. Edit a dashboard, choose **Add card**, switch to the **By card** tab (the cards create no entities, so **By entity** finds nothing) and search for **Mealie Atelier**.
 3. In the editor step **Connect kitchen**, pick your connection under **Your Mealie connection** if several are listed. The cards prefer the Bridge by default. You can check or change this later in the card settings under **Data connection** (**Automatic · Atelier first**).
 4. Confirm recipe search, recipe detail and cooking steps. With read-only mode off, try a small change such as ticking a shopping item.

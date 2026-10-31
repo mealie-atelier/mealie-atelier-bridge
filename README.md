@@ -54,7 +54,7 @@ The Bridge is submitted to the default catalog (`hacs/default`) that the Home As
 
 [![Open the repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=mealie-atelier&repository=mealie-atelier-bridge&category=integration)
 
-Restart Home Assistant after the download.
+HACS up to 2026.10 and manual installs need a restart of Home Assistant after the download. The Marketplace (2026.11 and newer) usually does not. Restart only if Home Assistant shows a repair or the **Restart required** notice, or if the integration is not listed under **Add integration**.
 
 ### 2. Connect Mealie
 

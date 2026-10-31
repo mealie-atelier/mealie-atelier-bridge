@@ -48,7 +48,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 - The README screenshots (setup, integration page, Smart Shopping Sync status and the complete rule editor) are recaptured from the current release with fictional data; the capture scripts live in `tests/live/`.
 - Install docs match Home Assistant 2026.11 (Marketplace "Add from link" with GitHub login, manual resource under Dashboards, "By card" tab, editor wording), name Mealie 3.x as recommended and gain an uninstall section. The Smart Shopping Sync doc uses the UI policy names. The comparison table no longer claims the built-in integration cannot write. README screenshot pairs fit GitHub's column width.
 - Consistent German and English copy: "das Token", "Benachrichtigungsdienst", the Mealie page name "API-Token" and "die Mealie Atelier Bridge".
-- Cancelling a kitchen timer that already finished or is being delivered succeeds instead of failing, so the card can remove it. The error code `timer_dispatched` is therefore never raised.
+- Canceling a kitchen timer that already finished or is being delivered succeeds instead of failing, so the card can remove it. The error code `timer_dispatched` is therefore never raised.
 - Kitchen timer notifications follow the Home Assistant language (German or English).
 - `notify.persistent_notification` is no longer offered as the timer notification service and no longer creates a second notification. `notify.send_message` is rejected, because it can never deliver.
 - Translated validation errors (too many timers, foreign timer, recipe changed, protected nutrition values, AI not configured) reach the card with their own error code instead of `invalid_request`.

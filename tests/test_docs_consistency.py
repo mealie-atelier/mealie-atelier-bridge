@@ -123,3 +123,36 @@ def test_websocket_doc_says_cards_localize_the_backup_summary() -> None:
     doc = (ROOT / "docs" / "WEBSOCKET_API.md").read_text(encoding="utf-8")
     assert "ingredient_count" in doc
     assert "English fallback" in doc
+
+
+def test_restart_guidance_is_conditional_for_the_marketplace() -> None:
+    for name in ("README.md", "docs/INSTALLATION.md"):
+        text = (ROOT / name).read_text(encoding="utf-8")
+        assert "usually does not" in text, name
+        assert "Restart required" in text, name
+
+
+def test_manual_install_names_the_source_zip_in_both_docs() -> None:
+    for name in ("README.md", "docs/INSTALLATION.md"):
+        text = (ROOT / name).read_text(encoding="utf-8")
+        assert "releases/latest" in text, name
+    assert "unpack" in (ROOT / "docs" / "INSTALLATION.md").read_text(encoding="utf-8")
+
+
+def test_sync_doc_points_to_the_web_app_route_and_hides_test_details() -> None:
+    text = (ROOT / "docs" / "SMART_SHOPPING_SYNC.md").read_text(encoding="utf-8")
+    assert "standalone web app does not sync" not in text
+    assert "web/README.md" in text
+    for leak in (
+        "todo.mealie_atelier",
+        "dedicated test list",
+        "30 checks",
+        "2026.11.0b0",
+        "Failed to connect",
+    ):
+        assert leak not in text, leak
+
+
+def test_docs_use_american_canceling() -> None:
+    for path in DOCS:
+        assert not re.search(r"\b[Cc]ancell", path.read_text(encoding="utf-8")), path.name
