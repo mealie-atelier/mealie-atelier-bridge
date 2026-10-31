@@ -46,7 +46,10 @@ def test_manifest_follows_hassfest_conventions() -> None:
     assert keys[:2] == ["domain", "name"]
     assert keys[2:] == sorted(keys[2:])
     assert {"http", "websocket_api"} <= set(manifest["dependencies"])
-    assert manifest["documentation"].startswith("https://github.com/mealie-atelier/")
+    assert (
+        manifest["documentation"] == "https://alles-automatisch.de/lernen/mealie-atelier-einrichten"
+    )
+    assert manifest["issue_tracker"].startswith("https://github.com/mealie-atelier/")
     assert manifest["version"]
 
 
@@ -160,3 +163,9 @@ def test_english_copy_is_consistent() -> None:
         joined = "\n".join(_strings(json.loads((INTEGRATION / name).read_text())))
         assert "To-do list" not in joined
         assert "reauthenticate" not in joined
+
+
+def test_url_placeholder_is_not_rendered_as_code_chip() -> None:
+    for name in ("strings.json", "translations/en.json", "translations/de.json"):
+        text = (INTEGRATION / name).read_text()
+        assert "`{url}`" not in text, name

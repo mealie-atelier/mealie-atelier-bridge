@@ -8,6 +8,8 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ### Fixed
 
+- The help link in every setup, options and re-authentication dialog opens the setup guide instead of the GitHub readme.
+- The connection address in the options and re-authentication text is plain text instead of a padded code chip, so it wraps cleanly on narrow screens.
 - Recipe editor: fractional servings such as 2.5 save again. A shopping sync destination that does not exist reports "not found" instead of "unsupported", and the AI key help no longer points to a remove option that only appears once a key is saved.
 - A Mealie token revoked while Home Assistant runs starts re-authentication from any rejected call, including the background sync, and a periodic check catches it even when nobody opens a card.
 - Smart Shopping Sync: "Send again" starts a run, a run that only skipped duplicates reports "nothing to send", items beyond the first 50 are sent in follow-up passes, an empty first batch activates the rule, read-only mode stops automatic runs, an unavailable or removed destination keeps counting the waiting items and names the problem, and changed items carry their current Mealie text.

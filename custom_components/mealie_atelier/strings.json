@@ -17,7 +17,7 @@
       },
       "reauth_confirm": {
         "title": "Re-authenticate Mealie Atelier Bridge",
-        "description": "Mealie rejected the saved API token of {account} (`{url}`). Create a new token in Mealie for this account under User profile > API Tokens and enter it here.",
+        "description": "Mealie rejected the saved API token of {account} ({url}). Create a new token in Mealie for this account under User profile > API Tokens and enter it here.",
         "data": {
           "api_token": "New Mealie API token"
         },
@@ -58,7 +58,7 @@
     "step": {
       "init": {
         "title": "Security and interaction",
-        "description": "Settings for {account} (`{url}`). Control what the dashboard may change and which optional services it can use.",
+        "description": "Settings for {account} ({url}). Control what the dashboard may change and which optional services it can use.",
         "data": {
           "read_only": "Read-only mode",
           "write_users": "Users allowed to change data",
