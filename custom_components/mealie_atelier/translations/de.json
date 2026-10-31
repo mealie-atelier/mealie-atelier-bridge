@@ -16,7 +16,7 @@
         }
       },
       "reauth_confirm": {
-        "title": "Mealie Atelier Bridge erneut anmelden",
+        "title": "Mealie Atelier Bridge neu anmelden",
         "description": "Mealie hat das gespeicherte API-Token von {account} ({url}) abgelehnt. Erstelle in Mealie für dieses Konto unter Benutzerprofil > API-Token ein neues Token und gib es hier ein.",
         "data": {
           "api_token": "Neues Mealie-API-Token"
@@ -49,7 +49,7 @@
     },
     "abort": {
       "already_configured": "Dieses Mealie-Konto ist bereits eingerichtet.",
-      "reauth_successful": "Die erneute Anmeldung war erfolgreich.",
+      "reauth_successful": "Die Mealie Atelier Bridge wurde neu angemeldet.",
       "reconfigure_successful": "Die Neukonfiguration war erfolgreich.",
       "wrong_account": "Dieses Token gehört zu einem anderen Mealie-Konto. Verwende ein Token des eingerichteten Kontos."
     }
@@ -204,7 +204,7 @@
       "message": "Die Anfrage war unvollständig oder ungültig. Lade die Seite neu und versuche es erneut."
     },
     "mealie_auth": {
-      "message": "Mealie hat das API-Token abgelehnt. Erstelle in Mealie ein neues Token und authentifiziere die Integration neu."
+      "message": "Mealie hat das API-Token abgelehnt. Erstelle in Mealie ein neues Token und melde die Integration neu an."
     },
     "mealie_error": {
       "message": "Mealie ist nicht erreichbar oder hat einen Fehler gemeldet. Prüfe, ob Mealie läuft. Versuche es dann erneut."

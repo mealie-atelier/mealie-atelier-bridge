@@ -653,7 +653,7 @@ async def test_options_form_names_the_entry(hass):
     entry.add_to_hass(hass)
     result = await hass.config_entries.options.async_init(entry.entry_id)
     assert result["description_placeholders"]["account"] == entry.title
-    assert result["description_placeholders"]["url"] == URL
+    assert result["description_placeholders"]["url"] == "mealie.test:9000"
     for locale in ("en", "de"):
         strings = json.loads((INTEGRATION / "translations" / f"{locale}.json").read_text())
         description = strings["options"]["step"]["init"]["description"]
@@ -681,3 +681,31 @@ async def test_options_form_shows_clear_checkbox_and_status_only_with_a_saved_ke
     assert "clear_fdc_key" not in names
     placeholders = result["description_placeholders"]
     assert (placeholders["ai_status"], placeholders["fdc_status"]) == ("✓", "✗")
+
+
+@pytest.mark.parametrize(
+    ("url", "shown"),
+    [
+        ("http://mealie:9000", "mealie:9000"),
+        ("https://mealie.test/", "mealie.test"),
+        ("https://host.test:8443/sub/path/", "host.test:8443/sub/path"),
+    ],
+)
+def test_display_address_has_no_scheme(url, shown):
+    from custom_components.mealie_atelier.config_flow import display_address
+
+    assert display_address(url) == shown
+
+
+async def test_description_placeholders_show_address_without_scheme(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    reauth = await entry.start_reauth_flow(hass)
+    assert "://" not in reauth["description_placeholders"]["url"]
+    options = await hass.config_entries.options.async_init(entry.entry_id)
+    assert "://" not in options["description_placeholders"]["url"]
+
+
+def test_url_placeholder_is_not_wrapped_in_backticks():
+    for path in [INTEGRATION / "strings.json", *(INTEGRATION / "translations").glob("*.json")]:
+        assert "`{url}`" not in path.read_text(encoding="utf-8"), path.name
