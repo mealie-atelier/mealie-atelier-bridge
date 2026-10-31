@@ -921,6 +921,25 @@ def shot_recipe(browser: Browser) -> None:
     context.close()
 
 
+STAGE = ".cook-content > .cook-stage"
+
+
+def fit_cook(page: Page, name: str, start: int, limit: int) -> None:
+    """The cooking dialog is a bounded box now: grow the window until the step text needs no scrolling."""
+    set_height(page, name, start)
+    for _ in range(10):
+        extra = page.evaluate(
+            "([deepSrc, sel]) => { const deep = new Function(deepSrc + 'return deep;')(); "
+            "const el = deep(sel); return el ? el.scrollHeight - el.clientHeight : 0; }",
+            [DEEP, STAGE],
+        )
+        height = page.viewport_size["height"]
+        print("fit_cook", name, height, "extra", extra)
+        if extra <= 1 or height >= limit:
+            return
+        set_height(page, name, min(limit, height + max(extra, 2) + 2))
+
+
 def shot_cook(browser: Browser) -> None:
     context, page = ha_page(browser, "kochmodus-dunkel", "dark")
     open_dashboard(page, "atelier-shots-dark/recipes")
@@ -929,7 +948,7 @@ def shot_cook(browser: Browser) -> None:
     page.locator("[data-action='cook-next'] >> visible=true").wait_for()
     settle_ha(page)
     # The dialog is as tall as the window allows: grow the window until the footer buttons are whole in view.
-    grow_to_fit(page, "kochmodus-dunkel", ".modal[role='dialog']")
+    fit_cook(page, "kochmodus-dunkel", 1050, 1200)
     snap(page, "kochmodus-dunkel")
     context.close()
 
@@ -941,22 +960,10 @@ def shot_cook_phone(browser: Browser) -> None:
     page.locator("[data-action='cook-start'] >> visible=true").click()
     page.locator("[data-action='cook-next'] >> visible=true").wait_for()
     settle_ha(page)
-    # Top of the dialog: photo, progress, the "keep awake" checkbox and the step. The dialog scrolls and its
-    # footer (Zurück, Zum Rezept, Weiter) is sticky, so the window height is chosen that the footer starts
-    # right where the tool tray begins: no half row hides under the footer.
+    # Top of the dialog: photo, progress, the "keep awake" checkbox and the step. The dialog is bounded, so
+    # the window grows until the step text needs no scrolling.
     modal = page.locator(".modal[role='dialog'] >> visible=true").first
-    need = modal.evaluate(
-        """modal => {
-            const box = modal.getBoundingClientRect();
-            const tray = modal.querySelector('.cook-utility').getBoundingClientRect();
-            const footer = [...modal.querySelectorAll('*')].find((el) => {
-                const css = getComputedStyle(el);
-                return css.position === 'sticky' && css.bottom !== 'auto';
-            });
-            return (tray.top - box.top + modal.scrollTop) - 18 + footer.getBoundingClientRect().height;
-        }"""
-    )
-    fit_modal_height(page, "kochmodus-handy", need)
+    fit_cook(page, "kochmodus-handy", 749, 940)
     modal.evaluate("modal => { modal.scrollTop = 0; }")
     page.wait_for_timeout(600)
     snap(page, "kochmodus-handy")
@@ -1474,8 +1481,7 @@ def shots_web(browser: Browser) -> None:
             web_settle(page)
             # As in the Home Assistant shot: a window tall enough for the dialog at its full height (1040 px).
             # In a 900 px window the dialog is squeezed to 828 px and its header rows nearly touch.
-            set_height(page, "web-app-kochmodus", 1160)
-            grow_to_fit(page, "web-app-kochmodus", ".modal[role='dialog']")
+            fit_cook(page, "web-app-kochmodus", 1050, 1200)
 
         def sync(page: Page) -> None:
             web_nav(page, "Einkaufsliste")
