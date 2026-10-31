@@ -554,6 +554,19 @@ async def prepare_ha() -> None:
                     }
                 ]
             )
+    # The smoke test adds its own "Atelier" dashboard; leaving it in the sidebar shows "Atelier" twice in every capture.
+    for entry in dashboards:
+        if entry["url_path"] == "atelier-live" and entry["show_in_sidebar"]:
+            await ha_all(
+                [
+                    {
+                        "type": "lovelace/dashboards/update",
+                        "dashboard_id": entry["id"],
+                        "title": entry["title"],
+                        "show_in_sidebar": False,
+                    }
+                ]
+            )
     # The English onboarding left the built-in map dashboard titled "Map": a German sidebar shows "Karte".
     for entry in dashboards:
         if entry["id"] == "map" and entry["title"] != "Karte":
