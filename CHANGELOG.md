@@ -13,7 +13,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 - Smart Shopping Sync: "Send again" starts a run, a run that only skipped duplicates reports "nothing to send", items beyond the first 50 are sent in follow-up passes, an empty first batch activates the rule, read-only mode stops automatic runs, an unavailable or removed destination keeps counting the waiting items and names the problem, and changed items carry their current Mealie text.
 - Setup and options: a pasted address drops its query and fragment, credentials or spaces in the address get a clear error, an unknown connection reports "entry not found", the options name the connection they configure and show whether a USDA or AI key is saved, and the version history records combined edits of basics and steps.
 - German texts: the read-only help says "aber", and the setup description keeps its "replaces nothing" half sentence without a comma before "und".
-- Docs: the shopping sync guide points to Bring! in the standalone web app, the tested destinations list no longer carries test notes, the manual install says where the folder comes from, Advanced mode is only needed on Home Assistant 2026.10 and older, the restart note matches the Marketplace, and American spelling.
+- Docs: the shopping sync guide points to Bring! in the standalone web app, the tested destinations list no longer carries test notes, the manual install says where the folder comes from, the Resources step no longer asks for Advanced mode (removed in Home Assistant 2026.6), the restart note matches the Marketplace, and American spelling.
 
 ## [0.12.0] - 2026-10-31
 
