@@ -69,3 +69,21 @@ def test_dialog_titles_are_short_enough_for_one_line() -> None:
         assert {key: steps[key]["title"] for key in titles} == titles
     strings = EN.parent.parent / "strings.json"
     assert strings.read_bytes() == EN.read_bytes()
+
+
+def test_german_key_removal_says_entfernen_like_its_help_text() -> None:
+    """The key help says "Zum Entfernen", EN says "Remove": the checkbox and its hint must not switch to "löschen"."""
+    steps = json.loads(DE.read_text(encoding="utf-8"))
+
+    def clear_texts(node):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if key in ("clear_fdc_key", "clear_ai_key") and isinstance(value, str):
+                    yield value
+                else:
+                    yield from clear_texts(value)
+
+    texts = list(clear_texts(steps))
+    assert len(texts) >= 16
+    assert [t for t in texts if "löschen" in t] == []
+    assert all("entfernen" in t for t in texts)
