@@ -197,8 +197,9 @@ async def test_reauth_rejects_other_account(hass):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], {CONF_API_TOKEN: "foreign"}
         )
-    assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "wrong_account"
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+    assert result["errors"] == {"base": "wrong_account"}
     assert entry.data[CONF_API_TOKEN] == "old"
 
 

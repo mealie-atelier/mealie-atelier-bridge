@@ -23,6 +23,11 @@ STATE = {
     "en": ("No key is saved.", "A key is saved."),
     "de": ("Es ist kein Schlüssel gespeichert.", "Ein Schlüssel ist gespeichert."),
 }
+REMOVE = {
+    "strings": "To remove it, enable the option below.",
+    "en": "To remove it, enable the option below.",
+    "de": "Zum Entfernen aktiviere die Option darunter.",
+}
 # step -> (usda key saved, ai key saved)
 STEPS = {
     "init": (False, False),
@@ -43,6 +48,9 @@ def test_keep_sentence_only_when_a_key_is_saved(lang, step, index, field):
     assert (KEEP[lang] in text) is saved
     assert (saved_text in text) is saved
     assert (none_text in text) is (not saved)
+    assert (REMOVE[lang] in text) is saved
+    if saved:
+        assert text.index(saved_text) + len(saved_text) + 1 == text.index(REMOVE[lang])
 
 
 def test_strings_and_english_stay_identical():

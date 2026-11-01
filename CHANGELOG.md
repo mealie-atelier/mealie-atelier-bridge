@@ -8,6 +8,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ### Fixed
 
+- The saved USDA key help now says how to remove the key, like the AI key help. Re-authentication with a token from a different Mealie account shows an error in the form instead of ending the flow, so the Reconfigure button and repair stay.
 - Options key help no longer prints raw ✓/✗ glyphs inside the sentence (the help text states in words whether a key is saved), the re-authentication token help adds only new information, and the USDA and AI key help no longer tells you to leave the field empty to keep a key when none is saved or points to a remove option that only appears once a key is saved.
 - Smart Shopping Sync: items waiting for an unavailable destination go out on their own once it is reachable again, with a few timed retries as a fallback, and are retried again after a Home Assistant restart instead of staying at "waiting" until the next manual send.
 - Nutrition lab: the food search prefills only the food name for lines such as "2 EL Zucker" or "1 Ei", without the leading quantity and unit.

@@ -230,12 +230,14 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = _error_key(error)
             else:
                 if _unique_id(account) != account_id_of(entry.unique_id):
-                    return self.async_abort(reason="wrong_account")
-                return self.async_update_reload_and_abort(
-                    entry,
-                    data_updates={CONF_API_TOKEN: user_input[CONF_API_TOKEN].strip()},
-                    reason="reauth_successful",
-                )
+                    # Stay in the flow so the entry keeps its Reconfigure button and repair.
+                    errors["base"] = "wrong_account"
+                else:
+                    return self.async_update_reload_and_abort(
+                        entry,
+                        data_updates={CONF_API_TOKEN: user_input[CONF_API_TOKEN].strip()},
+                        reason="reauth_successful",
+                    )
         return self.async_show_form(
             step_id="reauth_confirm",
             data_schema=vol.Schema({vol.Required(CONF_API_TOKEN): SECRET_SELECTOR}),
