@@ -202,6 +202,8 @@ class MealieClient:
         self._verify_ssl = verify_ssl
         # Called for every rejected request, whoever made it (card, sync engine, ledger).
         self.on_auth_rejected: Callable[[MealieAuthError], None] | None = None
+        # Written yield texts use a decimal comma when set (German Home Assistant language).
+        self.decimal_comma = False
 
     async def request(
         self,
@@ -695,7 +697,9 @@ class MealieClient:
             ):
                 # Steps are merged by id into the stored ones so titles and photos survive,
                 # and the yield text follows the servings only with the stored recipe at hand.
-                slug, changes = recipe_update_changes(payload, await self.recipe(slug))
+                slug, changes = recipe_update_changes(
+                    payload, await self.recipe(slug), decimal_comma=self.decimal_comma
+                )
             return await self.request("PATCH", f"/api/recipes/{slug}", data=changes)
         if action == "recipe_import":
             recipe_url = safe_text(payload.get("url"), 2000)
@@ -863,11 +867,14 @@ def _yield_number(text: str) -> float | None:
         return None
 
 
-def _follow_yield_text(changes: dict, recipe: dict, servings: float) -> None:
+def _follow_yield_text(
+    changes: dict, recipe: dict, servings: float, decimal_comma: bool = False
+) -> None:
     """Keep the yield text in step when it starts with the old servings number.
 
     Only that leading number is replaced, so "1,5 Portionen" becomes "2,5 Portionen". An empty
-    yield or one that starts with another number stays as it is.
+    yield or one that starts with another number stays as it is. A number without a separator
+    gets a decimal comma when decimal_comma is set ("4 Portionen" becomes "2,5 Portionen").
     """
     old = recipe.get("recipeServings")
     text = recipe.get("recipeYield")
@@ -885,13 +892,15 @@ def _follow_yield_text(changes: dict, recipe: dict, servings: float) -> None:
     if value is None or not math.isclose(value, old, abs_tol=1e-9):
         return
     shown = f"{round(servings, 4):.4f}".rstrip("0").rstrip(".")
-    if "," in number:
+    if "," in number or decimal_comma:
         shown = shown.replace(".", ",")
     changes["recipeYield"] = f"{lead}{shown}{rest}"
     changes["recipeYieldQuantity"] = servings
 
 
-def recipe_update_changes(payload: dict, recipe: dict | None = None) -> tuple[str, dict]:
+def recipe_update_changes(
+    payload: dict, recipe: dict | None = None, *, decimal_comma: bool = False
+) -> tuple[str, dict]:
     """Validate a recipe_update payload and return the slug and the Mealie PATCH body.
 
     Steps may be plain strings or {id, text} objects. With the current recipe, objects are
@@ -916,7 +925,7 @@ def recipe_update_changes(payload: dict, recipe: dict | None = None) -> tuple[st
             raise ValueError("Servings must be a number above 0 and up to 100")
         changes["recipeServings"] = servings
         if recipe is not None:
-            _follow_yield_text(changes, recipe, servings)
+            _follow_yield_text(changes, recipe, servings, decimal_comma)
     if "instructions" in payload:
         lines = payload["instructions"]
         if not isinstance(lines, list) or len(lines) > 60:

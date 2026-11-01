@@ -13,6 +13,8 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 - Smart Shopping Sync: items waiting for an unavailable destination go out on their own once it is reachable again, with a few timed retries as a fallback, and are retried again after a Home Assistant restart instead of staying at "waiting" until the next manual send.
 - Nutrition lab: the food search prefills only the food name for lines such as "2 EL Zucker" or "1 Ei", without the leading quantity and unit.
 - Recipe editor: fractional servings such as 2.5 save again, and saving other servings from the card also updates the yield text and its quantity in Mealie, so "2,5 Portionen" becomes "3,5 Portionen". A range such as "2-3 Portionen" and other yield texts stay as they are.
+- Recipe editor: a yield text without a decimal separator gets a decimal comma in German, so "4 Portionen" becomes "2,5 Portionen" at 2.5 servings. English keeps the point.
+- Setup: a failed start of the Bridge no longer leaves the periodic token check running.
 - Smart Shopping Sync: a destination list that has no state in Home Assistant reports "not found" instead of "unsupported", also when it is still in the entity registry.
 - Smart Shopping Sync: a run that leaves nothing pending cancels the scheduled follow-up run and clears the next run time.
 - Setup: an address without `http://` or `https://` gets an error that names the scheme instead of talking about spaces. Spaces in the address keep their own error.

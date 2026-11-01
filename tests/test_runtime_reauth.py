@@ -10,6 +10,7 @@ from freezegun.api import FrozenDateTimeFactory
 
 from homeassistant.config_entries import SOURCE_REAUTH
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.event import async_track_time_interval
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
@@ -145,3 +146,29 @@ async def test_idle_bridge_notices_a_revoked_token_within_one_check_interval(
     await hass.async_block_till_done()
 
     assert len(_reauth_flows(hass)) == 1
+
+
+async def test_failed_store_load_leaves_no_token_check_armed(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_mealie,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    armed = []
+    real = async_track_time_interval
+
+    def _track(*args, **kwargs):
+        unsub = real(*args, **kwargs)
+        armed.append(unsub)
+        return unsub
+
+    monkeypatch.setattr("custom_components.mealie_atelier.async_track_time_interval", _track)
+    monkeypatch.setattr(
+        "custom_components.mealie_atelier.OfflineLedger.async_load",
+        AsyncMock(side_effect=OSError("corrupt store")),
+    )
+    mock_config_entry.add_to_hass(hass)
+    assert not await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert armed == []

@@ -150,8 +150,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry
             # Auth errors start reauth through the client hook; outages are not our concern here.
             pass
 
-    # Without any traffic a revoked token would go unnoticed until someone opens a card.
-    stop_auth_check = async_track_time_interval(hass, _check_token, AUTH_CHECK_INTERVAL)
+    client.decimal_comma = hass.config.language.startswith("de")
     _retitle_legacy_entry(hass, entry, account.get("username"))
     # Load everything that can fail before starting background work, so a failed setup
     # leaves no timer or sync task running.
@@ -167,6 +166,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: MealieAtelierConfigEntry
     except Exception:
         # Shopping sync is optional: a sync problem never blocks the rest of the Bridge.
         _LOGGER.exception("Shopping sync could not start")
+    # Armed last: a failed load above must leave no timer behind, as unload never runs then.
+    # Without any traffic a revoked token would go unnoticed until someone opens a card.
+    stop_auth_check = async_track_time_interval(hass, _check_token, AUTH_CHECK_INTERVAL)
     entry.runtime_data = MealieAtelierData(
         client=client,
         studio=StudioContext(store=store, state=state, lock=asyncio.Lock()),

@@ -103,3 +103,18 @@ async def test_websocket_servings_save_keeps_a_range_yield(
     assert server.recipe["recipeServings"] == 4
     assert server.recipe["recipeYield"] == "2-3 Portionen"
     assert server.recipe["recipeYieldQuantity"] == 2
+
+
+def test_german_yield_without_separator_gets_a_decimal_comma():
+    recipe = {"recipeServings": 4, "recipeYield": "4 Portionen"}
+    _slug, changes = recipe_update_changes(
+        {"slug": "a", "servings": 2.5}, recipe, decimal_comma=True
+    )
+    assert changes["recipeYield"] == "2,5 Portionen"
+    assert changes["recipeYieldQuantity"] == 2.5
+
+
+def test_english_yield_without_separator_keeps_the_point():
+    recipe = {"recipeServings": 4, "recipeYield": "4 servings"}
+    _slug, changes = recipe_update_changes({"slug": "a", "servings": 2.5}, recipe)
+    assert changes["recipeYield"] == "2.5 servings"
