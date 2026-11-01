@@ -237,10 +237,14 @@ async def test_options_form_fills_every_link_placeholder(hass):
     placeholders = result["description_placeholders"]
     for locale in ("en", "de"):
         strings = json.loads((INTEGRATION / "translations" / f"{locale}.json").read_text())
-        help_texts = strings["options"]["step"]["init"]["data_description"].values()
+        help_texts = [
+            text
+            for step in strings["options"]["step"].values()
+            for text in step["data_description"].values()
+        ]
         used = {name for text in help_texts for name in re.findall(r"\{(\w+)\}", text)}
         links = {"openai_keys_url", "anthropic_keys_url", "usda_signup_url"}
-        assert used - links == {"fdc_status", "ai_status"}
+        assert used - links == set()
         assert links <= used
         assert used <= set(placeholders)
     assert all(placeholders[name].startswith("https://") for name in links)
@@ -669,13 +673,13 @@ async def test_options_form_names_the_entry(hass):
         assert "{account}" in description and "{url}" not in description
 
 
-async def test_options_form_shows_clear_checkbox_and_status_only_with_a_saved_key(hass):
+async def test_options_form_shows_clear_checkbox_only_with_a_saved_key(hass):
     bare = _entry()
     bare.add_to_hass(hass)
     result = await hass.config_entries.options.async_init(bare.entry_id)
     names = {str(key) for key in result["data_schema"].schema}
     assert {"clear_fdc_key", "clear_ai_key"}.isdisjoint(names)
-    assert result["description_placeholders"]["ai_status"] == "✗"
+    assert result["step_id"] == "init"
 
     keyed = MockConfigEntry(
         domain=DOMAIN,
@@ -688,8 +692,8 @@ async def test_options_form_shows_clear_checkbox_and_status_only_with_a_saved_ke
     names = {str(key) for key in result["data_schema"].schema}
     assert "clear_ai_key" in names
     assert "clear_fdc_key" not in names
-    placeholders = result["description_placeholders"]
-    assert (placeholders["ai_status"], placeholders["fdc_status"]) == ("✓", "✗")
+    assert not {"ai_status", "fdc_status"} & set(result["description_placeholders"])
+    assert result["step_id"] == "init_ai"
 
 
 @pytest.mark.parametrize(
@@ -738,3 +742,62 @@ def test_descriptions_use_only_the_account_placeholder():
 def test_url_placeholder_is_not_wrapped_in_backticks():
     for path in [INTEGRATION / "strings.json", *(INTEGRATION / "translations").glob("*.json")]:
         assert "`{url}`" not in path.read_text(encoding="utf-8"), path.name
+
+
+def test_option_help_and_reauth_copy_have_no_glyphs_and_no_repeat():
+    tails = {
+        "en": "Must belong to the same Mealie account.",
+        "de": "Muss zum selben Mealie-Konto gehören.",
+    }
+    paths = {
+        "en": [INTEGRATION / "translations" / "en.json", INTEGRATION / "strings.json"],
+        "de": [INTEGRATION / "translations" / "de.json"],
+    }
+    for locale, tail in tails.items():
+        for path in paths[locale]:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            for step in data["options"]["step"].values():
+                assert not {"✓", "✗"} & set("".join(step["data_description"].values()))
+            reauth = data["config"]["step"]["reauth_confirm"]["data_description"]["api_token"]
+            assert reauth == tail
+
+
+def test_option_step_variants_state_whether_a_key_is_saved():
+    saved = {"en": "A key is saved.", "de": "Ein Schlüssel ist gespeichert."}
+    unsaved = {"en": "No key is saved.", "de": "Es ist kein Schlüssel gespeichert."}
+    variants = {
+        "init": (False, False),
+        "init_fdc": (True, False),
+        "init_ai": (False, True),
+        "init_both": (True, True),
+    }
+    for locale in ("en", "de"):
+        data = json.loads((INTEGRATION / "translations" / f"{locale}.json").read_text("utf-8"))
+        steps = data["options"]["step"]
+        assert set(variants) <= set(steps)
+        for step_id, flags in variants.items():
+            help_texts = steps[step_id]["data_description"]
+            for field, flag in zip(("usda_fdc_api_key", "openai_api_key"), flags, strict=True):
+                assert (saved[locale] if flag else unsaved[locale]) in help_texts[field]
+
+
+@pytest.mark.parametrize(
+    ("options", "step_id"),
+    [
+        ({}, "init"),
+        ({"usda_fdc_api_key": "k"}, "init_fdc"),
+        ({"openai_api_key": "k"}, "init_ai"),
+        ({"usda_fdc_api_key": "k", "openai_api_key": "k"}, "init_both"),
+    ],
+)
+async def test_options_form_picks_the_step_for_the_saved_keys(hass, options, step_id):
+    entry = MockConfigEntry(
+        domain=DOMAIN, title="Mealie", data=_entry().data, options=options, version=_entry().version
+    )
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["step_id"] == step_id
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"read_only": True}
+    )
+    assert result["type"] == "create_entry"

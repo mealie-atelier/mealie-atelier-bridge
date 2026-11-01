@@ -8,6 +8,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ### Fixed
 
+- Options key help no longer prints raw ✓/✗ glyphs inside the sentence (the help text states in words whether a key is saved), and the re-authentication token help adds only new information.
 - Smart Shopping Sync: items left waiting while the destination list was unavailable go out on their own once it is reachable again, with a few timed retries as a fallback.
 - Recipe editor: saving other servings also updates a yield text that starts with the old number, so "1,5 Portionen" becomes "2,5 Portionen". Other yield texts stay as they are.
 - Setup: an address without `http://` or `https://` gets an error that names the scheme instead of talking about spaces. Spaces in the address keep their own error.
@@ -17,7 +18,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 - A Mealie token revoked while Home Assistant runs starts re-authentication from any rejected call, including the background sync, and a periodic check catches it even when nobody opens a card.
 - Smart Shopping Sync: "Send again" starts a run, a run that only skipped duplicates reports "nothing to send", items beyond the first 50 are sent in follow-up passes, an empty first batch activates the rule, read-only mode stops automatic runs, an unavailable or removed destination keeps counting the waiting items and names the problem, and changed items carry their current Mealie text.
 - Setup and options: a pasted address drops its query and fragment, credentials or spaces in the address get a clear error, an unknown connection reports "entry not found", the options show whether a USDA or AI key is saved, and the version history records combined edits of basics and steps.
-- Kitchen timer notifications use the language the card sent with the timer, falling back to the Home Assistant language. Default sync rule names are shortened per list name with an ellipsis and keep the destination, and a destination without a state shows its registry name. The options key help reads "Key saved: ✓."
+- Kitchen timer notifications use the language the card sent with the timer, falling back to the Home Assistant language. Default sync rule names are shortened per list name with an ellipsis and keep the destination, and a destination without a state shows its registry name.
 - The options and re-authentication text names the connection once: "Settings for admin@mealie:9000" instead of repeating the host in parentheses. A renamed connection still shows its address.
 - The setup dialog titles "Reconfigure Bridge" and "Re-authenticate Bridge" are short enough to stay on one line on a phone.
 - German texts: re-authentication uses one wording ("neu anmelden") in the dialog title, the success message and the error text.

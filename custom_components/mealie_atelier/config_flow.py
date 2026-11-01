@@ -300,8 +300,27 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
 
+_OPTIONS_STEP_IDS = {
+    (False, False): "init",
+    (True, False): "init_fdc",
+    (False, True): "init_ai",
+    (True, True): "init_both",
+}
+
+
 class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
     """Change dashboard write permissions without editing YAML."""
+
+    # The help text states whether a key is saved. Home Assistant cannot localize a placeholder, so
+    # each combination of saved keys has its own translated step, chosen in code.
+    async def async_step_init_fdc(self, user_input=None):
+        return await self.async_step_init(user_input)
+
+    async def async_step_init_ai(self, user_input=None):
+        return await self.async_step_init(user_input)
+
+    async def async_step_init_both(self, user_input=None):
+        return await self.async_step_init(user_input)
 
     async def async_step_init(self, user_input=None):
         errors = {}
@@ -392,14 +411,12 @@ class MealieAtelierOptionsFlow(config_entries.OptionsFlowWithReload):
             user_id for user_id in suggested.get(CONF_WRITE_USERS) or [] if user_id in known
         ]
         return self.async_show_form(
-            step_id="init",
+            step_id=_OPTIONS_STEP_IDS[(saved[CONF_FDC_KEY], saved[CONF_AI_KEY])],
             data_schema=self.add_suggested_values_to_schema(schema, suggested),
             errors=errors,
             # Hassfest rejects URLs inside translations, so the sign-up links are placeholders.
             description_placeholders={
                 "account": account_label(self.config_entry.title, self.config_entry.data[CONF_URL]),
-                "fdc_status": "✓" if saved[CONF_FDC_KEY] else "✗",
-                "ai_status": "✓" if saved[CONF_AI_KEY] else "✗",
                 "openai_keys_url": OPENAI_KEYS_URL,
                 "anthropic_keys_url": ANTHROPIC_KEYS_URL,
                 "usda_signup_url": USDA_SIGNUP_URL,
