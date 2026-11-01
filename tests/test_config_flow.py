@@ -824,3 +824,40 @@ async def test_options_form_picks_the_step_for_the_saved_keys(hass, options, ste
         result["flow_id"], {"read_only": True}
     )
     assert result["type"] == "create_entry"
+
+
+MALFORMED_URLS = [
+    "http://[::1",
+    "http://[",
+    "http://[zz]/",
+    "http://host:99999",
+    "http://host:abc",
+    "http://",
+    "mealie",
+]
+
+
+@pytest.mark.parametrize("url", MALFORMED_URLS)
+async def test_user_step_malformed_url_shows_invalid_url(hass, url):
+    result = await hass.config_entries.flow.async_configure(
+        (await _start_user(hass))["flow_id"], _input(url=url)
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "invalid_url"}
+
+
+@pytest.mark.parametrize("url", MALFORMED_URLS)
+async def test_reconfigure_malformed_url_shows_invalid_url(hass, url):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    result = await entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], _input(url=url))
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "invalid_url"}
+
+
+def test_malformed_url_never_echoes_a_typed_password():
+    from custom_components.mealie_atelier.config_flow import _without_userinfo, display_address
+
+    assert _without_userinfo("http://u:secret@[::1") == "[::1"
+    assert display_address("http://u:secret@[::1") == "[::1"

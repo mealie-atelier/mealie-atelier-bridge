@@ -93,8 +93,14 @@ def _clean_url(url: str) -> str:
 
 def _without_userinfo(url: str) -> str:
     """The address without user:password@, so a typed password never travels back to the browser."""
-    parts = urlsplit(url.strip())
-    return urlunsplit(parts._replace(netloc=parts.netloc.rpartition("@")[2]))
+    text = url.strip()
+    try:
+        parts = urlsplit(text)
+        return urlunsplit(parts._replace(netloc=parts.netloc.rpartition("@")[2]))
+    except ValueError:
+        # Unparseable text (for example "http://[::1"): drop anything up to the last "@" so a
+        # typed password still never travels back, and let the form show the URL error.
+        return text.rpartition("@")[2]
 
 
 def _error_key(error: Exception) -> str:
@@ -127,7 +133,10 @@ def display_address(url: str) -> str:
 
     Without a scheme the Home Assistant markdown renderer does not autolink it.
     """
-    parts = urlsplit(url.strip())
+    try:
+        parts = urlsplit(url.strip())
+    except ValueError:
+        return url.strip().rpartition("@")[2].rstrip("/")
     if not parts.netloc:
         return url.strip().rstrip("/")
     return f"{parts.netloc.rpartition('@')[2]}{parts.path}".rstrip("/")
