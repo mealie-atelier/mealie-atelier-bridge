@@ -11,10 +11,7 @@
 <img alt="Home Assistant 2026.10 or newer" src="https://img.shields.io/badge/Home%20Assistant-2026.10%2B-41BDF5?style=flat-square">
 <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/mealie-atelier/mealie-atelier-bridge?style=flat-square"></a>
 <a href="https://github.com/mealie-atelier/mealie-atelier-bridge/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/mealie-atelier/mealie-atelier-bridge?style=flat-square&color=3e6b48"></a>
-<a href="https://github.com/orgs/mealie-atelier/discussions"><img alt="Discussions" src="https://img.shields.io/badge/discussions-ask%20%26%20share-3e6b48?style=flat-square&logo=github"></a>
-</p>
-
-<p align="center">
+<br>
 <a href="https://github.com/mealie-recipes/mealie"><img alt="Mealie 3.x" src="https://img.shields.io/badge/Mealie-3.x-E58325?style=flat-square"></a>
 <img alt="Python 3.14" src="https://img.shields.io/badge/Python-3.14-3776AB?style=flat-square&logo=python&logoColor=white">
 <a href="https://github.com/astral-sh/ruff"><img alt="Code style: Ruff" src="https://img.shields.io/badge/code%20style-ruff-D7FF64?style=flat-square"></a>
