@@ -4,6 +4,8 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-11-01
+
 ### Fixed
 
 - Reconfigure with a token from a different Mealie account keeps the form open with an error, like re-authentication. A user name and password typed into the address are no longer shown again after an error, neither when adding nor when reconfiguring the integration.
@@ -147,7 +149,8 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 Before 0.10.0 the repository was an unreleased developer preview with no tagged versions. It contained the initial import of the Bridge source (secure server-side Mealie access, WebSocket commands for recipes, meal plans, shopping lists, nutrition, cooking sessions and timers, optional read-only mode, German and English setup translations), the pasta and tomatoes brand artwork, security and support links, and the first FAQ.
 
-[Unreleased]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.1...HEAD
+[Unreleased]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.2...HEAD
+[0.12.2]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.10.0...v0.11.0
