@@ -665,6 +665,18 @@ async def test_user_step_does_not_echo_credentials_of_the_address(hass):
     assert shown == [str({"suggested_value": "http://mealie:9000"})]
 
 
+async def test_reconfigure_does_not_echo_credentials_of_the_address(hass):
+    entry = _entry()
+    entry.add_to_hass(hass)
+    result = await entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], _input(url="http://user:secret@mealie:9000")
+    )
+    assert result["errors"] == {"base": "invalid_url_credentials"}
+    shown = [str(k.description) for k in result["data_schema"].schema if k == CONF_URL]
+    assert shown == [str({"suggested_value": "http://mealie:9000"})]
+
+
 async def test_user_step_rejects_whitespace_in_the_host_with_its_own_error(hass):
     result = await hass.config_entries.flow.async_configure(
         (await _start_user(hass))["flow_id"], _input(url="http://mealie :9000")

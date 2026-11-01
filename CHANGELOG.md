@@ -6,7 +6,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ### Fixed
 
-- Reconfigure with a token from a different Mealie account keeps the form open with an error, like re-authentication. A user name and password typed into the address are no longer shown again after the error.
+- Reconfigure with a token from a different Mealie account keeps the form open with an error, like re-authentication. A user name and password typed into the address are no longer shown again after an error, neither when adding nor when reconfiguring the integration.
 
 ## [0.12.1] - 2026-11-01
 

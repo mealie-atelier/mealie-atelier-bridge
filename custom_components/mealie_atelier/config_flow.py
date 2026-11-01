@@ -91,6 +91,12 @@ def _clean_url(url: str) -> str:
     return urlunsplit(parts._replace(path="/".join(segments)))
 
 
+def _without_userinfo(url: str) -> str:
+    """The address without user:password@, so a typed password never travels back to the browser."""
+    parts = urlsplit(url.strip())
+    return urlunsplit(parts._replace(netloc=parts.netloc.rpartition("@")[2]))
+
+
 def _error_key(error: Exception) -> str:
     """Map a validation failure to a translated error key."""
     if isinstance(error, MealieAuthError):
@@ -196,13 +202,8 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     },
                 )
         suggested = user_input
-        if errors.get("base") == "invalid_url_credentials":
-            # Do not echo a typed password back to the browser.
-            parts = urlsplit(user_input[CONF_URL].strip())
-            suggested = {
-                **user_input,
-                CONF_URL: urlunsplit(parts._replace(netloc=parts.netloc.rpartition("@")[2])),
-            }
+        if user_input is not None:
+            suggested = {**user_input, CONF_URL: _without_userinfo(user_input[CONF_URL])}
         return self.async_show_form(
             step_id="user",
             data_schema=self.add_suggested_values_to_schema(
@@ -307,7 +308,7 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ),
                 # Never suggest the saved token: suggested values travel to the browser.
                 {
-                    CONF_URL: (user_input or entry.data)[CONF_URL],
+                    CONF_URL: _without_userinfo((user_input or entry.data)[CONF_URL]),
                     CONF_VERIFY_SSL: (user_input or entry.data).get(CONF_VERIFY_SSL, True),
                 },
             ),
