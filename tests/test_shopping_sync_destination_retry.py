@@ -194,3 +194,56 @@ async def test_fallback_backoff_is_bounded(
     await tick(hass, freezer, 7200)
     assert len(sync.store.data["audit"]) == before
     assert rule_id in sync._dest_listeners
+
+
+async def restart(sync: SyncManager, hass: HomeAssistant) -> None:
+    """Drop the in-memory retry state the way a Home Assistant restart does, then run startup."""
+    for rule_id in list(sync.rules):
+        sync._disarm_destination_retry(rule_id)
+    sync._on_started(hass)
+    await hass.async_block_till_done()
+
+
+async def test_restart_rearms_waiting_rule_and_sends_when_destination_returns(
+    hass: HomeAssistant,
+    sync: SyncManager,
+    mealie: FakeMealie,
+    bring: FakeTodo,
+    freezer: FrozenDateTimeFactory,
+):
+    rule_id = await waiting_rule(sync, mealie, bring)
+    await restart(sync, hass)
+    assert rule_id in sync._dest_listeners
+
+    bring.set_available(True)
+    await hass.async_block_till_done()
+    await tick(hass, freezer, 31)
+
+    assert bring.calls == ["1 Milch", "1 Brot"]
+    assert sync.rules[rule_id]["last_run"]["outcome"] == "sent"
+
+
+async def test_restart_does_not_arm_paused_or_inactive_rules(
+    hass: HomeAssistant, sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
+):
+    rule_id = await waiting_rule(sync, mealie, bring)
+    await sync.async_set_paused(rule_id, True)
+    await restart(sync, hass)
+    assert not sync._dest_listeners
+    assert not sync._dest_timers
+
+    await sync.async_set_paused(rule_id, False)
+    sync._disarm_destination_retry(rule_id)
+    sync.rules[rule_id]["activated"] = False
+    await restart(sync, hass)
+    assert not sync._dest_listeners
+    assert not sync._dest_timers
+
+
+async def test_restart_does_not_arm_rule_without_unavailable_outcome(
+    hass: HomeAssistant, sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
+):
+    mealie.add(mealie_item("a", note="Milch"))
+    await activate(sync)
+    await restart(sync, hass)
+    assert not sync._dest_listeners

@@ -226,6 +226,11 @@ class SyncManager:
                 for record in self._rule_records(rule["id"])
             ):
                 self._schedule_run(rule["id"], "startup", SYNC_STARTUP_DELAY)
+            elif (rule.get("last_run") or {}).get("outcome") == "destination_unavailable" and any(
+                record["state"] == RecordState.PENDING for record in self._rule_records(rule["id"])
+            ):
+                # The retry listener and timers are in memory only: re-arm after a restart.
+                self._arm_destination_retry(rule["id"])
         self._refresh_watchers()
 
     async def async_stop(self) -> None:
