@@ -612,10 +612,19 @@ async def prepare_ha() -> None:
     for result in await ha_all(configs):
         if isinstance(result, dict) and "error" in result:
             raise SystemExit(f"dashboard config: {result['error']}")
+    # Leftover notifications (a finished kitchen timer from an earlier test run) put a badge on the sidebar.
+    await ha_all(
+        [{"type": "call_service", "domain": "persistent_notification", "service": "dismiss_all"}]
+    )
     issues = (await ha_all([{"type": "repairs/list_issues"}]))[0]
     left = [i["issue_id"] for i in issues.get("issues", []) if not i.get("ignored")]
     if left:
         raise SystemExit(f"Home Assistant still shows repair issues: {left}")
+    notes = (await ha_all([{"type": "persistent_notification/get"}]))[0]
+    if notes:
+        raise SystemExit(
+            f"Home Assistant still shows notifications: {[n['notification_id'] for n in notes]}"
+        )
     print("ok   Home Assistant prepared")
 
 
