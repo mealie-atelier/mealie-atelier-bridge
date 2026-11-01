@@ -29,7 +29,7 @@ def test_uninstall_steps_name_bridge_and_cards_everywhere() -> None:
 
 
 def test_live_scripts_write_bring_with_exclamation_mark() -> None:
-    """The capture scripts type rule names into screenshots, so they must not drop the mark."""
+    """The live scripts type rule names into the rig, so they must not drop the mark."""
     assert LIVE
     for path in LIVE:
         for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
@@ -50,15 +50,6 @@ def test_brand_readme_names_artwork_source_and_font_license() -> None:
     assert "SIL Open Font License" in text
     assert "brand/source/" in text
     assert "photograph of" not in text
-
-
-def test_bridge_capture_pins_the_card_language_and_uses_a_throwaway_list() -> None:
-    """Mixed-language or stale-bundle screenshots came from an unpinned capture."""
-    text = (ROOT / "tests" / "live" / "capture_bridge.py").read_text(encoding="utf-8")
-    assert "mealie-atelier:design" in text
-    assert "CARDS_BUNDLE" in text
-    assert "/api/households/shopping/lists" in text
-    assert 'f"/api/households/shopping/lists/{list_id}"' in text
 
 
 def test_sync_screenshots_keep_their_size() -> None:

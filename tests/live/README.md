@@ -14,11 +14,6 @@ Fictional demo recipes only; never point these scripts at a real household insta
   `/local/community/mealie-atelier-cards/mealie-atelier-cards.js`.
 - Smoke test of the Bridge against the rig: `python3 tests/live/smoke.py` (35 checks: reads, a recipe
   edit with backup and restore, the structured-editor guard, shopping sync reads, offline replay).
-- Bridge screenshots (setup form, integration page, sync dialogs): `uv run --with playwright python
-  tests/live/capture_bridge.py [out-dir] [de|en]`, after `capture_screens.py`.
-- Guide screenshots (Mealie API token page, integration search, Bridge options, card picker, visual
-  editor and one dashboard per card type): `uv run --with playwright python
-  tests/live/capture_guide.py [out-dir] [de|en]`, after `capture_screens.py`.
 - Smart Shopping Sync end to end: `python3 tests/live/sync_live.py`. Syncs throwaway Mealie lists
   into Home Assistant's built-in shopping list (`todo.shopping_list`, no account needed): preview,
   first-batch gate, exactly-once delivery, duplicate skip, the after-add trigger and move mode.
@@ -28,16 +23,6 @@ Fictional demo recipes only; never point these scripts at a real household insta
   `uv run --with playwright python tests/live/ui_smoke.py`. It registers the module resource at the
   Marketplace path, adds an `atelier-live` dashboard, checks that every recipe photo arrives whole and
   that the recipe dialog opens above the sidebar, and saves screenshots to `state/screens/`.
-- Product screenshots (desktop and phone, light and dark, every mode plus a recipe and cooking
-  mode): `uv run --with playwright python tests/live/capture_screens.py [out-dir] [de|en]`, after
-  `ui_smoke.py`. Default out-dir is `state/shots/`.
-- The whole German guide screenshot set for the site (webp, same names and sizes as the guides, plus the
-  OG crops in `<out>/og/`): `LIVE_STATE=<path to state> uv run --with playwright --with pillow python
-  tests/live/capture_guides.py <out-dir>`. It sets up its own dashboards, Lovelace resource, a Local
-  To-do sync target and the German demo data, starts the standalone web app with Node against the rig
-  Mealie, pins the clock to 09:00 and serves the cards bundle (`CARDS_BUNDLE`, default the sibling
-  repository's `dist`) through route interception. `GUIDE_ONLY=name,name` redoes single images.
-  Bring! shots and the Mealie token page are not part of it unless asked for by name.
 - Language: `SEED_LANGUAGE=en ./rig.sh up` seeds English recipes and an English Home Assistant user
   (default `de`). The seed is idempotent, adds a short fictional shopping list and removes items the
   smoke test left behind.

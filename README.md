@@ -155,7 +155,7 @@ uv run ruff check && uv run ruff format --check
 git config core.hooksPath .githooks
 ```
 
-Live acceptance tests run against disposable Mealie and Home Assistant containers with fictional data: smoke tests, browser checks of the cards, the shopping sync end to end and the screenshots in this README. See [`tests/live/README.md`](tests/live/README.md). Contribution rules are in [CONTRIBUTING.md](CONTRIBUTING.md).
+Live acceptance tests run against disposable Mealie and Home Assistant containers with fictional data: smoke tests, browser checks of the cards, the shopping sync end to end. The screenshots in this README are real captures of that rig. See [`tests/live/README.md`](tests/live/README.md). Contribution rules are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Support the project
 
