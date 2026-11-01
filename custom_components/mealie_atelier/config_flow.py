@@ -195,6 +195,14 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_VERIFY_SSL: user_input[CONF_VERIFY_SSL],
                     },
                 )
+        suggested = user_input
+        if errors.get("base") == "invalid_url_credentials":
+            # Do not echo a typed password back to the browser.
+            parts = urlsplit(user_input[CONF_URL].strip())
+            suggested = {
+                **user_input,
+                CONF_URL: urlunsplit(parts._replace(netloc=parts.netloc.rpartition("@")[2])),
+            }
         return self.async_show_form(
             step_id="user",
             data_schema=self.add_suggested_values_to_schema(
@@ -205,7 +213,7 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         vol.Optional(CONF_VERIFY_SSL, default=True): bool,
                     }
                 ),
-                user_input,
+                suggested,
             ),
             errors=errors,
         )
@@ -265,7 +273,9 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 # A new URL is fine, a different Mealie account is not: studio data and timers
                 # are stored per entry and would leak.
                 if _unique_id(account) != account_id_of(entry.unique_id):
-                    return self.async_abort(reason="wrong_account")
+                    # Stay in the flow like re-authentication, so the URL need not be retyped.
+                    errors["base"] = "wrong_account"
+                    return self._show_reconfigure_form(entry, user_input, errors)
                 # Follow the new host in the title, unless the user renamed the entry.
                 username = account.get("username", "Kitchen")
                 generated = entry.title in (
@@ -282,6 +292,9 @@ class MealieAtelierConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     },
                     reason="reconfigure_successful",
                 )
+        return self._show_reconfigure_form(entry, user_input, errors)
+
+    def _show_reconfigure_form(self, entry, user_input, errors):
         return self.async_show_form(
             step_id="reconfigure",
             data_schema=self.add_suggested_values_to_schema(

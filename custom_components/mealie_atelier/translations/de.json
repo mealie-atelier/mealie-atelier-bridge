@@ -52,8 +52,7 @@
     "abort": {
       "already_configured": "Dieses Mealie-Konto ist bereits eingerichtet.",
       "reauth_successful": "Die erneute Anmeldung war erfolgreich.",
-      "reconfigure_successful": "Die Neukonfiguration war erfolgreich.",
-      "wrong_account": "Dieses Token gehört zu einem anderen Mealie-Konto. Verwende ein Token des eingerichteten Kontos."
+      "reconfigure_successful": "Die Neukonfiguration war erfolgreich."
     }
   },
   "options": {

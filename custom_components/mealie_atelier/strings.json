@@ -52,8 +52,7 @@
     "abort": {
       "already_configured": "This Mealie account is already set up.",
       "reauth_successful": "Re-authentication was successful.",
-      "reconfigure_successful": "Reconfiguration was successful.",
-      "wrong_account": "This token belongs to a different Mealie account. Use a token of the account that was set up."
+      "reconfigure_successful": "Reconfiguration was successful."
     }
   },
   "options": {

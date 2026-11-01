@@ -211,8 +211,9 @@ async def test_reconfigure_rejects_other_account(hass):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], _input(token="foreign")
         )
-    assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "wrong_account"
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reconfigure"
+    assert result["errors"] == {"base": "wrong_account"}
     assert entry.data[CONF_API_TOKEN] == "old"
     assert entry.unique_id == "user-1"
 
@@ -653,6 +654,15 @@ async def test_user_step_names_credentials_in_the_address(hass):
         path = INTEGRATION / "translations" / f"{locale}.json"
         errors = json.loads(path.read_text())["config"]["error"]
         assert errors["invalid_url_credentials"]
+
+
+async def test_user_step_does_not_echo_credentials_of_the_address(hass):
+    result = await hass.config_entries.flow.async_configure(
+        (await _start_user(hass))["flow_id"], _input(url="http://user:secret@mealie:9000")
+    )
+    assert result["errors"] == {"base": "invalid_url_credentials"}
+    shown = [str(k.description) for k in result["data_schema"].schema if k == CONF_URL]
+    assert shown == [str({"suggested_value": "http://mealie:9000"})]
 
 
 async def test_user_step_rejects_whitespace_in_the_host_with_its_own_error(hass):
