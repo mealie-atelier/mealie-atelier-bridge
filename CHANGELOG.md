@@ -4,32 +4,30 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
-## [0.12.1] - 2026-10-31
+## [0.12.1] - 2026-11-01
 
 ### Fixed
 
-- Options key help no longer prints raw ✓/✗ glyphs inside the sentence (the help text states in words whether a key is saved), and the re-authentication token help adds only new information.
-- Smart Shopping Sync: items waiting for an unavailable destination are retried again after a Home Assistant restart instead of staying at "waiting" until the next manual send.
-- Options help for the USDA and AI keys no longer tells you to leave the field empty to keep a key when none is saved.
-- The Smart Shopping Sync screenshot in the README shows the left-aligned rule actions.
-- Smart Shopping Sync: items left waiting while the destination list was unavailable go out on their own once it is reachable again, with a few timed retries as a fallback.
-- Recipe editor: saving other servings also updates a yield text that starts with the old number, so "1,5 Portionen" becomes "2,5 Portionen". Other yield texts stay as they are.
+- Options key help no longer prints raw ✓/✗ glyphs inside the sentence (the help text states in words whether a key is saved), the re-authentication token help adds only new information, and the USDA and AI key help no longer tells you to leave the field empty to keep a key when none is saved or points to a remove option that only appears once a key is saved.
+- Smart Shopping Sync: items waiting for an unavailable destination go out on their own once it is reachable again, with a few timed retries as a fallback, and are retried again after a Home Assistant restart instead of staying at "waiting" until the next manual send.
+- Nutrition lab: the food search prefills only the food name for lines such as "2 EL Zucker" or "1 Ei", without the leading quantity and unit.
+- Recipe editor: fractional servings such as 2.5 save again, and saving other servings from the card also updates the yield text and its quantity in Mealie, so "2,5 Portionen" becomes "3,5 Portionen". A range such as "2-3 Portionen" and other yield texts stay as they are.
+- Smart Shopping Sync: a destination list that has no state in Home Assistant reports "not found" instead of "unsupported", also when it is still in the entity registry.
+- Smart Shopping Sync: a run that leaves nothing pending cancels the scheduled follow-up run and clears the next run time.
 - Setup: an address without `http://` or `https://` gets an error that names the scheme instead of talking about spaces. Spaces in the address keep their own error.
 - The help link in every setup, options and re-authentication dialog opens the setup guide instead of the GitHub readme.
 - The connection address in the options and re-authentication text is plain text without `http://` or `https://`, so it wraps cleanly and Home Assistant no longer turns it into a link.
-- Recipe editor: fractional servings such as 2.5 save again. A shopping sync destination that does not exist reports "not found" instead of "unsupported", and the AI key help no longer points to a remove option that only appears once a key is saved.
 - A Mealie token revoked while Home Assistant runs starts re-authentication from any rejected call, including the background sync, and a periodic check catches it even when nobody opens a card.
 - Smart Shopping Sync: "Send again" starts a run, a run that only skipped duplicates reports "nothing to send", items beyond the first 50 are sent in follow-up passes, an empty first batch activates the rule, read-only mode stops automatic runs, an unavailable or removed destination keeps counting the waiting items and names the problem, and changed items carry their current Mealie text.
 - Setup and options: a pasted address drops its query and fragment, credentials or spaces in the address get a clear error, an unknown connection reports "entry not found", the options show whether a USDA or AI key is saved, and the version history records combined edits of basics and steps.
-- Kitchen timer notifications use the language the card sent with the timer, falling back to the Home Assistant language. Default sync rule names are shortened per list name with an ellipsis and keep the destination, and a destination without a state shows its registry name.
+- Kitchen timer notifications use the language the card sent with the timer, falling back to the Home Assistant language. Default sync rule names are shortened per list name with an ellipsis and keep the destination.
 - The options and re-authentication text names the connection once: "Settings for admin@mealie:9000" instead of repeating the host in parentheses. A renamed connection still shows its address.
 - The setup dialog titles "Reconfigure Bridge" and "Re-authenticate Bridge" are short enough to stay on one line on a phone.
 - German texts: re-authentication uses one wording ("neu anmelden") in the dialog title, the success message and the error text.
 - German texts: the read-only help says "aber", and the setup description keeps its "replaces nothing" half sentence without a comma before "und".
-- Docs: the shopping sync guide points to Bring! in the standalone web app, the tested destinations list no longer carries test notes, the manual install says where the folder comes from, the Resources step no longer asks for Advanced mode (removed in Home Assistant 2026.6), the restart note matches the Marketplace, and American spelling.
 - Smart Shopping Sync: the preview sample skips duplicates that would not be sent, and shows no sample when everything is skipped.
-- German texts: the re-authentication success message reads "Die erneute Anmeldung war erfolgreich." Docs: the install example address matches the setup dialog.
-- Docs: the Smart Shopping Sync rule editor screenshot shows the gap above the delay field, and the guide capture script fits the bounded cooking dialog so the step text is never cut.
+- German texts: the re-authentication success message reads "Die erneute Anmeldung war erfolgreich."
+- Docs: the guides, screenshots and capture scripts match the current screens and setup steps.
 
 ## [0.12.0] - 2026-10-31
 

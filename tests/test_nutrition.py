@@ -243,3 +243,26 @@ class NutritionTests(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@pytest.mark.parametrize(
+    ("line", "query"),
+    [
+        ("2 EL Zucker", "Zucker"),
+        ("2 TL Backpulver", "Backpulver"),
+        ("1 Ei", "Ei"),
+        ("250 g Weizenmehl", "Weizenmehl"),
+        ("½ Bund Petersilie", "Petersilie"),
+        ("1,5 EL. Honig", "Honig"),
+        ("2-3 Zehen Knoblauch", "Knoblauch"),
+        ("1 1/2 cups flour", "flour"),
+        ("3 tbsp. sugar", "sugar"),
+        ("Salz", "Salz"),
+        ("Eier", "Eier"),
+        ("2 Eier", "Eier"),
+    ],
+)
+def test_prepare_query_drops_leading_quantity_and_unit(line, query):
+    recipe = {"recipeIngredient": [{"display": line}]}
+    rows = n.prepare(recipe, fdc_enabled=True, ai_enabled=False)["ingredients"]
+    assert rows[0]["query"] == query

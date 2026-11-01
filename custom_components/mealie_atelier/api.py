@@ -690,8 +690,11 @@ class MealieClient:
             )
         if action == "recipe_update":
             slug, changes = recipe_update_changes(payload)
-            if any(isinstance(step, dict) for step in payload.get("instructions") or ()):
-                # Steps are merged by id into the stored ones so titles and photos survive.
+            if "servings" in payload or any(
+                isinstance(step, dict) for step in payload.get("instructions") or ()
+            ):
+                # Steps are merged by id into the stored ones so titles and photos survive,
+                # and the yield text follows the servings only with the stored recipe at hand.
                 slug, changes = recipe_update_changes(payload, await self.recipe(slug))
             return await self.request("PATCH", f"/api/recipes/{slug}", data=changes)
         if action == "recipe_import":

@@ -215,6 +215,10 @@ async def test_rule_limits_and_validation(hass: HomeAssistant, admin, mealie: Fa
     assert response["error"]["code"] == "sync_destination_unsupported"
     response = await save(rule=draft("todo.missing"))
     assert response["error"]["code"] == "sync_destination_missing"
+    # A list that is still in the registry but has no state is gone as well.
+    entity_registry.async_get_or_create("todo", "bring", "gone", suggested_object_id="gone")
+    response = await save(rule=draft("todo.gone"))
+    assert response["error"]["code"] == "sync_destination_missing"
     for bad in (
         {"debounce_seconds": 4},
         {"debounce_seconds": 601},

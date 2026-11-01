@@ -622,6 +622,30 @@ async def test_two_rules_run_concurrently(
     assert plain.calls == ["1 Chips", "1 Saft"]
 
 
+async def test_run_with_nothing_pending_cancels_the_scheduled_run(
+    hass: HomeAssistant,
+    sync: SyncManager,
+    mealie: FakeMealie,
+    bring: FakeTodo,
+    freezer: FrozenDateTimeFactory,
+):
+    mealie.add(mealie_item("a", note="Milch"))
+    rule_id, _ = await activate(sync)
+    mealie.add(mealie_item("b", note="Brot"))
+    sync.notify_source_changed("list-weekly", "after_atelier_add")
+    assert sync.rule_status(sync.rules[rule_id])["next_run_at"] is not None
+
+    result = await sync.async_run(rule_id, "manual")
+
+    assert result["pending_left"] == 0
+    assert sync.rule_status(sync.rules[rule_id])["next_run_at"] is None
+    sent = len(bring.calls)
+    freezer.tick(timedelta(seconds=60))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert len(bring.calls) == sent
+
+
 async def test_debounce_collapses_bursts_into_one_run(
     hass: HomeAssistant,
     sync: SyncManager,

@@ -448,12 +448,10 @@ class SyncManager:
         return destination["supports"]["create"] and destination["platform"] != "mealie"
 
     def _require_destination(self, entity_id: str, destination: dict[str, Any]) -> None:
-        if (
-            self.hass.states.get(entity_id) is None
-            and er.async_get(self.hass).async_get(entity_id) is None
-        ):
+        if self.hass.states.get(entity_id) is None:
+            # A list without a state (removed or registry only) is gone for the sync.
             raise SyncError("sync_destination_missing", "That to-do list was not found")
-        if self.hass.states.get(entity_id) is None or not self._usable(destination):
+        if not self._usable(destination):
             raise SyncError(
                 "sync_destination_unsupported",
                 "Choose a to-do list that can add items. Mealie's own lists cannot be a destination.",
@@ -531,6 +529,9 @@ class SyncManager:
                 self._arm_destination_retry(rule_id)
             else:
                 self._disarm_destination_retry(rule_id)
+        if not result.get("queued") and result.get("pending_left") == 0:
+            # Nothing is left to send: a pending debounce run would only find an empty rule.
+            self._cancel_scheduled(rule_id)
         again = self._rerun.pop(rule_id, None)
         if again is not None and rule_id in self.rules and not self._stopped:
             self._spawn(self._run_quietly(rule_id, again), f"mealie_atelier_sync_{again}")

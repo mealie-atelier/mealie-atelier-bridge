@@ -31,6 +31,22 @@ _NUTRIENTS = {
 }
 _GRAMS = re.compile(r"^\s*(\d+(?:[.,]\d+)?)\s*(kg|g|gramm|grams?)\b", re.IGNORECASE)
 
+_UNITS = (
+    "kg|mg|g|ml|l|el|tl|prisen?|stk|stücke?|stueck|bund|bünde|dosen?|tassen?|becher|packung(?:en)?"
+    "|pck|zehen?|zehe|scheiben?|tbsp|tsp|cups?|oz|lb|pieces?|pinch|cloves?|can|slices?"
+)
+_QUANTITY = r"(?:\d+(?:[.,]\d+)?(?:\s*/\s*\d+)?(?:\s*[-–]\s*\d+(?:[.,]\d+)?)?|[¼½¾⅓⅔⅛⅜⅝⅞])"
+_LEADING_AMOUNT = re.compile(
+    rf"^\s*(?:\d+\s+)?{_QUANTITY}\s*(?:(?:{_UNITS})\b\.?\s*)?",
+    re.IGNORECASE,
+)
+
+
+def strip_amount(text: str) -> str:
+    """Drop a leading quantity and unit word so only the food name stays as the query."""
+    stripped = _LEADING_AMOUNT.sub("", text, count=1).strip()
+    return stripped or text
+
 
 def fingerprint(recipe: dict) -> str:
     """Stable guard against overwriting edits made after preview."""
@@ -85,7 +101,8 @@ def prepare(recipe: dict, *, fdc_enabled: bool, ai_enabled: bool) -> dict:
         description = _text(item)
         if not description:
             continue
-        query = str((item.get("food") or {}).get("name") or description)
+        food_name = (item.get("food") or {}).get("name")
+        query = str(food_name) if food_name else strip_amount(description)
         query = _GRAMS.sub("", query).strip(" -,;:")[:100]
         result.append(
             {
