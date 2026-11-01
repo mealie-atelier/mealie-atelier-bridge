@@ -4,6 +4,10 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
+### Fixed
+
+- A malformed address such as `http://[::1` when adding or reconfiguring the integration now shows the "Enter a valid Mealie URL" error in the form instead of an "Unknown error occurred" message.
+
 ## [0.12.2] - 2026-11-01
 
 ### Fixed
