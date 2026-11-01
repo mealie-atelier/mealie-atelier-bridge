@@ -153,7 +153,7 @@ class TimerManager:
             if entry["status"] == "sent":
                 # A finished timer is already gone from the user's point of view: removing it is a no-op.
                 return deepcopy(entry)
-            # A timer that is being delivered right now is cancelled too: the delivery result is
+            # A timer that is being delivered right now is canceled too: the delivery result is
             # ignored afterwards, so the card never has to show a dispatch error.
             entry["status"] = "cancelled"
             await self._save()

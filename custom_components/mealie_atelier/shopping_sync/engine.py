@@ -1321,8 +1321,14 @@ class SyncManager:
             in_flight={},
             **options,
         )
-        sample_line = next((line for line in lines if line["action"] != "skip_empty"), None)
-        if sample_line is not None:
+        sample_line = next(
+            (line for line in lines if line["action"] not in ("skip_empty", "skip_duplicate")),
+            None,
+        )
+        if sample_line is None and any(line["action"] == "skip_duplicate" for line in lines):
+            # Everything in the batch is skipped: there is nothing to preview as a sample.
+            sample = None
+        elif sample_line is not None:
             first = next(item for item in candidates if item["id"] == sample_line["key"])
             sample = map_item(first, **options)
         else:

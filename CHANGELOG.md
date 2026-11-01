@@ -23,6 +23,8 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 - German texts: re-authentication uses one wording ("neu anmelden") in the dialog title, the success message and the error text.
 - German texts: the read-only help says "aber", and the setup description keeps its "replaces nothing" half sentence without a comma before "und".
 - Docs: the shopping sync guide points to Bring! in the standalone web app, the tested destinations list no longer carries test notes, the manual install says where the folder comes from, the Resources step no longer asks for Advanced mode (removed in Home Assistant 2026.6), the restart note matches the Marketplace, and American spelling.
+- Smart Shopping Sync: the preview sample skips duplicates that would not be sent, and shows no sample when everything is skipped.
+- German texts: the re-authentication success message reads "Die erneute Anmeldung war erfolgreich." Docs: the install example address matches the setup dialog.
 - Docs: the Smart Shopping Sync rule editor screenshot shows the gap above the delay field, and the guide capture script fits the bounded cooking dialog so the step text is never cut.
 
 ## [0.12.0] - 2026-10-31

@@ -50,7 +50,7 @@
     },
     "abort": {
       "already_configured": "Dieses Mealie-Konto ist bereits eingerichtet.",
-      "reauth_successful": "Die Mealie Atelier Bridge wurde neu angemeldet.",
+      "reauth_successful": "Die erneute Anmeldung war erfolgreich.",
       "reconfigure_successful": "Die Neukonfiguration war erfolgreich.",
       "wrong_account": "Dieses Token gehört zu einem anderen Mealie-Konto. Verwende ein Token des eingerichteten Kontos."
     }

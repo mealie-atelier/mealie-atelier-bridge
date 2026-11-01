@@ -104,7 +104,7 @@ def _signed(hass: HomeAssistant, entry: MealieAtelierConfigEntry, recipe: dict) 
     return sign_images(hass, entry.entry_id, recipe)
 
 
-# Food and unit catalogue
+# Food and unit catalog
 
 
 def _project(item: dict, keys: tuple[str, ...]) -> dict:
