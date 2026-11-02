@@ -519,6 +519,7 @@ async def test_resend_of_a_gone_or_ticked_item_is_refused_and_keeps_the_record(
     mealie.add(mealie_item("a", note="Milch"), mealie_item("b", note="Brot"))
     rule_id, _ = await activate(sync)
     mealie.items["a"]["checked"] = True
+    mealie.items["a"]["note"] = "Hafermilch"
     del mealie.items["b"]
     await sync.async_run(rule_id, "manual")
     before = states(sync, rule_id)
@@ -1105,3 +1106,56 @@ async def test_destination_name_falls_back_to_the_registry_entry(
     assert sync.destination("todo.wocheneinkauf")["name"] == "Wocheneinkauf"
     assert sync.destination("todo.b")["name"] == "Eigener Name"
     assert sync.destination("todo.unknown")["name"] == "todo.unknown"
+
+
+async def test_ticking_a_sent_item_in_mealie_is_not_a_change(
+    sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
+):
+    mealie.add(mealie_item("a", note="Milch"))
+    rule_id, _ = await activate(sync)
+
+    mealie.items["a"] = {**mealie.items["a"], "checked": True}
+    await sync.async_run(rule_id, "manual")
+    assert states(sync, rule_id) == {"a": "sent"}
+
+    mealie.items["a"] = {**mealie.items["a"], "checked": True, "note": "Hafermilch"}
+    await sync.async_run(rule_id, "manual")
+    assert states(sync, rule_id) == {"a": "changed_after_send"}
+
+
+async def test_retarget_clears_stale_source_missing_and_last_run(
+    sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
+):
+    mealie.add(mealie_item("a", note="Milch"))
+    rule_id, _ = await activate(sync)
+    sync.rules[rule_id]["source_missing"] = True
+    assert sync.rules[rule_id]["last_run"] is not None
+
+    await sync.async_save_rule(
+        draft("todo.einkauf", source_list_id=PARTY),
+        rule_id=rule_id,
+        expected_revision=sync.rules[rule_id]["revision"],
+        reset_records=True,
+        user_id="admin-user",
+    )
+
+    status = sync.rule_status(sync.rules[rule_id])
+    assert status["source_missing"] is False
+    assert status["last_run"] is None
+
+
+async def test_rule_stores_the_destination_friendly_name(
+    sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
+):
+    rule_id = await save_rule(sync)
+
+    assert sync.rule_status(sync.rules[rule_id])["destination_name"] == "Einkauf"
+
+    await sync.async_save_rule(
+        draft("todo.plain_list"),
+        rule_id=rule_id,
+        expected_revision=sync.rules[rule_id]["revision"],
+        reset_records=True,
+        user_id="admin-user",
+    )
+    assert sync.rule_status(sync.rules[rule_id])["destination_name"] == "Plain list"

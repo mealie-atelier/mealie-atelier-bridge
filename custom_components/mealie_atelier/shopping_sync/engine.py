@@ -112,6 +112,13 @@ def _default_rule_name(source: str, destination: str) -> str:
     return f"{source}{separator}{destination}"
 
 
+def _changed_since_send(item: dict[str, Any], sent_fingerprint: str | None) -> bool:
+    """True when the item differs from what was sent. Ticking it (False to True) is no change."""
+    if fingerprint(item) == sent_fingerprint:
+        return False
+    return not (item.get("checked") and fingerprint(item, checked=False) == sent_fingerprint)
+
+
 class SyncManager:
     """Owns rules, the outbox and every trigger of one config entry."""
 
@@ -783,7 +790,8 @@ class SyncManager:
             if state == RecordState.SENT:
                 if item is None:
                     self._set(record, RecordState.REMOVED_AFTER_SEND)
-                elif (current := fingerprint(item)) != record["sent_fingerprint"]:
+                elif _changed_since_send(item, record["sent_fingerprint"]):
+                    current = fingerprint(item)
                     self._set(
                         record,
                         RecordState.CHANGED_AFTER_SEND,
@@ -972,7 +980,8 @@ class SyncManager:
                 )
                 failed += 1
                 continue
-            if (current_fp := fingerprint(current)) != record["sent_fingerprint"]:
+            if _changed_since_send(current, record["sent_fingerprint"]):
+                current_fp = fingerprint(current)
                 # Edited between send and completion: the destination holds the old version.
                 self._set(
                     record,
@@ -1096,6 +1105,11 @@ class SyncManager:
             raise ValueError("Unknown source shopping list")
         source_name = str(source.get("name") or "")[:100]
         now = _now()
+        state = self.hass.states.get(fields["destination_entity_id"])
+        friendly = state.attributes.get("friendly_name") if state else None
+        destination_name = (
+            friendly if isinstance(friendly, str) and friendly else destination["name"]
+        )[:100]
         name = fields.pop("name") or _default_rule_name(source_name, destination["name"])
         if existing is None:
             rule_id = str(uuid4())
@@ -1111,6 +1125,7 @@ class SyncManager:
                 "created_at": now,
                 "updated_at": now,
                 "last_run": None,
+                "destination_name": destination_name,
             }
             self.rules[rule_id] = rule
         else:
@@ -1119,6 +1134,9 @@ class SyncManager:
                 for record in self._rule_records(rule["id"]):
                     del self.records[record["key"]]
                 rule["activated"] = False
+                # A notice or outcome about the old target no longer applies.
+                rule["source_missing"] = False
+                rule["last_run"] = None
                 self._cancel_scheduled(rule["id"])
             if existing["mode"] == "copy" and fields["mode"] == "move":
                 # Earlier items were promised to stay open in Mealie, so Move starts with new ones.
@@ -1129,6 +1147,7 @@ class SyncManager:
                 fields,
                 name=name,
                 source_list_name=source_name,
+                destination_name=destination_name,
                 revision=rule["revision"] + 1,
                 updated_at=now,
             )
