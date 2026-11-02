@@ -1212,6 +1212,22 @@ async def test_auto_name_follows_the_target_and_typed_name_is_custom(
     assert status["name"] == "Mine"
 
 
+async def test_generated_name_sent_by_older_cards_stays_automatic(
+    sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
+):
+    rule_id = await save_rule(sync)
+    generated = sync.rules[rule_id]["name"]
+    status = await sync.async_save_rule(
+        draft(sync.rules[rule_id]["destination_entity_id"], name=generated),
+        rule_id=rule_id,
+        expected_revision=sync.rules[rule_id]["revision"],
+        reset_records=False,
+        user_id="admin-user",
+    )
+    assert status["auto_name"] is True
+    assert status["name"] == generated
+
+
 async def test_legacy_rule_without_auto_name_is_detected(
     sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
 ):

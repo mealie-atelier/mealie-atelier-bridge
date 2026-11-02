@@ -1126,8 +1126,13 @@ class SyncManager:
             friendly if isinstance(friendly, str) and friendly else destination["name"]
         )[:100]
         typed_name = fields.pop("name")
-        auto_name = not typed_name
-        name = typed_name or _default_rule_name(source_name, destination["name"])
+        default_name = _default_rule_name(source_name, destination["name"])
+        # Older cards send the generated name instead of leaving the field empty.
+        auto_name = not typed_name or typed_name in {
+            default_name,
+            _default_rule_name(source_name, destination_name),
+        }
+        name = default_name if auto_name else typed_name
         if existing is None:
             rule_id = str(uuid4())
             rule = {
