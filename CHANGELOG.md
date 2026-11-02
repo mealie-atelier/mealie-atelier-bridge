@@ -4,6 +4,16 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
+### Fixed
+
+- Smart shopping sync: ticking a sent item in Mealie no longer marks it "Changed after send" with a resend button. Editing it still does.
+- Smart shopping sync: pointing a rule at another source or destination clears the old "list missing" notice and the last run outcome.
+- Setup, reauthentication and options: the token hint now names Mealie's real path ("Manage Your API Tokens" in the "API Tokens" tile of your profile), as do the README and installation guide.
+
+### Added
+
+- Smart shopping sync: each rule stores the destination list's name, so the cards can still name a list that was deleted in Home Assistant.
+
 ## [0.12.4] - 2026-11-02
 
 ### Fixed
