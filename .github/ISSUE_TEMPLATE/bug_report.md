@@ -13,7 +13,7 @@ labels: bug
 
 ## Mealie Atelier version (required)
 
-<!-- For example 0.12.5. -->
+<!-- For example 0.12.6. -->
 
 ## Relevant versions (required)
 

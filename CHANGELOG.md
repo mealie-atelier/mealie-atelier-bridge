@@ -4,6 +4,8 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
+## [0.12.6] - 2026-11-02
+
 ### Fixed
 
 - Smart shopping sync: pointing a rule at another list no longer shows the old list's last delivery.
@@ -179,7 +181,8 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 Before 0.10.0 the repository was an unreleased developer preview with no tagged versions. It contained the initial import of the Bridge source (secure server-side Mealie access, WebSocket commands for recipes, meal plans, shopping lists, nutrition, cooking sessions and timers, optional read-only mode, German and English setup translations), the pasta and tomatoes brand artwork, security and support links, and the first FAQ.
 
-[Unreleased]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.5...HEAD
+[Unreleased]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.6...HEAD
+[0.12.6]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.5...v0.12.6
 [0.12.5]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.4...v0.12.5
 [0.12.4]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.3...v0.12.4
 [0.12.3]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.2...v0.12.3
