@@ -4,6 +4,12 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
+### Fixed
+
+- Smart shopping sync: pointing a rule at another list no longer shows the old list's last delivery.
+- Smart shopping sync: a rule whose name was left empty keeps a name that follows its lists, so it updates when you point the rule at another list.
+- Smart shopping sync: items waiting to be sent are sent after Home Assistant restarts or the integration reloads, instead of waiting for the next change.
+
 ## [0.12.5] - 2026-11-02
 
 ### Fixed
