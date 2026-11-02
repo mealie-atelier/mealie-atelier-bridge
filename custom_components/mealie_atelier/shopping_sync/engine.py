@@ -228,16 +228,21 @@ class SyncManager:
         for rule in self.rules.values():
             if not rule.get("activated") or rule.get("paused"):
                 continue
+            records = self._rule_records(rule["id"])
+            has_pending = any(record["state"] == RecordState.PENDING for record in records)
             if any(
                 record["state"] == RecordState.NEEDS_RECONCILIATION or record["completion_pending"]
-                for record in self._rule_records(rule["id"])
+                for record in records
             ):
                 self._schedule_run(rule["id"], "startup", SYNC_STARTUP_DELAY)
-            elif (rule.get("last_run") or {}).get("outcome") == "destination_unavailable" and any(
-                record["state"] == RecordState.PENDING for record in self._rule_records(rule["id"])
+            elif has_pending and (rule.get("last_run") or {}).get("outcome") == (
+                "destination_unavailable"
             ):
                 # The retry listener and timers are in memory only: re-arm after a restart.
                 self._arm_destination_retry(rule["id"])
+            elif has_pending and any(rule["triggers"].get(name) for name in TRIGGERS_AUTOMATIC):
+                # A queued "Send again" or debounced run lives in memory only.
+                self._schedule_run(rule["id"], "startup", SYNC_STARTUP_DELAY)
         self._refresh_watchers()
 
     async def async_stop(self) -> None:
@@ -1023,6 +1028,15 @@ class SyncManager:
 
     # Rule management
 
+    def _is_auto_name(self, rule: dict[str, Any]) -> bool:
+        """Rules saved before `auto_name` existed count as auto when the old default matches."""
+        if "auto_name" in rule:
+            return bool(rule["auto_name"])
+        destination = self.destination(rule["destination_entity_id"])
+        names = {rule.get("destination_name") or "", (destination or {}).get("name") or ""}
+        source = rule.get("source_list_name") or ""
+        return any(rule.get("name") == _default_rule_name(source, name) for name in names if name)
+
     def rule_status(self, rule: dict[str, Any]) -> dict[str, Any]:
         counts = dict.fromkeys(STATES, 0)
         for record in self._rule_records(rule["id"]):
@@ -1031,6 +1045,7 @@ class SyncManager:
         lock = self._locks.get(rule["id"])
         return {
             **deepcopy(rule),
+            "auto_name": self._is_auto_name(rule),
             "counts": counts,
             "running": bool(lock and lock.locked()),
             "next_run_at": scheduled[1].isoformat() if scheduled else None,
@@ -1110,13 +1125,16 @@ class SyncManager:
         destination_name = (
             friendly if isinstance(friendly, str) and friendly else destination["name"]
         )[:100]
-        name = fields.pop("name") or _default_rule_name(source_name, destination["name"])
+        typed_name = fields.pop("name")
+        auto_name = not typed_name
+        name = typed_name or _default_rule_name(source_name, destination["name"])
         if existing is None:
             rule_id = str(uuid4())
             rule = {
                 "id": rule_id,
                 "revision": 1,
                 "name": name,
+                "auto_name": auto_name,
                 "source_list_name": source_name,
                 **fields,
                 "activated": False,
@@ -1137,6 +1155,13 @@ class SyncManager:
                 # A notice or outcome about the old target no longer applies.
                 rule["source_missing"] = False
                 rule["last_run"] = None
+                # Recent runs of the old target would read as runs of the new one.
+                self.store.data["audit"][:] = [
+                    entry
+                    for entry in self.store.data["audit"]
+                    if entry.get("rule_id") != rule["id"]
+                ]
+                rule["retargeted_at"] = now
                 self._cancel_scheduled(rule["id"])
             if existing["mode"] == "copy" and fields["mode"] == "move":
                 # Earlier items were promised to stay open in Mealie, so Move starts with new ones.
@@ -1146,6 +1171,7 @@ class SyncManager:
             rule.update(
                 fields,
                 name=name,
+                auto_name=auto_name,
                 source_list_name=source_name,
                 destination_name=destination_name,
                 revision=rule["revision"] + 1,

@@ -1159,3 +1159,103 @@ async def test_rule_stores_the_destination_friendly_name(
         user_id="admin-user",
     )
     assert sync.rule_status(sync.rules[rule_id])["destination_name"] == "Plain list"
+
+
+async def test_retarget_drops_old_audit_entries_and_stamps_retargeted_at(
+    sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
+):
+    mealie.add(mealie_item("a", note="Milch"))
+    rule_id, _ = await activate(sync)
+    other_id = await save_rule(sync, source_list_id=PARTY, entity_id="todo.plain_list")
+    sync.store.data["audit"].append({"at": "", "rule_id": other_id, "count": 1})
+    assert any(e["rule_id"] == rule_id for e in sync.store.data["audit"])
+
+    status = await sync.async_save_rule(
+        draft("todo.plain_list"),
+        rule_id=rule_id,
+        expected_revision=sync.rules[rule_id]["revision"],
+        reset_records=True,
+        user_id="admin-user",
+    )
+
+    assert not any(e["rule_id"] == rule_id for e in sync.store.data["audit"])
+    assert any(e["rule_id"] == other_id for e in sync.store.data["audit"])
+    assert status["retargeted_at"] == sync.rules[rule_id]["updated_at"]
+
+
+async def test_auto_name_follows_the_target_and_typed_name_is_custom(
+    sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
+):
+    rule_id = await save_rule(sync)
+    assert sync.rule_status(sync.rules[rule_id])["auto_name"] is True
+    first_name = sync.rules[rule_id]["name"]
+
+    status = await sync.async_save_rule(
+        draft("todo.plain_list"),
+        rule_id=rule_id,
+        expected_revision=sync.rules[rule_id]["revision"],
+        reset_records=True,
+        user_id="admin-user",
+    )
+    assert status["auto_name"] is True
+    assert status["name"] != first_name
+    assert status["name"].endswith("Plain list")
+
+    status = await sync.async_save_rule(
+        draft("todo.plain_list", name="Mine"),
+        rule_id=rule_id,
+        expected_revision=status["revision"],
+        reset_records=False,
+        user_id="admin-user",
+    )
+    assert status["auto_name"] is False
+    assert status["name"] == "Mine"
+
+
+async def test_legacy_rule_without_auto_name_is_detected(
+    sync: SyncManager, mealie: FakeMealie, bring: FakeTodo
+):
+    auto_id = await save_rule(sync)
+    del sync.rules[auto_id]["auto_name"]
+    assert sync.rule_status(sync.rules[auto_id])["auto_name"] is True
+
+    sync.rules[auto_id]["name"] = "Custom"
+    assert sync.rule_status(sync.rules[auto_id])["auto_name"] is False
+
+
+async def test_reload_rearms_a_queued_run_for_pending_records(
+    hass: HomeAssistant,
+    setup_integration: MockConfigEntry,
+    sync: SyncManager,
+    mealie: FakeMealie,
+    bring: FakeTodo,
+):
+    mealie.add(mealie_item("a", note="Milch"))
+    rule_id, _ = await activate(sync)
+    sync.records[f"{rule_id}:a"]["state"] = "pending"
+    await sync.store.async_save()
+
+    assert await hass.config_entries.async_reload(setup_integration.entry_id)
+    await hass.async_block_till_done()
+    reloaded = setup_integration.runtime_data.sync
+
+    assert reloaded.rule_status(reloaded.rules[rule_id])["next_run_at"] is not None
+
+
+async def test_reload_does_not_rearm_pending_records_of_a_paused_rule(
+    hass: HomeAssistant,
+    setup_integration: MockConfigEntry,
+    sync: SyncManager,
+    mealie: FakeMealie,
+    bring: FakeTodo,
+):
+    mealie.add(mealie_item("a", note="Milch"))
+    rule_id, _ = await activate(sync)
+    sync.records[f"{rule_id}:a"]["state"] = "pending"
+    await sync.async_set_paused(rule_id, True)
+
+    assert await hass.config_entries.async_reload(setup_integration.entry_id)
+    await hass.async_block_till_done()
+    reloaded = setup_integration.runtime_data.sync
+
+    assert reloaded.rule_status(reloaded.rules[rule_id])["next_run_at"] is None
