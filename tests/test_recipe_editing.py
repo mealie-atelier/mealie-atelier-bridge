@@ -939,7 +939,13 @@ async def test_mutate_without_changes_writes_no_backup_and_no_patch(
 
 @pytest.mark.parametrize(
     ("status", "code"),
-    [(400, "invalid_request"), (422, "invalid_request"), (500, "mealie_error")],
+    [
+        (400, "invalid_request"),
+        (422, "invalid_request"),
+        (404, "mealie_error"),
+        (429, "mealie_error"),
+        (500, "mealie_error"),
+    ],
 )
 async def test_recipe_import_maps_mealie_4xx_to_invalid_request(
     setup_integration: MockConfigEntry,

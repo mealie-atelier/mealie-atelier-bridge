@@ -718,8 +718,9 @@ class MealieClient:
             except MealieAuthError:
                 raise
             except MealieError as exc:
-                if exc.status is not None and 400 <= exc.status < 500:
-                    # Mealie could not scrape a recipe from this address: a bad request, not an outage.
+                # Mealie answers a page it cannot scrape with 400 or 422: a bad URL, not an outage.
+                # A 404, 408 or 429 is about the server or a proxy and keeps its own error.
+                if exc.status in (400, 422):
                     raise ValueError("This URL could not be imported") from exc
                 raise
         raise ValueError("Unsupported operation")
