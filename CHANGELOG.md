@@ -4,6 +4,10 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
+### Fixed
+
+- A recipe import that Mealie rejects (for example an address without a readable recipe) now shows the "This URL could not be imported" hint instead of "Mealie is unreachable", and diagnostics downloads no longer reveal the timer notification service name.
+
 ## [0.12.3] - 2026-11-01
 
 ### Fixed

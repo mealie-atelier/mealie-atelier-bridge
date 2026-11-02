@@ -935,3 +935,29 @@ async def test_mutate_without_changes_writes_no_backup_and_no_patch(
     assert response["result"]["unchanged"] is True
     assert server.snapshots() == []
     assert not any(event[0] == "patch" for event in server.events)
+
+
+@pytest.mark.parametrize(
+    ("status", "code"),
+    [(400, "invalid_request"), (422, "invalid_request"), (500, "mealie_error")],
+)
+async def test_recipe_import_maps_mealie_4xx_to_invalid_request(
+    setup_integration: MockConfigEntry,
+    mock_mealie: AiohttpClientMocker,
+    hass_ws_client: WebSocketGenerator,
+    status: int,
+    code: str,
+):
+    mock_mealie.post(f"{MEALIE_URL}/api/recipes/create/url", status=status, json={}, headers=JSON)
+    client = await hass_ws_client()
+
+    response = await send(
+        client,
+        {
+            "type": "mealie_atelier/mutate",
+            "action": "recipe_import",
+            "payload": {"url": "https://example.com/not-a-recipe"},
+        },
+    )
+
+    assert response["error"]["code"] == code

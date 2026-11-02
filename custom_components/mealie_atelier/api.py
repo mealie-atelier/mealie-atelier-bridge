@@ -711,7 +711,17 @@ class MealieClient:
                 or parsed.password
             ):
                 raise ValueError("Enter a valid recipe URL")
-            return await self.request("POST", "/api/recipes/create/url", data={"url": recipe_url})
+            try:
+                return await self.request(
+                    "POST", "/api/recipes/create/url", data={"url": recipe_url}
+                )
+            except MealieAuthError:
+                raise
+            except MealieError as exc:
+                if exc.status is not None and 400 <= exc.status < 500:
+                    # Mealie could not scrape a recipe from this address: a bad request, not an outage.
+                    raise ValueError("This URL could not be imported") from exc
+                raise
         raise ValueError("Unsupported operation")
 
     async def shopping_lists(self) -> list[dict]:

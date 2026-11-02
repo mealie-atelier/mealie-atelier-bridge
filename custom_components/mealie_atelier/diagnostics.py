@@ -9,10 +9,17 @@ from homeassistant.const import CONF_URL
 from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_get_integration
 
-from .const import CONF_AI_KEY, CONF_API_TOKEN, CONF_FDC_KEY, CONF_READ_ONLY, DOMAIN
+from .const import (
+    CONF_AI_KEY,
+    CONF_API_TOKEN,
+    CONF_FDC_KEY,
+    CONF_READ_ONLY,
+    CONF_TIMER_NOTIFY_SERVICE,
+    DOMAIN,
+)
 from .models import MealieAtelierConfigEntry
 
-TO_REDACT = {CONF_API_TOKEN, CONF_AI_KEY, CONF_FDC_KEY, CONF_URL}
+TO_REDACT = {CONF_API_TOKEN, CONF_AI_KEY, CONF_FDC_KEY, CONF_TIMER_NOTIFY_SERVICE, CONF_URL}
 
 
 async def async_get_config_entry_diagnostics(
