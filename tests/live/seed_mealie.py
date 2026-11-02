@@ -94,7 +94,9 @@ def seed_shopping() -> None:
     for item in items:
         if str(item.get("note") or "").startswith("Live smoke"):
             call("DELETE", f"/api/households/shopping/items/{item['id']}")
-    notes = {item.get("note") for item in items}
+    # Only the seeded list counts: the same note on another list (left there by a test run) must not
+    # keep the demo item off the list the screenshots show.
+    notes = {item.get("note") for item in items if item.get("shoppingListId") == list_id}
     for index, note in enumerate(SHOPPING.get(LANG, SHOPPING["en"])):
         if note not in notes:
             item = {"shoppingListId": list_id, "note": note, "quantity": 0, "checked": index == 5}
