@@ -46,3 +46,30 @@ def test_item_on_another_list_is_still_seeded_on_the_demo_list(tmp_path, monkeyp
     assert "Parmesan" in notes
     assert "Milch" not in notes
     assert all(body["shoppingListId"] == "demo" for body in posted)
+
+
+def test_demo_list_is_picked_by_name_not_position(tmp_path, monkeypatch):
+    seed = load_seed(tmp_path, monkeypatch)
+    lists = [{"id": "other", "name": "E2E"}, {"id": "demo", "name": "Wocheneinkauf"}]
+
+    def call(method, path, body=None, **_):
+        assert method == "GET"
+        return {"items": lists}
+
+    monkeypatch.setattr(seed, "call", call)
+    assert seed.demo_list_id() == "demo"
+
+
+def test_demo_list_is_created_when_missing(tmp_path, monkeypatch):
+    seed = load_seed(tmp_path, monkeypatch)
+    created = []
+
+    def call(method, path, body=None, **_):
+        if method == "POST":
+            created.append(body)
+            return {"id": "new"}
+        return {"items": [{"id": "other", "name": "E2E"}]}
+
+    monkeypatch.setattr(seed, "call", call)
+    assert seed.demo_list_id() == "new"
+    assert created == [{"name": "Wocheneinkauf"}]

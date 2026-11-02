@@ -87,9 +87,21 @@ SHOPPING = {
 }
 
 
+LIST_NAMES = {"de": "Wocheneinkauf", "en": "Weekly shop"}
+
+
+def demo_list_id() -> str:
+    """Id of the demo shopping list by name; created when missing."""
+    name = LIST_NAMES.get(LANG, LIST_NAMES["en"])
+    for shopping_list in call("GET", "/api/households/shopping/lists?perPage=200")["items"]:
+        if shopping_list.get("name") == name:
+            return shopping_list["id"]
+    return call("POST", "/api/households/shopping/lists", {"name": name})["id"]
+
+
 def seed_shopping() -> None:
-    """Fictional items on the first list; leftovers of the live smoke are removed."""
-    list_id = call("GET", "/api/households/shopping/lists")["items"][0]["id"]
+    """Fictional items on the demo list; leftovers of the live smoke are removed."""
+    list_id = demo_list_id()
     items = call("GET", "/api/households/shopping/items?perPage=500")["items"]
     for item in items:
         if str(item.get("note") or "").startswith("Live smoke"):
@@ -110,9 +122,6 @@ def main() -> None:
     for recipe_data in catalog["recipes"]:
         slugs.append(seed_recipe(recipe_data, existing))
         print("seeded", slugs[-1])
-    if not call("GET", "/api/households/shopping/lists")["items"]:
-        name = "Wocheneinkauf" if LANG == "de" else "Weekly shop"
-        call("POST", "/api/households/shopping/lists", {"name": name})
     seed_shopping()
     recipes = {r["slug"]: r for r in call("GET", "/api/recipes?perPage=200")["items"]}
     today = date.today()

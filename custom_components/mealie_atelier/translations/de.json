@@ -11,13 +11,13 @@
         },
         "data_description": {
           "url": "Die vollständige Adresse, die Home Assistant erreichen kann, mit http:// oder https:// und Port, zum Beispiel `http://192.168.1.20:9925`. Bei der Mealie-App für Home Assistant gilt Port 9090. Verwende keine Ingress- oder Login-Adresse.",
-          "api_token": "Erstelle in Mealie unter Benutzerprofil > API-Token ein Token und füge es hier ein. Home Assistant speichert es sicher. Es gehört niemals in die Karten-YAML.",
+          "api_token": "Erstelle in Mealie ein Token und füge es hier ein. Klicke in Mealie oben in der Seitenleiste auf deinen Namen und öffne in der Kachel „API-Token“ den Eintrag „Verwalte Deine API-Token“. Fehlt die Kachel, aktiviere unter „Benutzerprofil verwalten“ die Option „Erweiterte Funktionen anzeigen (API-Schlüssel, Webhooks und Datenverwaltung)“. Home Assistant speichert es sicher. Es gehört niemals in die Karten-YAML.",
           "verify_ssl": "Lass diese Option aktiviert. Deaktiviere sie nur bei einem selbst signierten Zertifikat in einem vertrauenswürdigen Heimnetz."
         }
       },
       "reauth_confirm": {
         "title": "Bridge neu anmelden",
-        "description": "Mealie hat das gespeicherte API-Token von {account} abgelehnt. Erstelle in Mealie für dieses Konto unter Benutzerprofil > API-Token ein neues Token und gib es hier ein.",
+        "description": "Mealie hat das gespeicherte API-Token von {account} abgelehnt. Erstelle für dieses Konto ein neues Token und gib es hier ein. Klicke in Mealie oben in der Seitenleiste auf deinen Namen und öffne in der Kachel „API-Token“ den Eintrag „Verwalte Deine API-Token“. Fehlt die Kachel, aktiviere unter „Benutzerprofil verwalten“ die Option „Erweiterte Funktionen anzeigen (API-Schlüssel, Webhooks und Datenverwaltung)“.",
         "data": {
           "api_token": "Neues Mealie-API-Token"
         },
@@ -35,7 +35,7 @@
         },
         "data_description": {
           "url": "Die vollständige Adresse, die Home Assistant erreichen kann, mit http:// oder https:// und Port, zum Beispiel `http://192.168.1.20:9925`. Bei der Mealie-App für Home Assistant gilt Port 9090. Verwende keine Ingress- oder Login-Adresse.",
-          "api_token": "Optional. Leer lassen, um das gespeicherte Token zu behalten. Ein neues Token erstellst du in Mealie unter Benutzerprofil > API-Token. Home Assistant speichert es sicher.",
+          "api_token": "Optional. Leer lassen, um das gespeicherte Token zu behalten. Ein neues Token erstellst du in Mealie. Klicke in Mealie oben in der Seitenleiste auf deinen Namen und öffne in der Kachel „API-Token“ den Eintrag „Verwalte Deine API-Token“. Fehlt die Kachel, aktiviere unter „Benutzerprofil verwalten“ die Option „Erweiterte Funktionen anzeigen (API-Schlüssel, Webhooks und Datenverwaltung)“. Home Assistant speichert es sicher.",
           "verify_ssl": "Lass diese Option aktiviert. Deaktiviere sie nur bei einem selbst signierten Zertifikat in einem vertrauenswürdigen Heimnetz."
         }
       }

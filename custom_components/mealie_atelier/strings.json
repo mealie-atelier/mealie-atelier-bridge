@@ -11,13 +11,13 @@
         },
         "data_description": {
           "url": "The full address Home Assistant can reach, including http:// or https:// and the port, for example `http://192.168.1.20:9925`. For the Mealie Home Assistant app, use port 9090. Do not use an ingress or login URL.",
-          "api_token": "Create a token in Mealie under User profile > API Tokens, then paste it here. Home Assistant stores it securely. It must never go in card YAML.",
+          "api_token": "Create a token in Mealie, then paste it here. Click your name at the top of the Mealie sidebar and open \"Manage Your API Tokens\" in the \"API Tokens\" tile. If the tile is missing, turn on \"Show advanced features (API Keys, Webhooks, and Data Management)\" under \"Manage User Profile\". Home Assistant stores it securely. It must never go in card YAML.",
           "verify_ssl": "Leave this enabled. Disable it only for a self-signed certificate on a trusted local network."
         }
       },
       "reauth_confirm": {
         "title": "Re-authenticate Bridge",
-        "description": "Mealie rejected the saved API token of {account}. Create a new token in Mealie for this account under User profile > API Tokens and enter it here.",
+        "description": "Mealie rejected the saved API token of {account}. Create a new token for this account and enter it here. Click your name at the top of the Mealie sidebar and open \"Manage Your API Tokens\" in the \"API Tokens\" tile. If the tile is missing, turn on \"Show advanced features (API Keys, Webhooks, and Data Management)\" under \"Manage User Profile\".",
         "data": {
           "api_token": "New Mealie API token"
         },
@@ -35,7 +35,7 @@
         },
         "data_description": {
           "url": "The full address Home Assistant can reach, including http:// or https:// and the port, for example `http://192.168.1.20:9925`. For the Mealie Home Assistant app, use port 9090. Do not use an ingress or login URL.",
-          "api_token": "Optional. Leave empty to keep the saved token. Create a new token in Mealie under User profile > API Tokens. Home Assistant stores it securely.",
+          "api_token": "Optional. Leave empty to keep the saved token. Create a new token in Mealie. Click your name at the top of the Mealie sidebar and open \"Manage Your API Tokens\" in the \"API Tokens\" tile. If the tile is missing, turn on \"Show advanced features (API Keys, Webhooks, and Data Management)\" under \"Manage User Profile\". Home Assistant stores it securely.",
           "verify_ssl": "Leave this enabled. Disable it only for a self-signed certificate on a trusted local network."
         }
       }
