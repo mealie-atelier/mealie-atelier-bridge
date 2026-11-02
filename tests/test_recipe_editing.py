@@ -947,7 +947,7 @@ async def test_mutate_without_changes_writes_no_backup_and_no_patch(
         (500, "mealie_error"),
     ],
 )
-async def test_recipe_import_maps_mealie_4xx_to_invalid_request(
+async def test_recipe_import_maps_mealie_rejections_to_invalid_request(
     setup_integration: MockConfigEntry,
     mock_mealie: AiohttpClientMocker,
     hass_ws_client: WebSocketGenerator,
