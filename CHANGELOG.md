@@ -4,6 +4,8 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
+## [0.12.4] - 2026-11-02
+
 ### Fixed
 
 - A recipe import that Mealie rejects (for example an address without a readable recipe) now shows the "This URL could not be imported" hint instead of "Mealie is unreachable", and diagnostics downloads no longer reveal the timer notification service name.
@@ -159,7 +161,8 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 Before 0.10.0 the repository was an unreleased developer preview with no tagged versions. It contained the initial import of the Bridge source (secure server-side Mealie access, WebSocket commands for recipes, meal plans, shopping lists, nutrition, cooking sessions and timers, optional read-only mode, German and English setup translations), the pasta and tomatoes brand artwork, security and support links, and the first FAQ.
 
-[Unreleased]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.3...HEAD
+[Unreleased]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.4...HEAD
+[0.12.4]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.3...v0.12.4
 [0.12.3]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.0...v0.12.1
