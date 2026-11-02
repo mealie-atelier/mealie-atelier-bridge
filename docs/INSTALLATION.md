@@ -38,7 +38,7 @@ HACS (up to Home Assistant 2026.10) and manual installs need a restart so Home A
 2. Choose **Add integration** and search for **Mealie Atelier Bridge**.
 3. Fill in the form:
    - **Mealie server URL:** the direct address Home Assistant can reach, including `http://` or `https://` and the port, for example `http://192.168.1.20:9925`. For the Mealie Home Assistant app use port 9090. Do not use a `/login` or `/api` path, an ingress URL or credentials in the URL.
-   - **Mealie API token:** create it in Mealie under **User profile → API Tokens** and paste it here. The token needs the permissions of the account for the features you plan to use. It is stored in the Home Assistant config entry and never goes into card YAML or browser code.
+   - **Mealie API token:** create it in Mealie and paste it here. Click your name at the top of the sidebar. On the profile page, open **Manage Your API Tokens** in the **API Tokens** tile. If the tile is missing, turn on **Show advanced features (API Keys, Webhooks, and Data Management)** under **Manage User Profile**. The token needs the permissions of the account for the features you plan to use. It is stored in the Home Assistant config entry and never goes into card YAML or browser code.
    - **Verify TLS certificate:** leave it enabled for normal HTTPS certificates. Disable it only on a trusted private network with a self-signed certificate.
 
 Home Assistant checks the connection before it saves. If Mealie later rejects the token, Home Assistant asks you to re-authenticate. To change the address or token, use **Reconfigure** on the integration. Reconfiguring to a token of a different Mealie account is refused, because timers and studio data are stored per entry.

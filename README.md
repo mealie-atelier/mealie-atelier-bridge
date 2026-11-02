@@ -66,7 +66,7 @@ HACS up to 2026.10 and manual installs need a restart of Home Assistant after th
 
 ### 2. Connect Mealie
 
-Add the integration and enter the Mealie address Home Assistant can reach and a Mealie API token (Mealie: **User profile → API Tokens**).
+Add the integration and enter the Mealie address Home Assistant can reach and a Mealie API token (create it in Mealie as described in the [configuration reference](#configuration-reference) below).
 
 [![Add the integration to Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=mealie_atelier)
 
@@ -88,7 +88,7 @@ Step-by-step guides in German: [setup](https://alles-automatisch.de/lernen/meali
 | Field | Meaning |
 | --- | --- |
 | Mealie server URL | The direct address Home Assistant can reach, with `http://` or `https://` and the port. No `/login` or `/api` path, no ingress URL, no credentials in the URL. |
-| Mealie API token | Created in Mealie under **User profile → API Tokens**. Stored in the Home Assistant config entry and never sent to the browser. |
+| Mealie API token | Click your name at the top of the Mealie sidebar. On the profile page, open **Manage Your API Tokens** in the **API Tokens** tile. If the tile is missing, turn on **Show advanced features (API Keys, Webhooks, and Data Management)** under **Manage User Profile**. Stored in the Home Assistant config entry and never sent to the browser. |
 | Verify TLS certificate | On by default. Turn it off only on a trusted private network with a self-signed certificate. |
 
 **Options** (**Settings → Devices & services → Mealie Atelier Bridge → Configure**)
