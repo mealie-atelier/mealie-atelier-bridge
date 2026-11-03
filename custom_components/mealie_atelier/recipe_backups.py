@@ -6,6 +6,7 @@ import asyncio
 import copy
 import json
 import os
+import re
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
@@ -32,6 +33,12 @@ KINDS = frozenset(
         "step_image",
         "restore",
     }
+)
+# "<recipe id>/<backup uuid4>.webp": checked as a string, so building a path never touches
+# the filesystem on the event loop, and no stored name can point outside the backup folder.
+_IMAGE_FILE = re.compile(
+    r"[\w\-]{1,150}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.webp",
+    re.ASCII,
 )
 FIELDS = (
     "name",
@@ -112,10 +119,9 @@ class RecipeBackupStore:
         return Path(self._hass.config.path("mealie_atelier", "backups", self._entry_id))
 
     def _file(self, relative: str) -> Path:
-        path = (self._root / relative).resolve()
-        if not path.is_relative_to(self._root.resolve()):
+        if not isinstance(relative, str) or not _IMAGE_FILE.fullmatch(relative):
             raise _failed()
-        return path
+        return self._root / relative
 
     def list(self, recipe_id: str) -> list[dict]:
         return [

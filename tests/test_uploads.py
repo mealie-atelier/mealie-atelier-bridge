@@ -86,6 +86,38 @@ def test_large_file_arrives_in_ordered_chunks():
     assert last == {"received": 3, "complete": True}
 
 
+def test_finishing_a_large_photo_hashes_no_more_than_one_chunk_at_a_time(monkeypatch):
+    """The checksum grows with every chunk, so the last chunk never hashes the whole photo."""
+    from custom_components.mealie_atelier import uploads
+
+    real = hashlib.sha256
+    hashed: list[int] = []
+
+    class Recording:
+        def __init__(self, data: bytes = b""):
+            self._inner = real(data)
+            hashed.append(len(data))
+
+        def update(self, data: bytes) -> None:
+            hashed.append(len(data))
+            self._inner.update(data)
+
+        def hexdigest(self) -> str:
+            return self._inner.hexdigest()
+
+    payload = JPEG + b"\x01" * (UPLOAD_MAX_BYTES - len(JPEG))
+    sessions = UploadSessions()
+    monkeypatch.setattr(uploads.hashlib, "sha256", Recording)
+    info = begin(sessions, payload, "image/jpeg")
+    hashed.clear()  # the helper computes the client's checksum up front
+    for index in range(info["chunks"]):
+        part = payload[index * UPLOAD_CHUNK_BYTES : (index + 1) * UPLOAD_CHUNK_BYTES]
+        result = sessions.chunk("u1", info["upload_id"], index, b64(part))
+
+    assert result["complete"] is True
+    assert max(hashed) <= UPLOAD_CHUNK_BYTES
+
+
 @pytest.mark.parametrize(
     "changes",
     [

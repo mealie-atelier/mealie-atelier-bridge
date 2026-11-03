@@ -4,6 +4,11 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
+### Fixed
+
+- Recipe backups: saving, restoring and photo changes no longer touch the disk on Home Assistant's event loop to check a backup photo's path, so they do not stall Home Assistant on slow storage such as SD cards.
+- Photo uploads: the checksum is computed chunk by chunk, so the last chunk of a 10 MB photo no longer hashes the whole photo on the event loop.
+
 ## [0.12.6] - 2026-11-02
 
 ### Fixed

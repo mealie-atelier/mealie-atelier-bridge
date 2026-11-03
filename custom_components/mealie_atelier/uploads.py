@@ -8,6 +8,7 @@ import hashlib
 import re
 import time
 from dataclasses import dataclass, field
+from typing import Any
 from uuid import uuid4
 
 from .const import UPLOAD_CHUNK_BYTES, UPLOAD_MAX_BYTES, UPLOAD_MAX_SESSIONS, UPLOAD_TTL_SECONDS
@@ -23,7 +24,7 @@ def _invalid(message: str) -> AtelierError:
     return AtelierError("upload_invalid", message)
 
 
-def magic_matches(mime: str, data: bytes) -> bool:
+def magic_matches(mime: str, data: bytes | bytearray) -> bool:
     """Check the leading bytes against the declared image type."""
     if mime == "image/jpeg":
         return data[:3] == b"\xff\xd8\xff"
@@ -48,6 +49,8 @@ class UploadSession:
     received: int = 0
     chunks_done: int = 0
     buffer: bytearray = field(default_factory=bytearray)
+    # Hashed chunk by chunk, so finishing a 10 MB photo costs no long hash on the event loop.
+    digest: Any = field(default_factory=lambda: hashlib.sha256(), compare=False, repr=False)
     complete: bool = False
 
     @property
@@ -120,6 +123,7 @@ class UploadSessions:
             self._sessions.pop(upload_id, None)
             raise _invalid("More data arrived than announced")
         session.buffer += raw
+        session.digest.update(raw)
         session.received += len(raw)
         session.chunks_done += 1
         session.touched = self._clock()
@@ -128,11 +132,10 @@ class UploadSessions:
         return {"received": session.chunks_done, "complete": session.complete}
 
     def _finish(self, session: UploadSession) -> None:
-        data = bytes(session.buffer)
         if (
-            len(data) != session.size
-            or hashlib.sha256(data).hexdigest() != session.sha256
-            or not magic_matches(session.mime, data)
+            len(session.buffer) != session.size
+            or session.digest.hexdigest() != session.sha256
+            or not magic_matches(session.mime, session.buffer)
         ):
             self._sessions.pop(session.upload_id, None)
             raise _invalid("The photo does not match its size, checksum or type")

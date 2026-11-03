@@ -198,3 +198,49 @@ def test_combined_basics_and_steps_kind_has_its_own_summary():
 
     assert "basics_instructions" in KINDS
     assert _summary("basics_instructions", {}) == "Name, description, servings and steps"
+
+
+async def test_photo_paths_are_built_without_filesystem_access(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+):
+    """Snapshot, retention and photo reads must not stat or resolve paths on the event loop."""
+    store = await RecipeBackupStore.async_load(hass, "e1")
+    await store.async_snapshot(client(), recipe(image="x"), "image", USER, image=True)
+
+    def no_io(*_args, **_kwargs):
+        raise AssertionError("filesystem access on the event loop")
+
+    with monkeypatch.context() as guard:
+        for method in ("resolve", "exists", "is_dir", "is_file", "stat", "lstat"):
+            guard.setattr(Path, method, no_io)
+        guard.setattr(hass, "async_add_executor_job", AsyncMock(return_value=WEBP))
+        for _ in range(IMAGE_BACKUPS_PER_RECIPE + 1):
+            newest = await store.async_snapshot(
+                client(), recipe(image="x"), "image", USER, image=True
+            )
+        image = await store.read_image(newest)
+
+    assert image == WEBP
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "../e2/r1/00000000-0000-4000-8000-000000000000.webp",
+        "r1/../../../secrets.yaml",
+        "/etc/passwd",
+        "r1/00000000-0000-4000-8000-000000000000.webp/..",
+        "r1/not-a-uuid.webp",
+        "r1/00000000-0000-4000-8000-000000000000.webp\n",
+        "r.1/00000000-0000-4000-8000-000000000000.webp",
+        42,
+    ],
+)
+async def test_a_tampered_photo_name_never_leaves_the_backup_folder(
+    hass: HomeAssistant, name: object
+):
+    store = await RecipeBackupStore.async_load(hass, "e1")
+
+    with pytest.raises(AtelierError) as caught:
+        await store.read_image({"image_file": name})
+    assert caught.value.code == "backup_failed"
