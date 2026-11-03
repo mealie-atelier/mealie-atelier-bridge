@@ -1541,7 +1541,7 @@ wheels = [
 
 [[package]]
 name = "mealie-atelier-bridge"
-version = "0.12.6"
+version = "0.12.7"
 source = { virtual = "." }
 
 [package.dev-dependencies]
