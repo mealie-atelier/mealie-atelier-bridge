@@ -4,6 +4,10 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
+### Changed
+
+- Docs: the README and the installation guide say that the cards are listed in the default catalog and install by search, while the Bridge waits for its own listing and installs as a custom repository until then.
+
 ## [0.12.7] - 2026-11-03
 
 ### Fixed

@@ -52,12 +52,12 @@ Requirements: Home Assistant 2026.10 or newer and a Mealie server that Home Assi
 
 ### 1. Download the integration
 
-The Bridge is submitted to the default catalog (`hacs/default`) that the Home Assistant Marketplace and HACS both read. Pick one route:
+The Bridge is submitted to the default catalog (`hacs/default`) that the Home Assistant Marketplace and HACS both read and still waits for review. Until it is listed, install it as a custom repository. Pick one route:
 
 | Route | Steps |
 | --- | --- |
-| **Home Assistant Marketplace** (Home Assistant 2026.11 and newer) | Open **Settings → Marketplace** (route `/marketplace/browse`), search for **Mealie Atelier Bridge** and download it. Available as soon as the catalog listing is merged. |
-| **Custom repository** (Home Assistant 2026.10 and newer) | **Settings → Marketplace** (2026.11 and newer): choose **Add from link**, paste the repository URL and complete the one-time **Connect GitHub** login (a free GitHub account is needed). Classic HACS: add it as a custom repository of type **Integration**. Then download it. The button below opens the add dialog. |
+| **Home Assistant Marketplace** (Home Assistant 2026.11 and newer) | Once the Bridge is listed: open **Settings → Marketplace**, tab **Browse** (route `/marketplace/browse`), search for **Mealie Atelier Bridge**, open it and choose **Install**. |
+| **Custom repository** (Home Assistant 2026.10 and newer) | **Settings → Marketplace** (2026.11 and newer): choose **Add from link**, paste the repository URL and complete the one-time **Connect GitHub** login (a free GitHub account is needed). Classic HACS: add it as a custom repository of type **Integration**. Then open it and choose **Install** (Marketplace) or **Download** (HACS). The button below opens the add dialog. |
 | **Manual** | Download the source of the [latest release](https://github.com/mealie-atelier/mealie-atelier-bridge/releases/latest) and copy `custom_components/mealie_atelier` into the `custom_components` folder of your configuration. |
 
 [![Open the repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=mealie-atelier&repository=mealie-atelier-bridge&category=integration)
@@ -74,7 +74,7 @@ Add the integration and enter the Mealie address Home Assistant can reach and a 
 
 ### 3. Add the cards
 
-Install [Mealie Atelier Cards](https://github.com/mealie-atelier/mealie-atelier-cards) and add a **Mealie Atelier** card to a dashboard. The card finds the Bridge on its own.
+Install [Mealie Atelier Cards](https://github.com/mealie-atelier/mealie-atelier-cards) (they are listed in the default catalog: search for **Mealie Atelier Cards** in the Marketplace or in HACS; if the search does not find them yet, add `https://github.com/mealie-atelier/mealie-atelier-cards` by link in the Marketplace or as a custom repository of type **Dashboard** in HACS) and add a **Mealie Atelier** card to a dashboard. The card finds the Bridge on its own.
 
 Step-by-step guides in German: [setup](https://alles-automatisch.de/lernen/mealie-atelier-einrichten) and [troubleshooting](https://alles-automatisch.de/lernen/mealie-atelier-fehlerbehebung). The full English walkthrough is the [installation guide](docs/INSTALLATION.md).
 
