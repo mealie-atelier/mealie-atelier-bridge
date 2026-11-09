@@ -31,7 +31,7 @@ Every command below is registered by the Bridge and nothing else is reachable. A
 | `mealie_atelier/mealplan` | Meal plan entries for a date range. | read |
 | `mealie_atelier/shopping` | Shopping lists and their items. | read |
 | `mealie_atelier/metadata` | Categories, tags, cookbooks and other lookups. | read |
-| `mealie_atelier/mutate` | Recipe and shopping actions. Recipe create, update and import are admin, the shopping actions need write. | write or admin |
+| `mealie_atelier/mutate` | Recipe, shopping and meal plan actions. Recipe create, update and import are admin, the shopping and meal plan actions need write. | write or admin |
 | `mealie_atelier/offline_replay` | Replay shopping edits queued while the card was offline. | write |
 | `mealie_atelier/nutrition_prepare` | Prepare a nutrition calculation for a recipe. | read |
 | `mealie_atelier/nutrition_search` | Search USDA FoodData Central. | read |
@@ -96,6 +96,14 @@ A failed command returns an error whose `code` is stable and whose message is En
 | `not_configured` | No Mealie Atelier Bridge entry exists, or the addressed entry is unknown or not loaded for another reason. |
 
 The other codes (`read_only`, `write_not_permitted`, `backup_failed`, `upload_*`, `sync_*`, `offline_*` and so on) are listed in `custom_components/mealie_atelier/strings.json` under `exceptions`.
+
+## Meal plan moves
+
+`mealie_atelier/mutate` accepts `mealplan_move` with the same write permission as `mealplan_delete`.
+
+| Action | Payload | Result |
+| --- | --- | --- |
+| `mealplan_move` | `entry_id`, `date` (a real calendar day, `YYYY-MM-DD`) | The updated entry. The Bridge reads the entry first and sends it back with the new date. A failed read means no write. The status response advertises it as the `mealplan_move` feature. |
 
 ## Shopping list edits
 

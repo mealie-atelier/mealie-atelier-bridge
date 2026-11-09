@@ -707,22 +707,44 @@ class MealieClient:
             meal = payload.get("meal_type", "dinner")
             if meal not in _VALID_MEALS:
                 raise ValueError("Invalid meal type")
-            recipe_id = safe_id(payload.get("recipe_id"))
+            # A plan entry is a recipe or a note. Notes come back through this path on Undo.
+            if payload.get("recipe_id") is None:
+                note = {"title": safe_text(payload.get("title"))}
+                note["text"] = safe_text(payload["text"], 2000) if payload.get("text") else ""
+            else:
+                note = {"recipeId": safe_id(payload.get("recipe_id")), "title": "", "text": ""}
             return await self.request(
                 "POST",
                 "/api/households/mealplans",
-                data={
-                    "date": day,
-                    "entryType": meal,
-                    "recipeId": recipe_id,
-                    "title": "",
-                    "text": "",
-                },
+                data={"date": day, "entryType": meal, **note},
             )
         if action == "mealplan_delete":
             return await self.request(
                 "DELETE", f"/api/households/mealplans/{safe_id(payload.get('entry_id'))}"
             )
+        if action == "mealplan_move":
+            entry_id = safe_id(payload.get("entry_id"))
+            day = safe_date(payload.get("date"))
+            current = await self.request("GET", f"/api/households/mealplans/{entry_id}")
+            if not isinstance(current, dict):
+                raise MealieError("Unexpected mealplan response")
+            # Mealie replaces the entry, so the stored fields are sent back with the new date.
+            moved = {
+                key: current[key]
+                for key in (
+                    "id",
+                    "groupId",
+                    "userId",
+                    "entryType",
+                    "title",
+                    "text",
+                    "recipeId",
+                    "recipeScale",
+                )
+                if key in current
+            }
+            moved["date"] = day
+            return await self.request("PUT", f"/api/households/mealplans/{entry_id}", data=moved)
         if action == "recipe_create":
             return await self.request(
                 "POST", "/api/recipes", data={"name": safe_text(payload.get("name"), 120)}

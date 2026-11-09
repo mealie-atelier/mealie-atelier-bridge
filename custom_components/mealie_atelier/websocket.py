@@ -186,6 +186,7 @@ async def ws_status(hass, connection, msg):
                     "shopping_edit": True,
                     "ai": bool(ai_key),
                     "recipe_feedback": True,
+                    "mealplan_move": True,
                 },
                 "ai_enabled": bool(ai_key),
                 "ai_provider": provider_for(ai_key) if ai_key else "none",

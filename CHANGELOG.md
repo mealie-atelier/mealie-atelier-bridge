@@ -7,6 +7,7 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 ### Added
 
 - Favorites and ratings: the Bridge reads and sets the signed-in Mealie user's own rating and favorite flag for a recipe, and the status response advertises it as the `recipe_feedback` feature.
+- Meal plan: the `mutate` action `mealplan_move` moves a meal plan entry to another day (payload `entry_id`, `date`) with the same write permission as `mealplan_delete`, and the status response advertises it as the `mealplan_move` feature.
 
 ### Changed
 

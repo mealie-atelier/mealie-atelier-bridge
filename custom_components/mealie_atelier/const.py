@@ -46,6 +46,7 @@ WRITE_ACTIONS = frozenset(
         "shopping_clear_checked",
         "mealplan_add",
         "mealplan_delete",
+        "mealplan_move",
     }
 )
 
