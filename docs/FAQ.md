@@ -6,7 +6,7 @@ No. It is an optional Home Assistant integration. The standalone web app works w
 
 ## How do I install it?
 
-Through the Home Assistant Marketplace (Home Assistant 2026.11 and newer) or HACS, once the Bridge is listed in the `hacs/default` catalog. Until then add it as a custom repository: in the Marketplace choose **Add from link** (this needs a one-time GitHub login), in classic HACS use **Custom repositories** with the type Integration. The [installation guide](INSTALLATION.md) covers every step.
+Search for **Mealie Atelier Bridge** in the Home Assistant Marketplace (Home Assistant 2026.11 and newer) or in HACS: it is listed in the `hacs/default` catalog. New catalog entries take a while to reach every Home Assistant. If the search does not find it yet, add it by link: in the Marketplace choose **Add from link** (this needs a one-time GitHub connection), in classic HACS use **Custom repositories** with the type Integration. The [installation guide](INSTALLATION.md) covers every step.
 
 ## Where are API credentials stored?
 
