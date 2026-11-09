@@ -25,6 +25,9 @@ Every command below is registered by the Bridge and nothing else is reachable. A
 | `mealie_atelier/units` | Search the Mealie unit catalog. | read |
 | `mealie_atelier/food_create` | Create a food. | admin |
 | `mealie_atelier/unit_create` | Create a unit. | admin |
+| `mealie_atelier/recipe_feedback` | Rating and favorite of the signed-in Mealie user for one recipe. | read |
+| `mealie_atelier/recipe_rate` | Set the rating of one recipe, 1 to 5. | write |
+| `mealie_atelier/recipe_favorite` | Add or remove one recipe as a favorite. | write |
 | `mealie_atelier/mealplan` | Meal plan entries for a date range. | read |
 | `mealie_atelier/shopping` | Shopping lists and their items. | read |
 | `mealie_atelier/metadata` | Categories, tags, cookbooks and other lookups. | read |

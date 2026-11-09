@@ -204,6 +204,7 @@ class MealieClient:
         self.on_auth_rejected: Callable[[MealieAuthError], None] | None = None
         # Written yield texts use a decimal comma when set (German Home Assistant language).
         self.decimal_comma = False
+        self._self_id: str | None = None
 
     async def request(
         self,
@@ -488,6 +489,42 @@ class MealieClient:
         if not isinstance(result, dict):
             raise MealieError("Unexpected recipe response")
         return result
+
+    async def self_id(self) -> str:
+        """The id of the token's user, fetched once because ratings and favorites are per user."""
+        if self._self_id is None:
+            self._self_id = str((await self.check_connection())["id"])
+        return self._self_id
+
+    async def recipe_feedback(self, recipe_id: str) -> dict:
+        """The user's own rating and favorite flag; a recipe never rated has neither."""
+        try:
+            data = await self.request("GET", f"/api/users/self/ratings/{safe_id(recipe_id)}")
+        except MealieError as exc:
+            if exc.status != 404:
+                raise
+            data = None
+        data = data if isinstance(data, dict) else {}
+        rating = data.get("rating")
+        isnum = isinstance(rating, (int, float)) and not isinstance(rating, bool)
+        return {"rating": rating if isnum else None, "favorite": data.get("isFavorite") is True}
+
+    async def rate_recipe(self, slug: str, rating: float | None) -> None:
+        if rating is not None and (
+            isinstance(rating, bool) or not isinstance(rating, (int, float)) or not 0 <= rating <= 5
+        ):
+            raise ValueError("Rating must be a number from 0 to 5")
+        user = await self.self_id()
+        await self.request(
+            "POST", f"/api/users/{safe_id(user)}/ratings/{safe_slug(slug)}", data={"rating": rating}
+        )
+
+    async def favorite_recipe(self, slug: str, favorite: bool) -> None:
+        user = await self.self_id()
+        await self.request(
+            "POST" if favorite else "DELETE",
+            f"/api/users/{safe_id(user)}/favorites/{safe_slug(slug)}",
+        )
 
     async def patch_recipe(self, slug: str, changes: dict) -> dict:
         """PATCH only the given recipe fields; Mealie answers with the updated recipe."""

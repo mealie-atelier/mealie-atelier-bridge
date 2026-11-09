@@ -92,6 +92,9 @@ def async_register_commands(hass: HomeAssistant) -> None:
         ws_alarm_cancel,
         ws_alarms,
         ws_alarm_capabilities,
+        ws_recipe_feedback,
+        ws_recipe_rate,
+        ws_recipe_favorite,
     ):
         websocket_api.async_register_command(hass, command)
 
@@ -182,6 +185,7 @@ async def ws_status(hass, connection, msg):
                     "offline_queue": True,
                     "shopping_edit": True,
                     "ai": bool(ai_key),
+                    "recipe_feedback": True,
                 },
                 "ai_enabled": bool(ai_key),
                 "ai_provider": provider_for(ai_key) if ai_key else "none",
@@ -240,6 +244,66 @@ async def ws_recipe(hass, connection, msg):
         connection.send_result(msg["id"], _sign_images(hass, entry.entry_id, result))
     except (ValueError, MealieError, HomeAssistantError) as exc:
         _fail(connection, msg, exc)
+
+
+@websocket_api.websocket_command(
+    {
+        probatio.Required("type"): "mealie_atelier/recipe_feedback",
+        probatio.Optional("entry_id"): str,
+        probatio.Required("recipe_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_recipe_feedback(hass, connection, msg):
+    await _respond(hass, connection, msg, lambda client: client.recipe_feedback(msg["recipe_id"]))
+
+
+@websocket_api.websocket_command(
+    {
+        probatio.Required("type"): "mealie_atelier/recipe_rate",
+        probatio.Optional("entry_id"): str,
+        probatio.Required("slug"): str,
+        probatio.Required("rating"): probatio.Any(None, int, float),
+    }
+)
+@websocket_api.async_response
+async def ws_recipe_rate(hass, connection, msg):
+    entry = _entry(hass, msg)
+    if entry is None:
+        send_missing_entry(hass, connection, msg, "Configure Mealie Atelier Bridge")
+        return
+    if not check(connection, msg, entry, "write"):
+        return
+
+    async def run(client):
+        await client.rate_recipe(msg["slug"], msg["rating"])
+        return {"rating": msg["rating"]}
+
+    await _respond(hass, connection, msg, run)
+
+
+@websocket_api.websocket_command(
+    {
+        probatio.Required("type"): "mealie_atelier/recipe_favorite",
+        probatio.Optional("entry_id"): str,
+        probatio.Required("slug"): str,
+        probatio.Required("favorite"): bool,
+    }
+)
+@websocket_api.async_response
+async def ws_recipe_favorite(hass, connection, msg):
+    entry = _entry(hass, msg)
+    if entry is None:
+        send_missing_entry(hass, connection, msg, "Configure Mealie Atelier Bridge")
+        return
+    if not check(connection, msg, entry, "write"):
+        return
+
+    async def run(client):
+        await client.favorite_recipe(msg["slug"], msg["favorite"])
+        return {"favorite": msg["favorite"]}
+
+    await _respond(hass, connection, msg, run)
 
 
 @websocket_api.websocket_command(

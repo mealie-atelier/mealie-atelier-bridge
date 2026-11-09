@@ -4,6 +4,10 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
+### Added
+
+- Favorites and ratings: the Bridge reads and sets the signed-in Mealie user's own rating and favorite flag for a recipe, and the status response advertises it as the `recipe_feedback` feature.
+
 ### Changed
 
 - Docs: the README, the installation guide and the FAQ say that the Bridge and the cards are both listed in the default catalog and install by search, with adding by link as the fallback while a new entry has not reached your Home Assistant yet.

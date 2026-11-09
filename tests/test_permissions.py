@@ -48,6 +48,7 @@ READ_COMMANDS = {
     "studio_ai_audit",
     "alarms",
     "alarm_capabilities",
+    "recipe_feedback",
     "foods",
     "units",
     "ingredients_get",
@@ -66,6 +67,8 @@ WRITE_COMMANDS = {
     "sync_retry",
     "sync_resolve",
     "offline_replay",
+    "recipe_rate",
+    "recipe_favorite",
 }
 ADMIN_COMMANDS = {
     "mutate",
@@ -104,6 +107,13 @@ WRITE_MESSAGES = [pytest.param(_mutate(a), id=f"mutate:{a}") for a in sorted(WRI
             "payload": {"people": 2, "maxMinutes": 30},
         },
         id="studio_update:profile",
+    ),
+    pytest.param(
+        {"type": f"{PREFIX}recipe_rate", "slug": "gnocchi", "rating": 4}, id="recipe_rate"
+    ),
+    pytest.param(
+        {"type": f"{PREFIX}recipe_favorite", "slug": "gnocchi", "favorite": True},
+        id="recipe_favorite",
     ),
     pytest.param({"type": f"{PREFIX}sync_run", "rule_id": "r1"}, id="sync_run"),
     pytest.param({"type": f"{PREFIX}sync_pause", "rule_id": "r1"}, id="sync_pause"),
@@ -455,6 +465,7 @@ async def test_status_reports_permissions_of_the_calling_user(
             "offline_queue",
             "shopping_edit",
             "ai",
+            "recipe_feedback",
         }
         assert row["limits"] == {"upload_max_bytes": 10485760, "upload_chunk_bytes": 262144}
 
