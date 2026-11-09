@@ -4,6 +4,8 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
+## [0.12.8] - 2026-11-09
+
 ### Added
 
 - Favorites and ratings: the Bridge reads and sets the signed-in Mealie user's own rating and favorite flag for a recipe, and the status response advertises it as the `recipe_feedback` feature.
@@ -197,7 +199,8 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 Before 0.10.0 the repository was an unreleased developer preview with no tagged versions. It contained the initial import of the Bridge source (secure server-side Mealie access, WebSocket commands for recipes, meal plans, shopping lists, nutrition, cooking sessions and timers, optional read-only mode, German and English setup translations), the pasta and tomatoes brand artwork, security and support links, and the first FAQ.
 
-[Unreleased]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.7...HEAD
+[Unreleased]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.8...HEAD
+[0.12.8]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.7...v0.12.8
 [0.12.7]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.6...v0.12.7
 [0.12.6]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.5...v0.12.6
 [0.12.5]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.4...v0.12.5
