@@ -26,7 +26,7 @@ Every command below is registered by the Bridge and nothing else is reachable. A
 | `mealie_atelier/food_create` | Create a food. | admin |
 | `mealie_atelier/unit_create` | Create a unit. | admin |
 | `mealie_atelier/recipe_feedback` | Rating and favorite of the signed-in Mealie user for one recipe. | read |
-| `mealie_atelier/recipe_rate` | Set the rating of one recipe, 1 to 5. | write |
+| `mealie_atelier/recipe_rate` | Set the rating of one recipe, a number from 0 to 5, or `null` to clear it. | write |
 | `mealie_atelier/recipe_favorite` | Add or remove one recipe as a favorite. | write |
 | `mealie_atelier/mealplan` | Meal plan entries for a date range. | read |
 | `mealie_atelier/shopping` | Shopping lists and their items. | read |
@@ -79,7 +79,7 @@ A failed command returns an error whose `code` is stable and whose message is En
 
 | Code | When |
 | --- | --- |
-| `timer_not_found` | No timer with that id. Canceling it counts as success. |
+| `timer_not_found` | No timer with that id. The Bridge also returns this error on cancel; cards treat it as already canceled. |
 | `timer_not_permitted` | The timer belongs to another user. |
 | `timer_exists` | A timer with that id already exists. |
 | `too_many_timers` | The user reached the limit of 20 active timers, or the Bridge reached its global limit of 300 active timers. |
@@ -93,7 +93,8 @@ A failed command returns an error whose `code` is stable and whose message is En
 | `mealie_auth`, `mealie_error` | Mealie refused or failed the request. |
 | `entry_reauth` | The addressed entry exists but Mealie rejected its token. The user must re-authenticate in Settings, Devices & services. Without `entry_id` this is reported when exactly one entry exists. |
 | `entry_unavailable` | The addressed entry exists but cannot reach Mealie right now and Home Assistant is retrying. Without `entry_id` this is reported when exactly one entry exists. |
-| `not_configured` | No Mealie Atelier Bridge entry exists, or the addressed entry is unknown or not loaded for another reason. |
+| `entry_not_found` | The given `entry_id` matches no Mealie Atelier Bridge entry (a wrong card setting). |
+| `not_configured` | No Mealie Atelier Bridge entry exists (or no `entry_id` was given and there is not exactly one entry), or the addressed entry exists but is not loaded for another reason. |
 
 The other codes (`read_only`, `write_not_permitted`, `backup_failed`, `upload_*`, `sync_*`, `offline_*` and so on) are listed in `custom_components/mealie_atelier/strings.json` under `exceptions`.
 
