@@ -201,3 +201,70 @@ def test_seed_recipe_with_an_old_catalog_puts_note_only_rows(tmp_path, monkeypat
     seed.seed_recipe(recipe, {})
     assert [row["note"] for row in puts[0]["recipeIngredient"]] == recipe["ingredients"]["de"]
     assert len(puts[0]["recipeInstructions"]) == 2
+
+
+def plural_mealie(calls, units=(), foods=()):
+    """A Mealie stand-in that keeps full items, so a PUT can be checked against the stored state."""
+    store = {
+        "units": {item["name"]: dict(item) for item in units},
+        "foods": {item["name"]: dict(item) for item in foods},
+    }
+
+    def call(method, path, body=None, **_):
+        calls.append((method, path, body))
+        kind = "units" if "/units" in path else "foods"
+        if method == "GET":
+            return {"items": list(store[kind].values())}
+        if method == "POST":
+            item = {"id": f"id-{body['name']}", **body}
+        else:
+            item = dict(body)
+        store[kind][item["name"]] = item
+        return item
+
+    return call, store
+
+
+PLURALS = {"foods": {"Zwiebel": "Zwiebeln"}, "units": {"EL": "EL"}}
+
+
+def test_new_units_and_foods_are_created_with_their_plural_name(tmp_path, monkeypatch):
+    seed = load_seed(tmp_path, monkeypatch)
+    calls = []
+    call, _ = plural_mealie(calls)
+    monkeypatch.setattr(seed, "call", call)
+    monkeypatch.setattr(seed, "PLURALS", PLURALS)
+    seed.ingredient_rows(recipe_fixture(ingredientParts=PARTS))
+    bodies = [body for method, _, body in calls if method == "POST"]
+    assert {"name": "Zwiebel", "pluralName": "Zwiebeln"} in bodies
+    assert {"name": "EL", "pluralName": "EL"} in bodies
+    assert {"name": "Olivenöl"} in bodies
+
+
+def test_existing_food_without_the_plural_gets_a_put(tmp_path, monkeypatch):
+    seed = load_seed(tmp_path, monkeypatch)
+    calls = []
+    existing = {"id": "f1", "name": "Zwiebel", "pluralName": None, "labelId": "keep"}
+    call, store = plural_mealie(calls, foods=[existing])
+    monkeypatch.setattr(seed, "call", call)
+    monkeypatch.setattr(seed, "PLURALS", PLURALS)
+    ref = seed.named("foods", "Zwiebel")
+    assert ref == {"id": "f1", "name": "Zwiebel"}
+    puts = [(path, body) for method, path, body in calls if method == "PUT"]
+    assert puts == [("/api/foods/f1", {**existing, "pluralName": "Zwiebeln"})]
+    # A second seed run finds the plural in place and sends no PUT.
+    seed._NAMED.clear()
+    calls.clear()
+    seed.named("foods", "Zwiebel")
+    assert [method for method, *_ in calls] == ["GET"]
+
+
+def test_old_catalog_without_plurals_creates_plain_names_and_never_puts(tmp_path, monkeypatch):
+    seed = load_seed(tmp_path, monkeypatch)
+    calls = []
+    call, _ = plural_mealie(calls, foods=[{"id": "f1", "name": "Zwiebel"}])
+    monkeypatch.setattr(seed, "call", call)
+    assert seed.PLURALS == {}
+    seed.ingredient_rows(recipe_fixture(ingredientParts=PARTS))
+    assert {"name": "EL"} in [body for method, _, body in calls if method == "POST"]
+    assert all(method != "PUT" for method, *_ in calls)

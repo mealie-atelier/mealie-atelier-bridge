@@ -23,6 +23,8 @@ TOKEN = Path(TOKEN_FILE).read_text(encoding="utf-8").strip()
 REFERENCE_NAMESPACE = uuid.UUID("6f1b2c1e-5a53-4e0b-9d35-3c0f6f3a7b21")
 # Units and foods by exact name, loaded once per run: {"units": {name: {id, name}}, "foods": {...}}.
 _NAMED: dict[str, dict[str, dict]] = {}
+# Plural names of the seeded language, {"foods": {singular: plural}, "units": {...}}; set from the catalog.
+PLURALS: dict[str, dict[str, str]] = {}
 
 
 def call(method: str, path: str, body=None, raw=None, ctype: str = "application/json"):
@@ -55,15 +57,24 @@ def upload_image(slug: str, image: Path) -> None:
 
 
 def named(kind: str, name: str) -> dict:
-    """The unit or food called `name`; created when Mealie does not know it yet."""
+    """The unit or food called `name`, with its plural name from the catalog.
+
+    Created when Mealie does not know it yet. An existing one without the plural gets a PUT, so a
+    reseed repairs rigs seeded before the plurals existed."""
     if kind not in _NAMED:
         listing = call("GET", f"/api/{kind}?perPage=-1")
         items = listing["items"] if isinstance(listing, dict) else listing
-        _NAMED[kind] = {item["name"]: {"id": item["id"], "name": item["name"]} for item in items}
-    if name not in _NAMED[kind]:
-        created = call("POST", f"/api/{kind}", {"name": name})
-        _NAMED[kind][name] = {"id": created["id"], "name": created["name"]}
-    return _NAMED[kind][name]
+        _NAMED[kind] = {item["name"]: item for item in items}
+    plural = PLURALS.get(kind, {}).get(name)
+    item = _NAMED[kind].get(name)
+    if item is None:
+        body = {"name": name, **({"pluralName": plural} if plural else {})}
+        item = call("POST", f"/api/{kind}", body)
+        _NAMED[kind][name] = item
+    elif plural and item.get("pluralName") != plural:
+        item = call("PUT", f"/api/{kind}/{item['id']}", {**item, "pluralName": plural})
+        _NAMED[kind][name] = item
+    return {"id": item["id"], "name": item["name"]}
 
 
 def reference_id(recipe_data: dict, index: int) -> str:
@@ -179,6 +190,7 @@ def seed_shopping() -> None:
 
 def main() -> None:
     catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
+    PLURALS.update((catalog.get("plurals") or {}).get(LANG) or {})
     existing = {r["name"]: r["slug"] for r in call("GET", "/api/recipes?perPage=200")["items"]}
     slugs = []
     for recipe_data in catalog["recipes"]:
