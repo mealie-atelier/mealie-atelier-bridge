@@ -4,7 +4,7 @@
 #                    add the integration
 #   ./rig.sh status  show container state and versions
 #   ./rig.sh down    stop the rig and delete its volumes and state
-# Images: HA_IMAGE (default home-assistant:beta), MEALIE_IMAGE (default mealie:latest).
+# Images: HA_IMAGE (default home-assistant:stable), MEALIE_IMAGE (default mealie:latest).
 # Language of seed data and HA user: SEED_LANGUAGE (de or en).
 # Ports: HA_PORT (18123), MEALIE_PORT (19925). Cards bundle: CARDS_DIST (../../../mealie-atelier-cards/dist).
 set -euo pipefail

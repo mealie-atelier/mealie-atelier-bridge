@@ -11,7 +11,7 @@ services:
       TZ: Europe/Berlin
     volumes: [mealie-data:/app/data]
   homeassistant:
-    image: ${HA_IMAGE:-ghcr.io/home-assistant/home-assistant:beta}
+    image: ${HA_IMAGE:-ghcr.io/home-assistant/home-assistant:stable}
     ports: ["127.0.0.1:${HA_PORT:-18123}:8123"]
     environment:
       TZ: Europe/Berlin

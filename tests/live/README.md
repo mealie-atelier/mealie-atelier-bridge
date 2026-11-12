@@ -4,7 +4,7 @@ A disposable Mealie and Home Assistant pair for acceptance tests of the Bridge a
 Fictional demo recipes only; never point these scripts at a real household instance.
 
 ```bash
-./rig.sh up       # Mealie :19925, Home Assistant beta :18123, onboarded, seeded, integration added
+./rig.sh up       # Mealie :19925, Home Assistant stable :18123, onboarded, seeded, integration added
 ./rig.sh status   # containers and versions
 ./rig.sh down     # stop and delete volumes and generated state
 ```
