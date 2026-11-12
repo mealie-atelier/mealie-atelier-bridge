@@ -205,7 +205,7 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             self.calls[-1]["body"], [{"recipeId": "recipe-1", "recipeIncrementQuantity": 1.5}]
         )
-        for unscaled in ({}, {"scale": 1}, {"scale": 1.0}, {"scale": None}):
+        for unscaled in ({}, {"scale": 1}, {"scale": 1.0}):
             before = len(self.calls)
             await self.client.mutate("shopping_from_recipe", {**base, **unscaled})
             self.assertEqual(len(self.calls), before + 1)
@@ -221,7 +221,7 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_shopping_from_recipe_rejects_invalid_scale_before_any_request(self):
         before = len(self.calls)
-        for bad in (True, 0, -1, 100.5, "2", float("nan"), float("inf")):
+        for bad in (True, 0, -1, 100.5, "2", None, 10**400, float("nan"), float("inf")):
             with self.assertRaises(ValueError):
                 await self.client.mutate(
                     "shopping_from_recipe",

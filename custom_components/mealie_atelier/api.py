@@ -79,13 +79,21 @@ def safe_quantity(value: Any) -> int | float:
     return value
 
 
-def safe_scale(value: Any) -> float | None:
-    """A recipe scale for the shopping list: None for absent or 1, else a number in (0, 100]."""
-    if value is None:
+_NO_SCALE = object()
+
+
+def safe_scale(value: Any = _NO_SCALE) -> float | None:
+    """A recipe scale for the shopping list: None when absent or 1, else a number in (0, 100].
+
+    An explicit null is rejected like in the web app: JSON turns NaN and Infinity into null, so
+    a broken factor must not silently become the recipe's base amounts.
+    """
+    if value is _NO_SCALE:
         return None
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError("Invalid scale")  # noqa: TRY004
-    if not math.isfinite(value) or not 0 < value <= 100:
+    # The range check comes first: math.isfinite raises OverflowError for a huge JSON integer.
+    if not 0 < value <= 100 or not math.isfinite(value):
         raise ValueError("Invalid scale")
     return None if value == 1 else float(value)
 
@@ -692,7 +700,7 @@ class MealieClient:
         if action == "shopping_from_recipe":
             list_id = safe_id(payload.get("list_id"))
             recipe_id = safe_id(payload.get("recipe_id"))
-            scale = safe_scale(payload.get("scale"))
+            scale = safe_scale(payload["scale"]) if "scale" in payload else safe_scale()
             batch_row: dict[str, Any] = {"recipeId": recipe_id}
             legacy_body: dict[str, Any] = {}
             if scale is not None:
