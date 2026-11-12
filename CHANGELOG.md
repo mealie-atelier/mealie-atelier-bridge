@@ -4,6 +4,8 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-12
+
 ### Added
 
 - Scaled shopping: the `mutate` action `shopping_from_recipe` accepts an optional `scale` (greater than 0, at most 100) and adds the recipe's ingredients multiplied by it. This enables the servings scaler in the cards: the shopping list gets the amounts for the servings chosen in the recipe dialog. Requests without `scale` are unchanged. Status advertises it as the `recipe_scale` feature.
@@ -204,7 +206,8 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 Before 0.10.0 the repository was an unreleased developer preview with no tagged versions. It contained the initial import of the Bridge source (secure server-side Mealie access, WebSocket commands for recipes, meal plans, shopping lists, nutrition, cooking sessions and timers, optional read-only mode, German and English setup translations), the pasta and tomatoes brand artwork, security and support links, and the first FAQ.
 
-[Unreleased]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.8...HEAD
+[Unreleased]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.8...v0.13.0
 [0.12.8]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.7...v0.12.8
 [0.12.7]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.6...v0.12.7
 [0.12.6]: https://github.com/mealie-atelier/mealie-atelier-bridge/compare/v0.12.5...v0.12.6
