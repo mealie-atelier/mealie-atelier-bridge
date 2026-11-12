@@ -26,6 +26,11 @@ Fictional demo recipes only; never point these scripts at a real household insta
 - Language: `SEED_LANGUAGE=en ./rig.sh up` seeds English recipes and an English Home Assistant user
   (default `de`). The seed is idempotent, adds a short fictional shopping list and removes items the
   smoke test left behind.
+- Structured rows: when the catalog recipe has `ingredientParts` and `stepIngredients`, the seed writes
+  ingredients with a parsed quantity, unit and food (units and foods are looked up by name and created
+  once) and links each step to its ingredients with stable reference ids. Rows without a part stay
+  note-only. That makes the servings scaler, scaled shopping list amounts and the step ingredients in
+  cooking mode testable against real Mealie data; a catalog without the fields seeds note-only rows.
 - Ad-hoc commands: `python3 tests/live/ha_ws.py http://localhost:18123 tests/live/state/ha-token '{"type": "mealie_atelier/status"}'`.
 - Version matrix: `HA_IMAGE=ghcr.io/home-assistant/home-assistant:stable` or
   `MEALIE_IMAGE=ghcr.io/mealie-recipes/mealie:v2.8.0 ./rig.sh up`.

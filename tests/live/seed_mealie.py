@@ -18,6 +18,10 @@ from pathlib import Path
 BASE, TOKEN_FILE, CATALOG = sys.argv[1].rstrip("/"), sys.argv[2], Path(sys.argv[3])
 LANG = sys.argv[4] if len(sys.argv) > 4 else "de"
 TOKEN = Path(TOKEN_FILE).read_text(encoding="utf-8").strip()
+# Fixed namespace: reference ids stay the same over reseeds, so step links survive.
+REFERENCE_NAMESPACE = uuid.UUID("6f1b2c1e-5a53-4e0b-9d35-3c0f6f3a7b21")
+# Units and foods by exact name, loaded once per run: {"units": {name: {id, name}}, "foods": {...}}.
+_NAMED: dict[str, dict[str, dict]] = {}
 
 
 def call(method: str, path: str, body=None, raw=None, ctype: str = "application/json"):
@@ -44,6 +48,66 @@ def upload_image(slug: str, image: Path) -> None:
     call("PUT", f"/api/recipes/{slug}/image", raw=parts, ctype=ctype)
 
 
+def named(kind: str, name: str) -> dict:
+    """The unit or food called `name`; created when Mealie does not know it yet."""
+    if kind not in _NAMED:
+        listing = call("GET", f"/api/{kind}?perPage=-1")
+        items = listing["items"] if isinstance(listing, dict) else listing
+        _NAMED[kind] = {item["name"]: {"id": item["id"], "name": item["name"]} for item in items}
+    if name not in _NAMED[kind]:
+        created = call("POST", f"/api/{kind}", {"name": name})
+        _NAMED[kind][name] = {"id": created["id"], "name": created["name"]}
+    return _NAMED[kind][name]
+
+
+def reference_id(recipe_data: dict, index: int) -> str:
+    return str(uuid.uuid5(REFERENCE_NAMESPACE, f"{recipe_data['id']}:{LANG}:{index}"))
+
+
+def ingredient_rows(recipe_data: dict) -> list[dict]:
+    """Structured rows when the catalog has `ingredientParts`, else note-only rows as before."""
+    lines = recipe_data["ingredients"][LANG]
+    parts = (recipe_data.get("ingredientParts") or {}).get(LANG)
+    if not parts:
+        return [{"note": line, "display": line, "referenceId": str(uuid.uuid4())} for line in lines]
+    rows = []
+    for index, line in enumerate(lines):
+        part = parts[index]
+        if part is None:
+            # Note-only row: Mealie adds it to a shopping list as written.
+            row = {"note": line, "display": line, "quantity": 0}
+        else:
+            row = {
+                "quantity": part["quantity"],
+                "unit": named("units", part["unit"]) if part.get("unit") else None,
+                "food": named("foods", part["food"]),
+                "note": part.get("note") or "",
+                "display": line,
+                "originalText": line,
+            }
+        row["referenceId"] = reference_id(recipe_data, index)
+        rows.append(row)
+    return rows
+
+
+def instruction_rows(recipe_data: dict) -> list[dict]:
+    links = recipe_data.get("stepIngredients") or []
+    rows = []
+    for position, step in enumerate(recipe_data["steps"][LANG]):
+        row = {
+            "id": str(uuid.uuid4()),
+            "title": step["title"],
+            "summary": step.get("summary", ""),
+            "text": step["text"],
+        }
+        if position < len(links):
+            row["ingredientReferences"] = [
+                {"referenceId": reference_id(recipe_data, i)} for i in links[position]
+            ]
+        rows.append(row)
+    return rows
+
+
 def seed_recipe(recipe_data: dict, existing: dict[str, str]) -> str:
     # Mealie derives its own slug (umlauts transliterate differently), so match by name.
     name = recipe_data["title"][LANG]
@@ -59,19 +123,8 @@ def seed_recipe(recipe_data: dict, existing: dict[str, str]) -> str:
             "prepTime": f"{prep} min",
             "performTime": f"{cook} min",
             "totalTime": f"{prep + cook} min",
-            "recipeIngredient": [
-                {"note": line, "display": line, "referenceId": str(uuid.uuid4())}
-                for line in recipe_data["ingredients"][LANG]
-            ],
-            "recipeInstructions": [
-                {
-                    "id": str(uuid.uuid4()),
-                    "title": step["title"],
-                    "summary": step.get("summary", ""),
-                    "text": step["text"],
-                }
-                for step in recipe_data["steps"][LANG]
-            ],
+            "recipeIngredient": ingredient_rows(recipe_data),
+            "recipeInstructions": instruction_rows(recipe_data),
         }
     )
     call("PUT", f"/api/recipes/{slug}", recipe)
