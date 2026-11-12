@@ -6,8 +6,8 @@ All notable changes to the Mealie Atelier Bridge are documented here. The format
 
 ### Added
 
-- Scaled shopping: the `mutate` action `shopping_from_recipe` accepts an optional `scale` (greater than 0, at most 100) and adds the recipe's ingredients multiplied by it. Requests without `scale` are unchanged. Status advertises it as the `recipe_scale` feature.
-- Shared servings: a cooking session can carry `servings` and `servingsBase` (`session_start`, new studio action `session_servings`). Status advertises it as the `session_servings` feature.
+- Scaled shopping: the `mutate` action `shopping_from_recipe` accepts an optional `scale` (greater than 0, at most 100) and adds the recipe's ingredients multiplied by it. This enables the servings scaler in the cards: the shopping list gets the amounts for the servings chosen in the recipe dialog. Requests without `scale` are unchanged. Status advertises it as the `recipe_scale` feature.
+- Shared servings: a cooking session can carry `servings` and `servingsBase` (`session_start`, new studio action `session_servings`). The cards use it to share the chosen servings with the family in cook mode. Status advertises it as the `session_servings` feature.
 
 ## [0.12.8] - 2026-11-09
 

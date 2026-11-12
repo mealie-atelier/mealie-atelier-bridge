@@ -44,6 +44,8 @@ The [Atelier Cards](https://github.com/mealie-atelier/mealie-atelier-cards) can 
 | Per-user write grants and read-only mode | | ✓ |
 | Offline shopping that replays safely when you are back online | | ✓ |
 | Smart Shopping Sync to a to-do list | | ✓ |
+| Shopping lists scaled to the servings you chose | | ✓ |
+| Servings shared across the family in a cooking session | | ✓ |
 | Cooking timers that notify after the browser closes | | ✓ |
 
 ## Install
