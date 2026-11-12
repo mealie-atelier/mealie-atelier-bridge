@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import uuid
 from pathlib import Path
 
 SEED = Path(__file__).parent / "live" / "seed_mealie.py"
@@ -152,6 +153,8 @@ def test_reference_ids_are_stable_across_runs(tmp_path, monkeypatch):
         runs.append([row["referenceId"] for row in seed.ingredient_rows(recipe)])
     assert runs[0] == runs[1]
     assert len(set(runs[0])) == 3
+    # Mealie rejects step references that are not version 4 UUIDs with HTTP 422.
+    assert all(uuid.UUID(value).version == 4 for value in runs[0])
 
 
 def test_step_references_map_to_the_linked_rows(tmp_path, monkeypatch):

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import sys
+import urllib.error
 import urllib.request
 import uuid
 from datetime import date, timedelta
@@ -30,9 +31,14 @@ def call(method: str, path: str, body=None, raw=None, ctype: str = "application/
     req.add_header("Authorization", f"Bearer {TOKEN}")
     if data is not None:
         req.add_header("Content-Type", ctype)
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        text = resp.read().decode()
-        return json.loads(text) if text else None
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            text = resp.read().decode()
+            return json.loads(text) if text else None
+    except urllib.error.HTTPError as err:
+        # Mealie explains a 422 in the body; without it a failed seed says nothing useful.
+        detail = err.read().decode(errors="replace")[:2000]
+        raise RuntimeError(f"{method} {path} failed with HTTP {err.code}: {detail}") from err
 
 
 def upload_image(slug: str, image: Path) -> None:
@@ -61,7 +67,10 @@ def named(kind: str, name: str) -> dict:
 
 
 def reference_id(recipe_data: dict, index: int) -> str:
-    return str(uuid.uuid5(REFERENCE_NAMESPACE, f"{recipe_data['id']}:{LANG}:{index}"))
+    """A stable id for one ingredient row. Mealie accepts only version 4 UUIDs as step references
+    (HTTP 422 "UUID version 4 expected"), so the name-based hash is stamped as version 4."""
+    stable = uuid.uuid5(REFERENCE_NAMESPACE, f"{recipe_data['id']}:{LANG}:{index}")
+    return str(uuid.UUID(bytes=stable.bytes, version=4))
 
 
 def ingredient_rows(recipe_data: dict) -> list[dict]:
