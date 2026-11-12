@@ -92,3 +92,72 @@ class StudioQualityTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "still has cooking tasks"):
             studio.apply(s, "family_member", {"id": member, "remove": True})
+
+
+class SessionServingsTests(unittest.TestCase):
+    def start(self, **extra):
+        return studio.apply(
+            studio.initial(), "session_start", {"slug": "dish", "name": "Dish", **extra}
+        )
+
+    def test_start_stores_the_pair(self):
+        session = self.start(servings=4, servings_base=2.5)["family"]["session"]
+        self.assertEqual((session["servings"], session["servingsBase"]), (4, 2.5))
+
+    def test_start_without_pair_has_neither_key(self):
+        session = self.start()["family"]["session"]
+        self.assertNotIn("servings", session)
+        self.assertNotIn("servingsBase", session)
+
+    def test_start_rejects_half_pairs_and_bad_numbers(self):
+        for extra in (
+            {"servings": 4},
+            {"servings_base": 2},
+            {"servings": 0, "servings_base": 2},
+            {"servings": 4, "servings_base": 1000.5},
+            {"servings": 0.005, "servings_base": 2},
+            {"servings": True, "servings_base": 2},
+            {"servings": "4", "servings_base": 2},
+        ):
+            with self.subTest(extra=extra), self.assertRaises(ValueError):
+                self.start(**extra)
+        self.start(servings=0.01, servings_base=1000)
+
+    def test_session_servings_updates_and_bumps_revision(self):
+        s = self.start()
+        sid = s["family"]["session"]["id"]
+        s2 = studio.apply(
+            s, "session_servings", {"session_id": sid, "servings": 6, "servings_base": 2}
+        )
+        session = s2["family"]["session"]
+        self.assertEqual((session["servings"], session["servingsBase"]), (6, 2))
+        self.assertEqual(session["revision"], 1)
+        self.assertEqual(s2["revision"], s["revision"] + 1)
+
+    def test_session_servings_rejects_wrong_session_none_and_bad_values(self):
+        s = self.start()
+        sid = s["family"]["session"]["id"]
+        with self.assertRaises(ValueError):
+            studio.apply(
+                s, "session_servings", {"session_id": "x", "servings": 4, "servings_base": 2}
+            )
+        with self.assertRaises(ValueError):
+            studio.apply(
+                studio.initial(),
+                "session_servings",
+                {"session_id": sid, "servings": 4, "servings_base": 2},
+            )
+        for extra in ({}, {"servings": 4}, {"servings": 0, "servings_base": 2}):
+            with self.subTest(extra=extra), self.assertRaises(ValueError):
+                studio.apply(s, "session_servings", {"session_id": sid, **extra})
+
+    def test_step_task_and_timer_keep_the_pair(self):
+        s = self.start(servings=4, servings_base=2)
+        sid = s["family"]["session"]["id"]
+        s = studio.apply(s, "session_step", {"session_id": sid, "step": 2})
+        s = studio.apply(s, "session_timer", {"session_id": sid, "name": "Eggs", "minutes": 3})
+        s = studio.apply(s, "family_member", {"name": "Ann"})
+        member = s["family"]["members"][0]["id"]
+        s = studio.apply(s, "session_task", {"session_id": sid, "memberId": member, "text": "Stir"})
+        session = s["family"]["session"]
+        self.assertEqual((session["servings"], session["servingsBase"]), (4, 2))

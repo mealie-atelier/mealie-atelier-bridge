@@ -79,6 +79,17 @@ def safe_quantity(value: Any) -> int | float:
     return value
 
 
+def safe_scale(value: Any) -> float | None:
+    """A recipe scale for the shopping list: None for absent or 1, else a number in (0, 100]."""
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError("Invalid scale")  # noqa: TRY004
+    if not math.isfinite(value) or not 0 < value <= 100:
+        raise ValueError("Invalid scale")
+    return None if value == 1 else float(value)
+
+
 def shopping_item_name(item: dict) -> str:
     """The name a list shows for an item: its display text, its note or its food name."""
     for value in (item.get("display"), item.get("note")):
@@ -681,17 +692,25 @@ class MealieClient:
         if action == "shopping_from_recipe":
             list_id = safe_id(payload.get("list_id"))
             recipe_id = safe_id(payload.get("recipe_id"))
+            scale = safe_scale(payload.get("scale"))
+            batch_row: dict[str, Any] = {"recipeId": recipe_id}
+            legacy_body: dict[str, Any] = {}
+            if scale is not None:
+                batch_row["recipeIncrementQuantity"] = scale
+                legacy_body["recipeIncrementQuantity"] = scale
             try:
                 return await self.request(
                     "POST",
                     f"/api/households/shopping/lists/{list_id}/recipe",
-                    data=[{"recipeId": recipe_id}],
+                    data=[batch_row],
                 )
             except MealieError as err:
                 if err.status not in (404, 405):
                     raise
                 return await self.request(
-                    "POST", f"/api/households/shopping/lists/{list_id}/recipe/{recipe_id}", data={}
+                    "POST",
+                    f"/api/households/shopping/lists/{list_id}/recipe/{recipe_id}",
+                    data=legacy_body,
                 )
         if action == "shopping_add":
             item = {

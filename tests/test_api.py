@@ -66,7 +66,6 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
             if path == "/api/households/shopping/lists/list-1/recipe" and request.method == "POST":
                 if not self.batch_recipe_endpoint:
                     return web.json_response({"error": "Not found"}, status=404)
-                self.assertEqual(data, [{"recipeId": "recipe-1"}])
                 return web.json_response({"added": 2})
             if (
                 path == "/api/households/shopping/lists/list-1/recipe/recipe-1"
@@ -199,6 +198,36 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
             await self.client.mutate(
                 "shopping_from_recipe", {"list_id": "../secret", "recipe_id": "recipe-1"}
             )
+
+    async def test_shopping_from_recipe_scale_bodies(self):
+        base = {"list_id": "list-1", "recipe_id": "recipe-1"}
+        await self.client.mutate("shopping_from_recipe", {**base, "scale": 1.5})
+        self.assertEqual(
+            self.calls[-1]["body"], [{"recipeId": "recipe-1", "recipeIncrementQuantity": 1.5}]
+        )
+        for unscaled in ({}, {"scale": 1}, {"scale": 1.0}, {"scale": None}):
+            before = len(self.calls)
+            await self.client.mutate("shopping_from_recipe", {**base, **unscaled})
+            self.assertEqual(len(self.calls), before + 1)
+            self.assertEqual(self.calls[-1]["body"], [{"recipeId": "recipe-1"}])
+        self.batch_recipe_endpoint = False
+        await self.client.mutate("shopping_from_recipe", {**base, "scale": 2})
+        self.assertEqual(
+            self.calls[-1]["path"], "/api/households/shopping/lists/list-1/recipe/recipe-1"
+        )
+        self.assertEqual(self.calls[-1]["body"], {"recipeIncrementQuantity": 2.0})
+        await self.client.mutate("shopping_from_recipe", base)
+        self.assertEqual(self.calls[-1]["body"], {})
+
+    async def test_shopping_from_recipe_rejects_invalid_scale_before_any_request(self):
+        before = len(self.calls)
+        for bad in (True, 0, -1, 100.5, "2", float("nan"), float("inf")):
+            with self.assertRaises(ValueError):
+                await self.client.mutate(
+                    "shopping_from_recipe",
+                    {"list_id": "list-1", "recipe_id": "recipe-1", "scale": bad},
+                )
+        self.assertEqual(len(self.calls), before)
 
     async def test_free_text_shopping_item_has_no_forced_quantity_of_one(self):
         await self.client.mutate("shopping_add", {"list_id": "list-1", "note": "Oat milk"})

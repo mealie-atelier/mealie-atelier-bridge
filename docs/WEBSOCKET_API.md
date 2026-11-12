@@ -65,6 +65,8 @@ Every command below is registered by the Bridge and nothing else is reachable. A
 | Field | Meaning |
 | --- | --- |
 | `read_only` | The entry is in read-only mode. Write actions fail with `read_only`. |
+| `features.recipe_scale` | `shopping_from_recipe` accepts `scale`. See [Scaled shopping and shared servings](#scaled-shopping-and-shared-servings). |
+| `features.session_servings` | `session_start` accepts `servings` and `servings_base`, `studio_update` accepts `session_servings`, and sessions carry `servings` and `servingsBase`. |
 | `features.ai` | Same as `ai_enabled`, kept for older cards. |
 | `ai_enabled` | `true` when an AI API key is configured. |
 | `ai_provider` | `openai`, `anthropic` or `none`. Keys starting with `sk-ant-` use `anthropic`, any other key uses `openai`. |
@@ -105,6 +107,14 @@ The other codes (`read_only`, `write_not_permitted`, `backup_failed`, `upload_*`
 | Action | Payload | Result |
 | --- | --- | --- |
 | `mealplan_move` | `entry_id`, `date` (a real calendar day, `YYYY-MM-DD`) | The updated entry. The Bridge reads the entry first and sends it back with the new date. A failed read means no write. The status response advertises it as the `mealplan_move` feature. |
+
+## Scaled shopping and shared servings
+
+`mealie_atelier/mutate` `shopping_from_recipe` takes `list_id`, `recipe_id` and an optional `scale`. `scale` is a number greater than 0 and at most 100 (not a boolean). Without it, or with exactly `1`, the requests to Mealie are the same as before. With another value the Bridge asks Mealie to add the recipe's ingredients multiplied by `scale` (`recipeIncrementQuantity`). Ingredients without a quantity are added as written. Anything else fails with `invalid_request` before Mealie is called. Status advertises this as `features.recipe_scale`.
+
+`mealie_atelier/studio_update` `session_start` takes an optional pair `servings` and `servings_base`: both or neither, each a number from 0.01 to 1000. The session then carries `servings` and `servingsBase`. The action `session_servings` (`session_id`, `servings`, `servings_base`, same bounds) changes the pair of the running session, fails with "Cooking session changed" for another session id and needs the same write permission as the other session actions. Status advertises this as `features.session_servings`.
+
+Older cards ignore both features and keep working. A card that sends `scale` or the pair to an older Bridge has them ignored, so cards check the feature flags first.
 
 ## Shopping list edits
 

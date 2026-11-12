@@ -43,6 +43,18 @@ def number(v, minimum, maximum, integer=False):
     return v
 
 
+def servings_pair(payload):
+    """The optional servings pair of a cooking session: both values or neither."""
+    if payload.get("servings") is None and payload.get("servings_base") is None:
+        return None
+    if payload.get("servings") is None or payload.get("servings_base") is None:
+        raise ValueError("Servings and servings_base come together")
+    return (
+        number(payload["servings"], 0.01, 1000),
+        number(payload["servings_base"], 0.01, 1000),
+    )
+
+
 def apply(state: dict, action: str, payload: dict) -> dict:
     if not isinstance(payload, dict):
         # The transport maps ValueError to the public invalid_request code.
@@ -145,6 +157,7 @@ def apply(state: dict, action: str, payload: dict) -> dict:
     elif action == "session_start":
         if family.get("session") is not None and payload.get("replace_existing") is not True:
             raise ValueError("A cooking session is already active. Confirm replacing it first.")
+        pair = servings_pair(payload)
         family["session"] = {
             "id": str(uuid4()),
             "slug": text(payload.get("slug"), 150),
@@ -155,12 +168,26 @@ def apply(state: dict, action: str, payload: dict) -> dict:
             "timers": [],
             "revision": 0,
         }
-    elif action in ("session_step", "session_task", "session_timer", "session_end"):
+        if pair:
+            family["session"]["servings"], family["session"]["servingsBase"] = pair
+    elif action in (
+        "session_step",
+        "session_task",
+        "session_timer",
+        "session_servings",
+        "session_end",
+    ):
         session = family.get("session")
         if not session or session["id"] != payload.get("session_id"):
             raise ValueError("Cooking session changed")
         if action == "session_step":
             session["step"] = number(payload.get("step"), 0, 500, True)
+            session["revision"] += 1
+        elif action == "session_servings":
+            pair = servings_pair(payload)
+            if not pair:
+                raise ValueError("Invalid number")
+            session["servings"], session["servingsBase"] = pair
             session["revision"] += 1
         elif action == "session_task":
             tasks = session["tasks"]

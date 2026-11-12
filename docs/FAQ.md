@@ -28,6 +28,10 @@ The sync uses Home Assistant's generic to-do entity contract, so any provider th
 
 The cards queue shopping changes while offline and replay them through the Bridge (`mealie_atelier/offline_replay`). The Bridge records every operation before it writes to Mealie, so a replay after a lost answer does not add the same item twice. If an item was changed elsewhere in the meantime, you are asked to review it instead of overwriting it.
 
+## Why does the shopping list get the recipe's base amounts?
+
+A Bridge older than 0.13.0 ignores the scale that newer cards send, so Mealie adds the amounts as written in the recipe. Update the Bridge to add the amounts for the servings you chose. Ingredients without a recognized quantity (free text) are always added as written. Mealie itself multiplies a legacy note row that has the quantity 1, so such a row is scaled too.
+
 ## Are recipe changes backed up?
 
 Yes. Before every recipe write (structured ingredients, name, description, servings, steps, cover photo, step photos and restores) the Bridge saves a snapshot in Home Assistant storage: the newest 10 per recipe, for up to 200 recipes. Cover photos are kept as private files under `mealie_atelier/backups/` in the Home Assistant config folder, the newest 3 per recipe. If the backup cannot be written, nothing is changed in Mealie. Removing the integration deletes its backups.
